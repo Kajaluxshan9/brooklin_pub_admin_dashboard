@@ -1,0 +1,682 @@
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Avatar,
+  Card,
+  CardContent,
+  Alert,
+  Snackbar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  InputAdornment,
+} from "@mui/material";
+import {
+  Save as SaveIcon,
+  Person as PersonIcon,
+  Security as SecurityIcon,
+  Edit as EditIcon,
+  Phone as PhoneIcon,
+} from "@mui/icons-material";
+import { useAuth } from "../contexts/AuthContext";
+
+// Comprehensive country codes list with flags - moved outside component for stability
+const COUNTRY_CODES = [
+  { code: "+1", country: "United States", flag: "🇺🇸", shortName: "US" },
+  { code: "+1", country: "Canada", flag: "🇨🇦", shortName: "CA" },
+  { code: "+44", country: "United Kingdom", flag: "🇬🇧", shortName: "UK" },
+  { code: "+91", country: "India", flag: "🇮🇳", shortName: "IN" },
+  { code: "+86", country: "China", flag: "🇨🇳", shortName: "CN" },
+  { code: "+81", country: "Japan", flag: "🇯🇵", shortName: "JP" },
+  { code: "+49", country: "Germany", flag: "🇩🇪", shortName: "DE" },
+  { code: "+33", country: "France", flag: "🇫🇷", shortName: "FR" },
+  { code: "+39", country: "Italy", flag: "🇮🇹", shortName: "IT" },
+  { code: "+34", country: "Spain", flag: "🇪🇸", shortName: "ES" },
+  { code: "+61", country: "Australia", flag: "🇦🇺", shortName: "AU" },
+  { code: "+55", country: "Brazil", flag: "🇧🇷", shortName: "BR" },
+  { code: "+7", country: "Russia", flag: "🇷🇺", shortName: "RU" },
+  { code: "+82", country: "South Korea", flag: "🇰🇷", shortName: "KR" },
+  { code: "+31", country: "Netherlands", flag: "🇳🇱", shortName: "NL" },
+  { code: "+46", country: "Sweden", flag: "🇸🇪", shortName: "SE" },
+  { code: "+47", country: "Norway", flag: "🇳🇴", shortName: "NO" },
+  { code: "+45", country: "Denmark", flag: "🇩🇰", shortName: "DK" },
+  { code: "+41", country: "Switzerland", flag: "🇨🇭", shortName: "CH" },
+  { code: "+43", country: "Austria", flag: "🇦🇹", shortName: "AT" },
+  { code: "+32", country: "Belgium", flag: "🇧🇪", shortName: "BE" },
+  { code: "+351", country: "Portugal", flag: "🇵🇹", shortName: "PT" },
+  { code: "+30", country: "Greece", flag: "🇬🇷", shortName: "GR" },
+  { code: "+48", country: "Poland", flag: "🇵🇱", shortName: "PL" },
+  { code: "+420", country: "Czech Republic", flag: "🇨🇿", shortName: "CZ" },
+  { code: "+36", country: "Hungary", flag: "🇭🇺", shortName: "HU" },
+  { code: "+40", country: "Romania", flag: "🇷🇴", shortName: "RO" },
+  { code: "+385", country: "Croatia", flag: "🇭🇷", shortName: "HR" },
+  { code: "+386", country: "Slovenia", flag: "🇸🇮", shortName: "SI" },
+  { code: "+421", country: "Slovakia", flag: "🇸🇰", shortName: "SK" },
+  { code: "+370", country: "Lithuania", flag: "🇱🇹", shortName: "LT" },
+  { code: "+371", country: "Latvia", flag: "🇱🇻", shortName: "LV" },
+  { code: "+372", country: "Estonia", flag: "🇪🇪", shortName: "EE" },
+  { code: "+358", country: "Finland", flag: "🇫🇮", shortName: "FI" },
+  { code: "+353", country: "Ireland", flag: "🇮🇪", shortName: "IE" },
+  { code: "+356", country: "Malta", flag: "🇲🇹", shortName: "MT" },
+  { code: "+357", country: "Cyprus", flag: "🇨🇾", shortName: "CY" },
+  { code: "+377", country: "Monaco", flag: "🇲🇨", shortName: "MC" },
+  { code: "+378", country: "San Marino", flag: "🇸🇲", shortName: "SM" },
+  { code: "+39", country: "Vatican City", flag: "🇻🇦", shortName: "VA" },
+  { code: "+423", country: "Liechtenstein", flag: "🇱🇮", shortName: "LI" },
+  { code: "+354", country: "Iceland", flag: "🇮🇸", shortName: "IS" },
+  { code: "+298", country: "Faroe Islands", flag: "🇫🇴", shortName: "FO" },
+  { code: "+299", country: "Greenland", flag: "🇬🇱", shortName: "GL" },
+  { code: "+52", country: "Mexico", flag: "🇲🇽", shortName: "MX" },
+  { code: "+54", country: "Argentina", flag: "🇦🇷", shortName: "AR" },
+  { code: "+56", country: "Chile", flag: "🇨🇱", shortName: "CL" },
+  { code: "+57", country: "Colombia", flag: "🇨🇴", shortName: "CO" },
+  { code: "+58", country: "Venezuela", flag: "🇻🇪", shortName: "VE" },
+  { code: "+51", country: "Peru", flag: "🇵🇪", shortName: "PE" },
+  { code: "+593", country: "Ecuador", flag: "🇪🇨", shortName: "EC" },
+  { code: "+595", country: "Paraguay", flag: "🇵🇾", shortName: "PY" },
+  { code: "+598", country: "Uruguay", flag: "🇺🇾", shortName: "UY" },
+  { code: "+591", country: "Bolivia", flag: "🇧🇴", shortName: "BO" },
+  { code: "+592", country: "Guyana", flag: "🇬🇾", shortName: "GY" },
+  { code: "+597", country: "Suriname", flag: "🇸🇷", shortName: "SR" },
+  { code: "+594", country: "French Guiana", flag: "🇬🇫", shortName: "GF" },
+  { code: "+20", country: "Egypt", flag: "🇪🇬", shortName: "EG" },
+  { code: "+27", country: "South Africa", flag: "🇿🇦", shortName: "ZA" },
+  { code: "+234", country: "Nigeria", flag: "🇳🇬", shortName: "NG" },
+  { code: "+254", country: "Kenya", flag: "🇰🇪", shortName: "KE" },
+  { code: "+233", country: "Ghana", flag: "🇬🇭", shortName: "GH" },
+  { code: "+256", country: "Uganda", flag: "🇺🇬", shortName: "UG" },
+  { code: "+255", country: "Tanzania", flag: "🇹🇿", shortName: "TZ" },
+  { code: "+212", country: "Morocco", flag: "🇲🇦", shortName: "MA" },
+  { code: "+213", country: "Algeria", flag: "🇩🇿", shortName: "DZ" },
+  { code: "+216", country: "Tunisia", flag: "🇹🇳", shortName: "TN" },
+  { code: "+218", country: "Libya", flag: "🇱🇾", shortName: "LY" },
+  { code: "+249", country: "Sudan", flag: "🇸🇩", shortName: "SD" },
+  { code: "+251", country: "Ethiopia", flag: "🇪🇹", shortName: "ET" },
+  { code: "+66", country: "Thailand", flag: "🇹🇭", shortName: "TH" },
+  { code: "+65", country: "Singapore", flag: "🇸🇬", shortName: "SG" },
+  { code: "+60", country: "Malaysia", flag: "🇲🇾", shortName: "MY" },
+  { code: "+62", country: "Indonesia", flag: "🇮🇩", shortName: "ID" },
+  { code: "+63", country: "Philippines", flag: "🇵🇭", shortName: "PH" },
+  { code: "+84", country: "Vietnam", flag: "🇻🇳", shortName: "VN" },
+  { code: "+855", country: "Cambodia", flag: "🇰🇭", shortName: "KH" },
+  { code: "+856", country: "Laos", flag: "🇱🇦", shortName: "LA" },
+  { code: "+95", country: "Myanmar", flag: "🇲🇲", shortName: "MM" },
+  { code: "+880", country: "Bangladesh", flag: "🇧🇩", shortName: "BD" },
+  { code: "+92", country: "Pakistan", flag: "🇵🇰", shortName: "PK" },
+  { code: "+94", country: "Sri Lanka", flag: "🇱🇰", shortName: "LK" },
+  { code: "+977", country: "Nepal", flag: "🇳🇵", shortName: "NP" },
+  { code: "+975", country: "Bhutan", flag: "🇧🇹", shortName: "BT" },
+  { code: "+960", country: "Maldives", flag: "🇲🇻", shortName: "MV" },
+  { code: "+98", country: "Iran", flag: "🇮🇷", shortName: "IR" },
+  { code: "+964", country: "Iraq", flag: "🇮🇶", shortName: "IQ" },
+  { code: "+966", country: "Saudi Arabia", flag: "🇸🇦", shortName: "SA" },
+  { code: "+971", country: "UAE", flag: "🇦🇪", shortName: "AE" },
+  { code: "+974", country: "Qatar", flag: "🇶🇦", shortName: "QA" },
+  { code: "+973", country: "Bahrain", flag: "🇧🇭", shortName: "BH" },
+  { code: "+965", country: "Kuwait", flag: "🇰🇼", shortName: "KW" },
+  { code: "+968", country: "Oman", flag: "🇴🇲", shortName: "OM" },
+  { code: "+967", country: "Yemen", flag: "🇾🇪", shortName: "YE" },
+  { code: "+962", country: "Jordan", flag: "🇯🇴", shortName: "JO" },
+  { code: "+961", country: "Lebanon", flag: "🇱🇧", shortName: "LB" },
+  { code: "+963", country: "Syria", flag: "🇸🇾", shortName: "SY" },
+  { code: "+972", country: "Israel", flag: "🇮🇱", shortName: "IL" },
+  { code: "+970", country: "Palestine", flag: "🇵🇸", shortName: "PS" },
+  { code: "+90", country: "Turkey", flag: "🇹🇷", shortName: "TR" },
+  { code: "+374", country: "Armenia", flag: "🇦🇲", shortName: "AM" },
+  { code: "+375", country: "Belarus", flag: "🇧🇾", shortName: "BY" },
+  { code: "+380", country: "Ukraine", flag: "🇺🇦", shortName: "UA" },
+  { code: "+373", country: "Moldova", flag: "🇲🇩", shortName: "MD" },
+  { code: "+995", country: "Georgia", flag: "🇬🇪", shortName: "GE" },
+  { code: "+994", country: "Azerbaijan", flag: "🇦🇿", shortName: "AZ" },
+  { code: "+996", country: "Kyrgyzstan", flag: "🇰🇬", shortName: "KG" },
+  { code: "+998", country: "Uzbekistan", flag: "🇺🇿", shortName: "UZ" },
+  { code: "+992", country: "Tajikistan", flag: "🇹🇯", shortName: "TJ" },
+  { code: "+993", country: "Turkmenistan", flag: "🇹🇲", shortName: "TM" },
+  { code: "+7", country: "Kazakhstan", flag: "🇰🇿", shortName: "KZ" },
+  { code: "+976", country: "Mongolia", flag: "🇲🇳", shortName: "MN" },
+  { code: "+852", country: "Hong Kong", flag: "🇭🇰", shortName: "HK" },
+  { code: "+853", country: "Macau", flag: "🇲🇴", shortName: "MO" },
+  { code: "+886", country: "Taiwan", flag: "🇹🇼", shortName: "TW" },
+  { code: "+850", country: "North Korea", flag: "🇰🇵", shortName: "KP" },
+];
+
+const Settings: React.FC = () => {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: "",
+    type: "success" as "success" | "error" | "warning" | "info",
+  });
+
+  const [profileForm, setProfileForm] = useState({
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    email: user?.email || "",
+    countryCode: "+1",
+    phoneNumber: "",
+  });
+
+  // Load user data including phone number when component mounts
+  useEffect(() => {
+    if (user) {
+      // Parse existing phone number if it exists
+      const parsePhoneNumber = (phone: string | undefined) => {
+        if (!phone) return { countryCode: "+1", phoneNumber: "" };
+        
+        // More intelligent parsing for different phone formats
+        phone = phone.trim();
+        
+        // Try to match known country codes
+        for (const country of COUNTRY_CODES) {
+          if (phone.startsWith(country.code)) {
+            const phoneNumber = phone.substring(country.code.length).trim();
+            return { countryCode: country.code, phoneNumber };
+          }
+        }
+        
+        // If no country code found, check if it starts with +
+        const phoneRegex = /^(\+\d{1,4})?(.*)$/;
+        const match = phone.match(phoneRegex);
+        
+        if (match && match[1]) {
+          const countryCode = match[1];
+          const phoneNumber = match[2] || "";
+          return { countryCode, phoneNumber };
+        }
+        
+        // If no + sign, assume it's just the number
+        return { countryCode: "+1", phoneNumber: phone };
+      };
+
+      const { countryCode, phoneNumber } = parsePhoneNumber(user.phone);
+      
+      setProfileForm({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "", // Keep for display but make field read-only
+        countryCode,
+        phoneNumber,
+      });
+    }
+  }, [user]);
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const showNotification = (message: string, type: "success" | "error" = "success") => {
+    setNotification({ open: true, message, type });
+  };
+    { code: "+44", country: "United Kingdom", flag: "🇬🇧", shortName: "UK" },
+    { code: "+91", country: "India", flag: "🇮🇳", shortName: "IN" },
+    { code: "+86", country: "China", flag: "🇨🇳", shortName: "CN" },
+    { code: "+81", country: "Japan", flag: "🇯🇵", shortName: "JP" },
+    { code: "+49", country: "Germany", flag: "🇩🇪", shortName: "DE" },
+    { code: "+33", country: "France", flag: "🇫🇷", shortName: "FR" },
+    { code: "+39", country: "Italy", flag: "🇮🇹", shortName: "IT" },
+    { code: "+34", country: "Spain", flag: "🇪🇸", shortName: "ES" },
+    { code: "+61", country: "Australia", flag: "🇦🇺", shortName: "AU" },
+    { code: "+55", country: "Brazil", flag: "🇧🇷", shortName: "BR" },
+    { code: "+7", country: "Russia", flag: "🇷🇺", shortName: "RU" },
+    { code: "+82", country: "South Korea", flag: "🇰🇷", shortName: "KR" },
+    { code: "+31", country: "Netherlands", flag: "🇳🇱", shortName: "NL" },
+    { code: "+46", country: "Sweden", flag: "🇸🇪", shortName: "SE" },
+    { code: "+47", country: "Norway", flag: "🇳🇴", shortName: "NO" },
+    { code: "+45", country: "Denmark", flag: "🇩🇰", shortName: "DK" },
+    { code: "+41", country: "Switzerland", flag: "🇨🇭", shortName: "CH" },
+    { code: "+43", country: "Austria", flag: "🇦🇹", shortName: "AT" },
+    { code: "+32", country: "Belgium", flag: "🇧🇪", shortName: "BE" },
+    { code: "+351", country: "Portugal", flag: "🇵🇹", shortName: "PT" },
+    { code: "+30", country: "Greece", flag: "🇬🇷", shortName: "GR" },
+    { code: "+48", country: "Poland", flag: "🇵🇱", shortName: "PL" },
+    { code: "+420", country: "Czech Republic", flag: "🇨🇿", shortName: "CZ" },
+    { code: "+36", country: "Hungary", flag: "🇭🇺", shortName: "HU" },
+    { code: "+40", country: "Romania", flag: "🇷🇴", shortName: "RO" },
+    { code: "+385", country: "Croatia", flag: "🇭🇷", shortName: "HR" },
+    { code: "+386", country: "Slovenia", flag: "🇸🇮", shortName: "SI" },
+    { code: "+421", country: "Slovakia", flag: "🇸🇰", shortName: "SK" },
+    { code: "+370", country: "Lithuania", flag: "🇱🇹", shortName: "LT" },
+    { code: "+371", country: "Latvia", flag: "🇱🇻", shortName: "LV" },
+    { code: "+372", country: "Estonia", flag: "🇪🇪", shortName: "EE" },
+    { code: "+358", country: "Finland", flag: "🇫�", shortName: "FI" },
+    { code: "+353", country: "Ireland", flag: "🇮🇪", shortName: "IE" },
+    { code: "+356", country: "Malta", flag: "🇲🇹", shortName: "MT" },
+    { code: "+357", country: "Cyprus", flag: "🇨🇾", shortName: "CY" },
+    { code: "+377", country: "Monaco", flag: "🇲🇨", shortName: "MC" },
+    { code: "+378", country: "San Marino", flag: "�🇸🇲", shortName: "SM" },
+    { code: "+39", country: "Vatican City", flag: "🇻🇦", shortName: "VA" },
+    { code: "+423", country: "Liechtenstein", flag: "🇱🇮", shortName: "LI" },
+    { code: "+354", country: "Iceland", flag: "🇮🇸", shortName: "IS" },
+    { code: "+298", country: "Faroe Islands", flag: "🇫🇴", shortName: "FO" },
+    { code: "+299", country: "Greenland", flag: "�🇱", shortName: "GL" },
+    { code: "+52", country: "Mexico", flag: "🇲🇽", shortName: "MX" },
+    { code: "+54", country: "Argentina", flag: "🇦🇷", shortName: "AR" },
+    { code: "+56", country: "Chile", flag: "🇨🇱", shortName: "CL" },
+    { code: "+57", country: "Colombia", flag: "🇨🇴", shortName: "CO" },
+    { code: "+58", country: "Venezuela", flag: "🇻🇪", shortName: "VE" },
+    { code: "+51", country: "Peru", flag: "🇵🇪", shortName: "PE" },
+    { code: "+593", country: "Ecuador", flag: "🇪🇨", shortName: "EC" },
+    { code: "+595", country: "Paraguay", flag: "🇵🇾", shortName: "PY" },
+    { code: "+598", country: "Uruguay", flag: "🇺🇾", shortName: "UY" },
+    { code: "+591", country: "Bolivia", flag: "🇧🇴", shortName: "BO" },
+    { code: "+592", country: "Guyana", flag: "🇬🇾", shortName: "GY" },
+    { code: "+597", country: "Suriname", flag: "🇸🇷", shortName: "SR" },
+    { code: "+594", country: "French Guiana", flag: "🇬�", shortName: "GF" },
+    { code: "+20", country: "Egypt", flag: "🇪🇬", shortName: "EG" },
+    { code: "+27", country: "South Africa", flag: "🇿🇦", shortName: "ZA" },
+    { code: "+234", country: "Nigeria", flag: "🇳🇬", shortName: "NG" },
+    { code: "+254", country: "Kenya", flag: "🇰🇪", shortName: "KE" },
+    { code: "+233", country: "Ghana", flag: "🇬🇭", shortName: "GH" },
+    { code: "+256", country: "Uganda", flag: "🇺🇬", shortName: "UG" },
+    { code: "+255", country: "Tanzania", flag: "🇹🇿", shortName: "TZ" },
+    { code: "+212", country: "Morocco", flag: "�🇦", shortName: "MA" },
+    { code: "+213", country: "Algeria", flag: "🇩🇿", shortName: "DZ" },
+    { code: "+216", country: "Tunisia", flag: "🇹�🇳", shortName: "TN" },
+    { code: "+218", country: "Libya", flag: "�🇾", shortName: "LY" },
+    { code: "+249", country: "Sudan", flag: "🇸🇩", shortName: "SD" },
+    { code: "+251", country: "Ethiopia", flag: "🇪🇹", shortName: "ET" },
+    { code: "+66", country: "Thailand", flag: "🇹🇭", shortName: "TH" },
+    { code: "+65", country: "Singapore", flag: "🇸🇬", shortName: "SG" },
+    { code: "+60", country: "Malaysia", flag: "🇲🇾", shortName: "MY" },
+    { code: "+62", country: "Indonesia", flag: "🇮🇩", shortName: "ID" },
+    { code: "+63", country: "Philippines", flag: "🇵🇭", shortName: "PH" },
+    { code: "+84", country: "Vietnam", flag: "🇻🇳", shortName: "VN" },
+    { code: "+855", country: "Cambodia", flag: "�🇭", shortName: "KH" },
+    { code: "+856", country: "Laos", flag: "🇱🇦", shortName: "LA" },
+    { code: "+95", country: "Myanmar", flag: "🇲🇲", shortName: "MM" },
+    { code: "+880", country: "Bangladesh", flag: "🇧�🇩", shortName: "BD" },
+    { code: "+92", country: "Pakistan", flag: "��🇰", shortName: "PK" },
+    { code: "+94", country: "Sri Lanka", flag: "🇱🇰", shortName: "LK" },
+    { code: "+977", country: "Nepal", flag: "🇳🇵", shortName: "NP" },
+    { code: "+975", country: "Bhutan", flag: "🇧🇹", shortName: "BT" },
+    { code: "+960", country: "Maldives", flag: "🇲🇻", shortName: "MV" },
+    { code: "+98", country: "Iran", flag: "🇮🇷", shortName: "IR" },
+    { code: "+964", country: "Iraq", flag: "🇮🇶", shortName: "IQ" },
+    { code: "+966", country: "Saudi Arabia", flag: "🇸🇦", shortName: "SA" },
+    { code: "+971", country: "UAE", flag: "🇦🇪", shortName: "AE" },
+    { code: "+974", country: "Qatar", flag: "🇶🇦", shortName: "QA" },
+    { code: "+973", country: "Bahrain", flag: "🇧🇭", shortName: "BH" },
+    { code: "+965", country: "Kuwait", flag: "🇰🇼", shortName: "KW" },
+    { code: "+968", country: "Oman", flag: "🇴🇲", shortName: "OM" },
+    { code: "+967", country: "Yemen", flag: "🇾🇪", shortName: "YE" },
+    { code: "+962", country: "Jordan", flag: "🇯🇴", shortName: "JO" },
+    { code: "+961", country: "Lebanon", flag: "🇱🇧", shortName: "LB" },
+    { code: "+963", country: "Syria", flag: "🇸🇾", shortName: "SY" },
+    { code: "+972", country: "Israel", flag: "🇮🇱", shortName: "IL" },
+    { code: "+970", country: "Palestine", flag: "🇵🇸", shortName: "PS" },
+    { code: "+90", country: "Turkey", flag: "��", shortName: "TR" },
+    { code: "+374", country: "Armenia", flag: "🇦🇲", shortName: "AM" },
+    { code: "+375", country: "Belarus", flag: "🇧🇾", shortName: "BY" },
+    { code: "+380", country: "Ukraine", flag: "🇺🇦", shortName: "UA" },
+    { code: "+373", country: "Moldova", flag: "🇲🇩", shortName: "MD" },
+    { code: "+995", country: "Georgia", flag: "�🇪", shortName: "GE" },
+    { code: "+994", country: "Azerbaijan", flag: "�🇦�", shortName: "AZ" },
+    { code: "+996", country: "Kyrgyzstan", flag: "🇰🇬", shortName: "KG" },
+    { code: "+998", country: "Uzbekistan", flag: "🇺🇿", shortName: "UZ" },
+    { code: "+992", country: "Tajikistan", flag: "�🇹🇯", shortName: "TJ" },
+    { code: "+993", country: "Turkmenistan", flag: "🇹🇲", shortName: "TM" },
+    { code: "+7", country: "Kazakhstan", flag: "🇰🇿", shortName: "KZ" },
+    { code: "+976", country: "Mongolia", flag: "🇲🇳", shortName: "MN" },
+    { code: "+852", country: "Hong Kong", flag: "🇭🇰", shortName: "HK" },
+    { code: "+853", country: "Macau", flag: "🇲🇴", shortName: "MO" },
+    { code: "+886", country: "Taiwan", flag: "🇹🇼", shortName: "TW" },
+    { code: "+850", country: "North Korea", flag: "��", shortName: "KP" },
+  ];
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const showNotification = (message: string, type: typeof notification.type = "success") => {
+    setNotification({ open: true, message, type });
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setLoading(true);
+      
+      // Combine country code and phone number
+      const fullPhoneNumber = profileForm.phoneNumber 
+        ? `${profileForm.countryCode}${profileForm.phoneNumber}`
+        : "";
+
+      const response = await fetch(`http://localhost:5000/users/${user?.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          firstName: profileForm.firstName,
+          lastName: profileForm.lastName,
+          phone: fullPhoneNumber,
+        }),
+      });
+
+      if (response.ok) {
+        showNotification("Profile updated successfully!");
+      } else {
+        throw new Error("Failed to update profile");
+      }
+    } catch (error) {
+      showNotification("Failed to update profile", "error");
+      console.error("Profile update error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      showNotification("New passwords do not match", "error");
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      showNotification("Password must be at least 6 characters long", "error");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch("http://localhost:5000/auth/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      });
+
+      if (response.ok) {
+        showNotification("Password changed successfully!");
+        setPasswordForm({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to change password");
+      }
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : "Failed to change password", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
+      <Typography variant="h4" gutterBottom sx={{ mb: 3, fontWeight: 600, color: "primary.main" }}>
+        Settings
+      </Typography>
+
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+        {/* Profile Settings */}
+        <Box sx={{ flex: "1 1 400px", minWidth: "400px" }}>
+          <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                <PersonIcon sx={{ mr: 2, color: "primary.main", fontSize: 28 }} />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>Profile Settings</Typography>
+              </Box>
+
+              <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                <Avatar
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    mr: 2,
+                    bgcolor: "primary.main",
+                    fontSize: "2rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  {profileForm.firstName.charAt(0)}{profileForm.lastName.charAt(0)}
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    {profileForm.firstName} {profileForm.lastName}
+                  </Typography>
+                  <Typography color="text.secondary" sx={{ mb: 1 }}>
+                    {user?.role === "super_admin" ? "Super Administrator" : "Administrator"}
+                  </Typography>
+                  {(profileForm.countryCode !== "+1" || profileForm.phoneNumber) && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      📞 {profileForm.countryCode}{profileForm.phoneNumber || "No phone number"}
+                    </Typography>
+                  )}
+                  <Button
+                    size="small"
+                    startIcon={<EditIcon />}
+                    sx={{ 
+                      color: "primary.main",
+                      "&:hover": { backgroundColor: "primary.50" }
+                    }}
+                  >
+                    Change Photo
+                  </Button>
+                </Box>
+              </Box>
+
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <Box sx={{ display: "flex", gap: 2 }}>
+                  <TextField
+                    fullWidth
+                    label="First Name"
+                    value={profileForm.firstName}
+                    onChange={(e) =>
+                      setProfileForm({
+                        ...profileForm,
+                        firstName: e.target.value,
+                      })
+                    }
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Last Name"
+                    value={profileForm.lastName}
+                    onChange={(e) =>
+                      setProfileForm({
+                        ...profileForm,
+                        lastName: e.target.value,
+                      })
+                    }
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                  />
+                </Box>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  value={profileForm.email}
+                  disabled
+                  helperText="Email cannot be changed"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                />
+                
+                {/* Phone Number with Country Code */}
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <FormControl sx={{ minWidth: 120 }}>
+                    <InputLabel id="country-code-label">Code</InputLabel>
+                    <Select
+                      labelId="country-code-label"
+                      value={profileForm.countryCode}
+                      label="Code"
+                      onChange={(e) =>
+                        setProfileForm({
+                          ...profileForm,
+                          countryCode: e.target.value,
+                        })
+                      }
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                    >
+                      {COUNTRY_CODES.map((item) => (
+                        <MenuItem key={item.code} value={item.code}>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <span>{item.flag}</span>
+                            <span>{item.code}</span>
+                            <Typography variant="caption" color="text.secondary">
+                              {item.country}
+                            </Typography>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  
+                  <TextField
+                    fullWidth
+                    label="Phone Number"
+                    value={profileForm.phoneNumber}
+                    onChange={(e) => {
+                      // Allow only numbers, spaces, hyphens, and parentheses
+                      const value = e.target.value.replace(/[^\d\s\-()]/g, '');
+                      setProfileForm({
+                        ...profileForm,
+                        phoneNumber: value,
+                      });
+                    }}
+                    placeholder="Enter phone number"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PhoneIcon sx={{ color: "primary.main" }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    helperText="Enter phone number without country code"
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                  />
+                </Box>
+              </Box>
+
+              <Button
+                variant="contained"
+                startIcon={<SaveIcon />}
+                onClick={handleSaveProfile}
+                disabled={loading}
+                sx={{
+                  mt: 3,
+                  backgroundColor: "primary.main",
+                  "&:hover": { backgroundColor: "primary.dark" },
+                  borderRadius: 2,
+                  py: 1.5,
+                  fontWeight: 600,
+                }}
+              >
+                {loading ? "Saving..." : "Save Profile"}
+              </Button>
+            </CardContent>
+          </Card>
+        </Box>
+
+        {/* Security Settings */}
+        <Box sx={{ flex: "1 1 400px", minWidth: "400px" }}>
+          <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                <SecurityIcon sx={{ mr: 2, color: "primary.main", fontSize: 28 }} />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>Security Settings</Typography>
+              </Box>
+
+              <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+                Choose a strong password with at least 6 characters.
+              </Alert>
+
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Current Password"
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      currentPassword: e.target.value,
+                    })
+                  }
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                />
+                <TextField
+                  fullWidth
+                  label="New Password"
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      newPassword: e.target.value,
+                    })
+                  }
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                />
+                <TextField
+                  fullWidth
+                  label="Confirm New Password"
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      confirmPassword: e.target.value,
+                    })
+                  }
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                />
+              </Box>
+
+              <Button
+                variant="contained"
+                startIcon={<SaveIcon />}
+                onClick={handleChangePassword}
+                disabled={loading || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
+                sx={{
+                  mt: 3,
+                  backgroundColor: "primary.main",
+                  "&:hover": { backgroundColor: "primary.dark" },
+                  borderRadius: 2,
+                  py: 1.5,
+                  fontWeight: 600,
+                }}
+              >
+                {loading ? "Changing..." : "Change Password"}
+              </Button>
+            </CardContent>
+          </Card>
+        </Box>
+      </Box>
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={4000}
+        onClose={() => setNotification({ ...notification, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={() => setNotification({ ...notification, open: false })}
+          severity={notification.type}
+          sx={{ width: "100%", borderRadius: 2 }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
+    </Box>
+  );
+};
+
+export default Settings;
