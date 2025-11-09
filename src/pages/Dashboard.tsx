@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { api } from "../utils/api";
 import {
   Box,
   Grid,
@@ -12,12 +13,30 @@ import {
   ListItemText,
   ListItemIcon,
   LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem as SelectMenuItem,
+  Chip,
+  IconButton,
+  Checkbox,
 } from "@mui/material";
 import {
   Restaurant as RestaurantIcon,
   People as PeopleIcon,
   Event as EventIcon,
   Star as SpecialsIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  CheckCircle as CheckCircleIcon,
+  RadioButtonUnchecked as UncheckedIcon,
+  Schedule as ScheduleIcon,
 } from "@mui/icons-material";
 import moment from "moment-timezone";
 
@@ -52,6 +71,18 @@ interface Special {
   createdAt: string;
 }
 
+interface Todo {
+  id: string;
+  title: string;
+  description: string;
+  priority: "low" | "medium" | "high" | "urgent";
+  status: "pending" | "in_progress" | "completed" | "cancelled";
+  dueDate?: Date;
+  createdAt: Date;
+}
+
+// User interface removed (unused)
+
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats>({
     menuItems: 0,
@@ -70,26 +101,30 @@ const Dashboard: React.FC = () => {
     Array<{ name: string; value: number; color: string }>
   >([]);
   const [loading, setLoading] = useState(true);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [todoDialog, setTodoDialog] = useState(false);
+  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
+  const [todoForm, setTodoForm] = useState({
+    title: "",
+    description: "",
+    priority: "medium" as "low" | "medium" | "high" | "urgent",
+    status: "pending" as "pending" | "in_progress" | "completed" | "cancelled",
+    dueDate: "",
+  });
 
   const loadDashboardData = useCallback(async () => {
     try {
       // Use the new dashboard summary endpoint
-      const summaryResponse = await fetch(
-        "http://localhost:5000/dashboard/summary",
-        {
-          credentials: "include",
-        }
-      );
-
-      if (summaryResponse.ok) {
-        const summary = await summaryResponse.json();
+      const summaryResponse = await api.get("/dashboard/summary");
+      if (summaryResponse.status === 200) {
+        const summary = summaryResponse.data;
 
         setStats({
           menuItems: summary.menu.total,
           activeMenuItems: summary.menu.active,
           users: summary.users.total,
           activeUsers: summary.users.active,
-          events: summary.events.total,
+          events: summary.events.upcoming,
           specials: summary.specials.total,
           todos: summary.todos.total,
           completedTodos: summary.todos.completed,
@@ -173,52 +208,29 @@ const Dashboard: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
-
   const loadDashboardDataFallback = async () => {
     try {
       // Fetch menu items
-      const menuItemsResponse = await fetch(
-        "http://localhost:5000/menu/items",
-        {
-          credentials: "include",
-        }
-      );
-      const menuItems: MenuItem[] = menuItemsResponse.ok
-        ? await menuItemsResponse.json()
-        : [];
+      const menuItemsResponse = await api.get("/menu/items");
+      const menuItems: MenuItem[] =
+        menuItemsResponse.status === 200 ? menuItemsResponse.data : [];
 
       // Fetch specials
-      const specialsResponse = await fetch("http://localhost:5000/specials", {
-        credentials: "include",
-      });
-      const specials: Special[] = specialsResponse.ok
-        ? await specialsResponse.json()
-        : [];
+      const specialsResponse = await api.get("/specials");
+      const specials: Special[] =
+        specialsResponse.status === 200 ? specialsResponse.data : [];
 
       // Fetch users
-      const usersResponse = await fetch("http://localhost:5000/users", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      const users = usersResponse.ok ? await usersResponse.json() : [];
+      const usersResponse = await api.get("/users");
+      const users = usersResponse.status === 200 ? usersResponse.data : [];
 
       // Fetch events
-      const eventsResponse = await fetch("http://localhost:5000/events", {
-        credentials: "include",
-      });
-      const events = eventsResponse.ok ? await eventsResponse.json() : [];
+      const eventsResponse = await api.get("/events");
+      const events = eventsResponse.status === 200 ? eventsResponse.data : [];
 
       // Fetch todos
-      const todosResponse = await fetch("http://localhost:5000/todos", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      const todos = todosResponse.ok ? await todosResponse.json() : [];
+      const todosResponse = await api.get("/todos");
+      const todos = todosResponse.status === 200 ? todosResponse.data : [];
 
       setStats({
         menuItems: menuItems.length,
@@ -237,15 +249,9 @@ const Dashboard: React.FC = () => {
       });
 
       // Fetch menu categories
-      const categoriesResponse = await fetch(
-        "http://localhost:5000/menu/categories",
-        {
-          credentials: "include",
-        }
-      );
-      const categories = categoriesResponse.ok
-        ? await categoriesResponse.json()
-        : [];
+      const categoriesResponse = await api.get("/menu/categories");
+      const categories =
+        categoriesResponse.status === 200 ? categoriesResponse.data : [];
 
       const categoryColors = ["#8B4513", "#D2691E", "#B8860B", "#CD853F"];
       setMenuCategoryData(
@@ -306,6 +312,131 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const loadTodos = async () => {
+    try {
+      const response = await api.get("/todos");
+      if (response.status === 200) {
+        setTodos(response.data || []);
+      }
+    } catch (error) {
+      console.error("Error loading todos:", error);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+    loadTodos();
+  }, [loadDashboardData]);
+
+  const handleCreateTodo = () => {
+    setSelectedTodo(null);
+    setTodoForm({
+      title: "",
+      description: "",
+      priority: "medium",
+      status: "pending",
+      dueDate: "",
+    });
+    setTodoDialog(true);
+  };
+
+  const handleEditTodo = (todo: Todo) => {
+    setSelectedTodo(todo);
+    setTodoForm({
+      title: todo.title,
+      description: todo.description,
+      priority: todo.priority,
+      status: todo.status,
+      dueDate: todo.dueDate ? moment(todo.dueDate).format("YYYY-MM-DD") : "",
+    });
+    setTodoDialog(true);
+  };
+
+  const handleSaveTodo = async () => {
+    try {
+      const todoData = {
+        ...todoForm,
+        dueDate: todoForm.dueDate
+          ? new Date(todoForm.dueDate).toISOString()
+          : null,
+      };
+
+      let response;
+      if (selectedTodo) {
+        response = await api.patch(`/todos/${selectedTodo.id}`, todoData);
+      } else {
+        response = await api.post(`/todos`, todoData);
+      }
+
+      if (response.status === 200 || response.status === 201) {
+        setTodoDialog(false);
+        await loadTodos();
+        await loadDashboardData();
+      } else {
+        alert("Failed to save todo. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error saving todo:", error);
+      alert("Error saving todo. Please try again.");
+    }
+  };
+
+  const handleDeleteTodo = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this todo?")) {
+      try {
+        const response = await api.delete(`/todos/${id}`);
+        if (response.status === 200) {
+          await loadTodos();
+          await loadDashboardData();
+        } else {
+          alert("Failed to delete todo. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error deleting todo:", error);
+        alert("Error deleting todo. Please try again.");
+      }
+    }
+  };
+
+  const handleToggleTodoStatus = async (todo: Todo) => {
+    try {
+      // Use the dedicated toggle endpoint to flip completion state
+      const response = await api.patch(`/todos/${todo.id}/toggle-complete`);
+
+      if (response.status === 200) {
+        await loadTodos();
+        await loadDashboardData();
+      }
+    } catch (error) {
+      console.error("Error updating todo status:", error);
+    }
+  };
+
+  const getPriorityColor = (
+    priority: string
+  ):
+    | "default"
+    | "primary"
+    | "secondary"
+    | "error"
+    | "info"
+    | "success"
+    | "warning" => {
+    switch (priority) {
+      case "urgent":
+        return "error";
+      case "high":
+        return "warning";
+      case "medium":
+        return "info";
+      case "low":
+        return "success";
+      default:
+        return "default";
+    }
+  };
+
+  // Updated order: Menu Items, Menu Categories, Upcoming Events, Active Specials, Active Users
   const statsCards = [
     {
       title: "Menu Items",
@@ -313,15 +444,18 @@ const Dashboard: React.FC = () => {
       total: stats.menuItems,
       icon: RestaurantIcon,
       color: "#8B4513",
-      progress: (stats.activeMenuItems / stats.menuItems) * 100,
+      progress:
+        stats.menuItems > 0
+          ? (stats.activeMenuItems / stats.menuItems) * 100
+          : 0,
     },
     {
-      title: "Active Users",
-      value: stats.activeUsers,
-      total: stats.users,
-      icon: PeopleIcon,
+      title: "Menu Categories",
+      value: menuCategoryData.length,
+      total: menuCategoryData.length,
+      icon: RestaurantIcon,
       color: "#D2691E",
-      progress: (stats.activeUsers / stats.users) * 100,
+      progress: 100,
     },
     {
       title: "Upcoming Events",
@@ -338,6 +472,14 @@ const Dashboard: React.FC = () => {
       icon: SpecialsIcon,
       color: "#CD853F",
       progress: 100,
+    },
+    {
+      title: "Active Users",
+      value: stats.activeUsers,
+      total: stats.users,
+      icon: PeopleIcon,
+      color: "#A0522D",
+      progress: stats.users > 0 ? (stats.activeUsers / stats.users) * 100 : 0,
     },
   ];
 
@@ -364,14 +506,30 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <Box sx={{ width: "100%", maxWidth: "100%" }}>
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: "100%",
+        backgroundColor: "#faf6f2",
+        minHeight: "100vh",
+        p: 2,
+      }}
+    >
       {/* Header Section */}
-      <Box sx={{ mb: 4 }}>
+      <Box
+        sx={{
+          mb: 4,
+          p: 3,
+          backgroundColor: "#8B4513",
+          borderRadius: 3,
+          boxShadow: "0 4px 12px rgba(139, 69, 19, 0.3)",
+        }}
+      >
         <Typography
           variant="h3"
           sx={{
             fontWeight: 800,
-            color: "text.primary",
+            color: "white",
             mb: 1,
             fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
           }}
@@ -381,8 +539,8 @@ const Dashboard: React.FC = () => {
         <Typography
           variant="h6"
           sx={{
-            color: "text.secondary",
-            fontWeight: 400,
+            color: "rgba(255, 255, 255, 0.9)",
+            fontWeight: 500,
             fontSize: { xs: "1rem", sm: "1.25rem" },
           }}
         >
@@ -395,21 +553,21 @@ const Dashboard: React.FC = () => {
         {statsCards.map((card) => {
           const Icon = card.icon;
           return (
-            <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={card.title}>
+            <Grid size={{ xs: 12, sm: 6, lg: 2.4 }} key={card.title}>
               <Card
                 sx={{
                   height: "100%",
                   borderRadius: 3,
-                  border: "none",
-                  background: `linear-gradient(135deg, ${card.color}08 0%, ${card.color}15 100%)`,
-                  backdropFilter: "blur(10px)",
+                  border: "1px solid #d7ccc8",
+                  background: "white",
+                  boxShadow: "0 4px 12px rgba(139, 69, 19, 0.15)",
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                   cursor: "pointer",
                   position: "relative",
                   overflow: "hidden",
                   "&:hover": {
-                    transform: "translateY(-8px)",
-                    boxShadow: `0 20px 40px ${card.color}20`,
+                    transform: "translateY(-4px)",
+                    boxShadow: "0 8px 25px rgba(139, 69, 19, 0.25)",
                   },
                   "&::before": {
                     content: '""',
@@ -418,7 +576,7 @@ const Dashboard: React.FC = () => {
                     left: 0,
                     right: 0,
                     height: 4,
-                    background: `linear-gradient(90deg, ${card.color}, ${card.color}80)`,
+                    background: card.color,
                   },
                 }}
               >
@@ -428,7 +586,7 @@ const Dashboard: React.FC = () => {
                       sx={{
                         p: 2,
                         borderRadius: 2,
-                        bgcolor: `${card.color}15`,
+                        bgcolor: `rgba(139, 69, 19, 0.1)`,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -442,8 +600,8 @@ const Dashboard: React.FC = () => {
                         variant="h6"
                         sx={{
                           fontWeight: 700,
-                          color: "text.primary",
-                          fontSize: "1.1rem",
+                          color: "#3e2723",
+                          fontSize: "1rem",
                           lineHeight: 1.2,
                         }}
                       >
@@ -469,8 +627,8 @@ const Dashboard: React.FC = () => {
                       <Typography
                         variant="body2"
                         sx={{
-                          color: "text.secondary",
-                          fontWeight: 500,
+                          color: "#5d4037",
+                          fontWeight: 600,
                         }}
                       >
                         of {card.total.toLocaleString()} total
@@ -487,10 +645,16 @@ const Dashboard: React.FC = () => {
                           mb: 1,
                         }}
                       >
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          sx={{ color: "#5d4037", fontWeight: 600 }}
+                        >
                           Progress
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          sx={{ color: "#5d4037", fontWeight: 600 }}
+                        >
                           {Math.round(card.progress)}%
                         </Typography>
                       </Box>
@@ -498,11 +662,11 @@ const Dashboard: React.FC = () => {
                         variant="determinate"
                         value={card.progress}
                         sx={{
-                          height: 6,
-                          borderRadius: 3,
-                          backgroundColor: `${card.color}20`,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: "rgba(139, 69, 19, 0.2)",
                           "& .MuiLinearProgress-bar": {
-                            borderRadius: 3,
+                            borderRadius: 4,
                             backgroundColor: card.color,
                           },
                         }}
@@ -518,16 +682,16 @@ const Dashboard: React.FC = () => {
 
       {/* Content Sections */}
       <Grid container spacing={{ xs: 2, sm: 3 }}>
-        {/* Recent Activity & Quick Actions */}
-        <Grid size={{ xs: 12, lg: 8 }}>
+        {/* Recent Activity */}
+        <Grid size={{ xs: 12, lg: 6 }}>
           <Paper
             sx={{
               p: 4,
               borderRadius: 3,
               height: "fit-content",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-              border: "1px solid",
-              borderColor: "divider",
+              backgroundColor: "white",
+              boxShadow: "0 4px 12px rgba(139, 69, 19, 0.15)",
+              border: "1px solid #d7ccc8",
             }}
           >
             <Typography
@@ -536,6 +700,7 @@ const Dashboard: React.FC = () => {
                 mb: 3,
                 fontWeight: 700,
                 fontSize: "1.25rem",
+                color: "#8B4513",
               }}
             >
               Recent Activity
@@ -549,7 +714,7 @@ const Dashboard: React.FC = () => {
                       px: 0,
                       py: 2,
                       borderBottom: "1px solid",
-                      borderColor: "divider",
+                      borderColor: "#d7ccc8",
                       "&:last-child": {
                         borderBottom: "none",
                       },
@@ -557,26 +722,30 @@ const Dashboard: React.FC = () => {
                   >
                     <ListItemIcon>
                       {activity.type === "menu" && (
-                        <RestaurantIcon sx={{ color: "primary.main" }} />
+                        <RestaurantIcon sx={{ color: "#8B4513" }} />
                       )}
                       {activity.type === "user" && (
-                        <PeopleIcon sx={{ color: "secondary.main" }} />
+                        <PeopleIcon sx={{ color: "#A0522D" }} />
                       )}
                       {activity.type === "event" && (
-                        <EventIcon sx={{ color: "warning.main" }} />
+                        <EventIcon sx={{ color: "#D2691E" }} />
+                      )}
+                      {activity.type === "special" && (
+                        <SpecialsIcon sx={{ color: "#CD853F" }} />
+                      )}
+                      {activity.type === "system" && (
+                        <CheckCircleIcon sx={{ color: "#B8860B" }} />
                       )}
                     </ListItemIcon>
                     <ListItemText
                       primary={
-                        <Typography
-                          sx={{ fontWeight: 500, color: "text.primary" }}
-                        >
+                        <Typography sx={{ fontWeight: 500, color: "#3e2723" }}>
                           {activity.message}
                         </Typography>
                       }
                       secondary={
                         <Typography
-                          sx={{ color: "text.secondary", fontSize: "0.875rem" }}
+                          sx={{ color: "#5d4037", fontSize: "0.875rem" }}
                         >
                           {moment(activity.timestamp).fromNow()}
                         </Typography>
@@ -588,7 +757,7 @@ const Dashboard: React.FC = () => {
                 <ListItem sx={{ px: 0, py: 4, textAlign: "center" }}>
                   <ListItemText
                     primary={
-                      <Typography color="text.secondary">
+                      <Typography color="#6d4c41">
                         No recent activity to display
                       </Typography>
                     }
@@ -599,172 +768,416 @@ const Dashboard: React.FC = () => {
           </Paper>
         </Grid>
 
-        {/* Quick Actions & Menu Categories */}
-        <Grid size={{ xs: 12, lg: 4 }}>
-          <Grid container spacing={{ xs: 2, sm: 3 }}>
-            {/* Quick Actions */}
-            <Grid size={{ xs: 12 }}>
-              <Card
+        {/* Todo List Section */}
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Card
+            sx={{
+              borderRadius: 3,
+              boxShadow: "0 4px 12px rgba(139, 69, 19, 0.15)",
+              border: "1px solid #d7ccc8",
+              backgroundColor: "white",
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box
                 sx={{
-                  borderRadius: 3,
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-                  border: "1px solid",
-                  borderColor: "divider",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 3,
                 }}
               >
-                <CardContent sx={{ p: 3 }}>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      mb: 3,
-                      fontWeight: 700,
-                      fontSize: "1.25rem",
-                    }}
-                  >
-                    Quick Actions
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 6 }}>
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        startIcon={<RestaurantIcon />}
-                        href="/menu"
-                        sx={{
-                          borderRadius: 2,
-                          py: 1.5,
-                          textTransform: "none",
-                          fontWeight: 600,
-                        }}
-                      >
-                        Add Menu Item
-                      </Button>
-                    </Grid>
-                    <Grid size={{ xs: 6 }}>
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        startIcon={<EventIcon />}
-                        href="/events"
-                        sx={{
-                          borderRadius: 2,
-                          py: 1.5,
-                          textTransform: "none",
-                          fontWeight: 600,
-                        }}
-                      >
-                        Create Event
-                      </Button>
-                    </Grid>
-                    <Grid size={{ xs: 6 }}>
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        startIcon={<SpecialsIcon />}
-                        href="/specials"
-                        sx={{
-                          borderRadius: 2,
-                          py: 1.5,
-                          textTransform: "none",
-                          fontWeight: 600,
-                        }}
-                      >
-                        Add Special
-                      </Button>
-                    </Grid>
-                    <Grid size={{ xs: 6 }}>
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        startIcon={<PeopleIcon />}
-                        href="/users"
-                        sx={{
-                          borderRadius: 2,
-                          py: 1.5,
-                          textTransform: "none",
-                          fontWeight: 600,
-                        }}
-                      >
-                        Add User
-                      </Button>
-                    </Grid>
-                  </Grid>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Menu Categories */}
-            {menuCategoryData.length > 0 && (
-              <Grid size={{ xs: 12 }}>
-                <Card
+                <Typography
+                  variant="h6"
                   sx={{
-                    borderRadius: 3,
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-                    border: "1px solid",
-                    borderColor: "divider",
+                    fontWeight: 700,
+                    fontSize: "1.25rem",
+                    color: "#8B4513",
                   }}
                 >
-                  <CardContent sx={{ p: 3 }}>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        mb: 3,
-                        fontWeight: 700,
-                        fontSize: "1.25rem",
-                      }}
-                    >
-                      Menu Categories
+                  Tasks & To-Do
+                </Typography>
+                <Button
+                  startIcon={<AddIcon />}
+                  variant="contained"
+                  size="small"
+                  onClick={handleCreateTodo}
+                  sx={{
+                    backgroundColor: "#8B4513",
+                    "&:hover": { backgroundColor: "#A0522D" },
+                    textTransform: "none",
+                    fontWeight: 600,
+                  }}
+                >
+                  Add Task
+                </Button>
+              </Box>
+
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ color: "#6d4c41" }}>
+                      Total Tasks
                     </Typography>
-                    <Box>
-                      {menuCategoryData.map((category) => (
-                        <Box key={category.name} sx={{ mb: 3 }}>
-                          <Box
+                    <Typography
+                      variant="h4"
+                      fontWeight={700}
+                      sx={{ color: "#3e2723" }}
+                    >
+                      {stats.todos}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ color: "#6d4c41" }}>
+                      Completed
+                    </Typography>
+                    <Typography
+                      variant="h4"
+                      fontWeight={700}
+                      sx={{ color: "#4caf50" }}
+                    >
+                      {stats.completedTodos}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ color: "#6d4c41" }}>
+                      Pending
+                    </Typography>
+                    <Typography
+                      variant="h4"
+                      fontWeight={700}
+                      sx={{ color: "#D2691E" }}
+                    >
+                      {stats.todos - stats.completedTodos}
+                    </Typography>
+                  </Box>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={
+                    stats.todos > 0
+                      ? (stats.completedTodos / stats.todos) * 100
+                      : 0
+                  }
+                  sx={{
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: "rgba(139, 69, 19, 0.2)",
+                    "& .MuiLinearProgress-bar": {
+                      backgroundColor: "#8B4513",
+                      borderRadius: 4,
+                    },
+                  }}
+                />
+              </Box>
+
+              <List sx={{ maxHeight: 400, overflow: "auto" }}>
+                {todos.length > 0 ? (
+                  todos
+                    .filter((todo) => todo.status !== "completed")
+                    .slice(0, 5)
+                    .map((todo) => (
+                      <ListItem
+                        key={todo.id}
+                        sx={{
+                          px: 0,
+                          py: 2,
+                          borderBottom: "1px solid #d7ccc8",
+                          "&:last-child": { borderBottom: "none" },
+                        }}
+                      >
+                        <ListItemIcon>
+                          <Checkbox
+                            edge="start"
+                            checked={todo.status === "completed"}
+                            onChange={() => handleToggleTodoStatus(todo)}
+                            icon={<UncheckedIcon />}
+                            checkedIcon={<CheckCircleIcon />}
                             sx={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              mb: 1,
-                            }}
-                          >
-                            <Typography
-                              variant="body1"
-                              sx={{ fontWeight: 600, color: "text.primary" }}
-                            >
-                              {category.name}
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              sx={{ fontWeight: 600, color: "text.secondary" }}
-                            >
-                              {category.value} items
-                            </Typography>
-                          </Box>
-                          <LinearProgress
-                            variant="determinate"
-                            value={
-                              category.value > 0
-                                ? Math.min((category.value / 20) * 100, 100)
-                                : 0
-                            }
-                            sx={{
-                              height: 8,
-                              borderRadius: 4,
-                              backgroundColor: `${category.color}15`,
-                              "& .MuiLinearProgress-bar": {
-                                backgroundColor: category.color,
-                                borderRadius: 4,
+                              color: "#8B4513",
+                              "&.Mui-checked": {
+                                color: "#8B4513",
                               },
                             }}
                           />
-                        </Box>
-                      ))}
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            )}
-          </Grid>
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              <Typography
+                                sx={{
+                                  fontWeight: 500,
+                                  color: "#3e2723",
+                                  textDecoration:
+                                    todo.status === "completed"
+                                      ? "line-through"
+                                      : "none",
+                                }}
+                              >
+                                {todo.title}
+                              </Typography>
+                              <Chip
+                                label={todo.priority}
+                                size="small"
+                                color={getPriorityColor(todo.priority)}
+                                sx={{ height: 20, fontSize: "0.7rem" }}
+                              />
+                            </Box>
+                          }
+                          secondary={
+                            todo.dueDate && (
+                              <Box
+                                sx={{ display: "flex", alignItems: "center" }}
+                              >
+                                <ScheduleIcon
+                                  sx={{
+                                    fontSize: 14,
+                                    mr: 0.5,
+                                    color: "#6d4c41",
+                                  }}
+                                />
+                                <Typography
+                                  variant="caption"
+                                  sx={{ color: "#6d4c41" }}
+                                >
+                                  {moment(todo.dueDate).format("MMM DD, YYYY")}
+                                </Typography>
+                              </Box>
+                            )
+                          }
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEditTodo(todo)}
+                          sx={{
+                            color: "#8B4513",
+                            "&:hover": {
+                              backgroundColor: "rgba(139, 69, 19, 0.1)",
+                            },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteTodo(todo.id)}
+                          sx={{
+                            color: "#D32F2F",
+                            "&:hover": {
+                              backgroundColor: "rgba(211, 47, 47, 0.1)",
+                            },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </ListItem>
+                    ))
+                ) : (
+                  <ListItem sx={{ px: 0, py: 4, textAlign: "center" }}>
+                    <ListItemText
+                      primary={
+                        <Typography sx={{ color: "#6d4c41" }}>
+                          No tasks yet. Create your first task!
+                        </Typography>
+                      }
+                    />
+                  </ListItem>
+                )}
+              </List>
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
+
+      {/* Todo Dialog */}
+      <Dialog
+        open={todoDialog}
+        onClose={() => setTodoDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            border: "1px solid #d7ccc8",
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "#8B4513", fontWeight: 600 }}>
+          {selectedTodo ? "Edit Task" : "Create New Task"}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                label="Title"
+                value={todoForm.title}
+                onChange={(e) =>
+                  setTodoForm({ ...todoForm, title: e.target.value })
+                }
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    "&:hover fieldset": {
+                      borderColor: "#8B4513",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#8B4513",
+                    },
+                  },
+                  "& .MuiInputLabel-root.Mui-focused": {
+                    color: "#8B4513",
+                  },
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                label="Description"
+                multiline
+                rows={3}
+                value={todoForm.description}
+                onChange={(e) =>
+                  setTodoForm({ ...todoForm, description: e.target.value })
+                }
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    "&:hover fieldset": {
+                      borderColor: "#8B4513",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#8B4513",
+                    },
+                  },
+                  "& .MuiInputLabel-root.Mui-focused": {
+                    color: "#8B4513",
+                  },
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 6 }}>
+              <FormControl fullWidth>
+                <InputLabel sx={{ "&.Mui-focused": { color: "#8B4513" } }}>
+                  Priority
+                </InputLabel>
+                <Select
+                  value={todoForm.priority}
+                  onChange={(e) =>
+                    setTodoForm({
+                      ...todoForm,
+                      priority: e.target.value as
+                        | "low"
+                        | "medium"
+                        | "high"
+                        | "urgent",
+                    })
+                  }
+                  sx={{
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#8B4513",
+                    },
+                  }}
+                >
+                  <SelectMenuItem value="low">Low</SelectMenuItem>
+                  <SelectMenuItem value="medium">Medium</SelectMenuItem>
+                  <SelectMenuItem value="high">High</SelectMenuItem>
+                  <SelectMenuItem value="urgent">Urgent</SelectMenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 6 }}>
+              <FormControl fullWidth>
+                <InputLabel sx={{ "&.Mui-focused": { color: "#8B4513" } }}>
+                  Status
+                </InputLabel>
+                <Select
+                  value={todoForm.status}
+                  onChange={(e) =>
+                    setTodoForm({
+                      ...todoForm,
+                      status: e.target.value as
+                        | "pending"
+                        | "in_progress"
+                        | "completed"
+                        | "cancelled",
+                    })
+                  }
+                  sx={{
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#8B4513",
+                    },
+                  }}
+                >
+                  <SelectMenuItem value="pending">Pending</SelectMenuItem>
+                  <SelectMenuItem value="in_progress">
+                    In Progress
+                  </SelectMenuItem>
+                  <SelectMenuItem value="completed">Completed</SelectMenuItem>
+                  <SelectMenuItem value="cancelled">Cancelled</SelectMenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 6 }}>
+              <TextField
+                fullWidth
+                label="Due Date"
+                type="date"
+                value={todoForm.dueDate}
+                onChange={(e) =>
+                  setTodoForm({ ...todoForm, dueDate: e.target.value })
+                }
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    "&:hover fieldset": {
+                      borderColor: "#8B4513",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#8B4513",
+                    },
+                  },
+                  "& .MuiInputLabel-root.Mui-focused": {
+                    color: "#8B4513",
+                  },
+                }}
+              />
+            </Grid>
+            {/* Assign To removed - todos are admin reminders */}
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button
+            onClick={() => setTodoDialog(false)}
+            sx={{
+              color: "#6d4c41",
+              "&:hover": {
+                backgroundColor: "rgba(109, 76, 65, 0.1)",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveTodo}
+            sx={{
+              backgroundColor: "#8B4513",
+              "&:hover": { backgroundColor: "#A0522D" },
+              fontWeight: 600,
+            }}
+          >
+            {selectedTodo ? "Update" : "Create"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

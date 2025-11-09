@@ -307,21 +307,46 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: "1200px", margin: "0 auto" }}>
-      <Typography
-        variant="h4"
-        sx={{ mb: 4, fontWeight: 700, color: "text.primary" }}
+    <Box
+      sx={{
+        p: { xs: 2, md: 3 },
+        maxWidth: "1200px",
+        margin: "0 auto",
+        backgroundColor: "#faf6f2",
+        minHeight: "100vh",
+      }}
+    >
+      <Box
+        sx={{
+          mb: 4,
+          p: 3,
+          backgroundColor: "#8B4513",
+          borderRadius: 3,
+          boxShadow: "0 4px 12px rgba(139, 69, 19, 0.3)",
+        }}
       >
-        Settings
-      </Typography>
+        <Typography variant="h4" sx={{ fontWeight: 700, color: "white" }}>
+          Settings
+        </Typography>
+      </Box>
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {/* Profile Settings Section */}
-        <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
+        <Card
+          sx={{
+            borderRadius: 3,
+            boxShadow: "0 4px 12px rgba(139, 69, 19, 0.15)",
+            border: "1px solid #d7ccc8",
+            backgroundColor: "white",
+          }}
+        >
           <CardContent sx={{ p: 4 }}>
             <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
-              <PersonIcon sx={{ mr: 2, color: "primary.main", fontSize: 32 }} />
-              <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              <PersonIcon sx={{ mr: 2, color: "#8B4513", fontSize: 32 }} />
+              <Typography
+                variant="h5"
+                sx={{ fontWeight: 600, color: "#3e2723" }}
+              >
                 Profile Information
               </Typography>
             </Box>
@@ -535,8 +560,8 @@ const Settings: React.FC = () => {
                     onClick={handleSaveProfile}
                     disabled={loading || !hasProfileChanges()}
                     sx={{
-                      backgroundColor: "primary.main",
-                      "&:hover": { backgroundColor: "primary.dark" },
+                      backgroundColor: "#8B4513",
+                      "&:hover": { backgroundColor: "#A0522D" },
                       borderRadius: 2,
                       py: 1.5,
                       px: 4,
@@ -552,18 +577,37 @@ const Settings: React.FC = () => {
         </Card>
 
         {/* Security Settings Section */}
-        <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
+        <Card
+          sx={{
+            borderRadius: 3,
+            boxShadow: "0 4px 12px rgba(139, 69, 19, 0.15)",
+            border: "1px solid #d7ccc8",
+            backgroundColor: "white",
+          }}
+        >
           <CardContent sx={{ p: 4 }}>
             <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
-              <SecurityIcon
-                sx={{ mr: 2, color: "primary.main", fontSize: 32 }}
-              />
-              <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              <SecurityIcon sx={{ mr: 2, color: "#8B4513", fontSize: 32 }} />
+              <Typography
+                variant="h5"
+                sx={{ fontWeight: 600, color: "#3e2723" }}
+              >
                 Security Settings
               </Typography>
             </Box>
 
-            <Alert severity="info" sx={{ mb: 4, borderRadius: 2 }}>
+            <Alert
+              severity="info"
+              sx={{
+                mb: 4,
+                borderRadius: 2,
+                backgroundColor: "rgba(139, 69, 19, 0.1)",
+                color: "#5d4037",
+                "& .MuiAlert-icon": {
+                  color: "#8B4513",
+                },
+              }}
+            >
               Choose a strong password with at least 6 characters.
             </Alert>
 
@@ -621,8 +665,8 @@ const Settings: React.FC = () => {
                   !passwordForm.confirmPassword
                 }
                 sx={{
-                  backgroundColor: "secondary.main",
-                  "&:hover": { backgroundColor: "secondary.dark" },
+                  backgroundColor: "#A0522D",
+                  "&:hover": { backgroundColor: "#8B4513" },
                   borderRadius: 2,
                   py: 1.5,
                   px: 4,

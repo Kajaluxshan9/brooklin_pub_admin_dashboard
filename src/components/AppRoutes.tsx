@@ -9,7 +9,6 @@ import SpecialsManagement from "../pages/SpecialsManagement";
 import EventsManagement from "../pages/EventsManagement";
 import UserManagement from "../pages/UserManagement";
 import OpeningHours from "../pages/OpeningHours";
-import TodoManagement from "../pages/TodoManagement";
 import Settings from "../pages/Settings";
 import LoadingScreen from "../components/LoadingScreen";
 
@@ -38,7 +37,6 @@ const AppRoutes: React.FC = () => {
         <Route path="events" element={<EventsManagement />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="hours" element={<OpeningHours />} />
-        <Route path="todos" element={<TodoManagement />} />
         <Route path="settings" element={<Settings />} />
       </Route>
       <Route path="/login" element={<Navigate to="/" replace />} />

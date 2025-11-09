@@ -260,16 +260,20 @@ const UserManagement: React.FC = () => {
   };
 
   return (
-    <Box>
+    <Box sx={{ backgroundColor: "#faf6f2", minHeight: "100vh", p: 3 }}>
       <Box
         sx={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           mb: 3,
+          p: 3,
+          backgroundColor: "#8B4513",
+          borderRadius: 3,
+          boxShadow: "0 4px 12px rgba(139, 69, 19, 0.3)",
         }}
       >
-        <Typography variant="h4" sx={{ fontWeight: 600 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, color: "white" }}>
           User Management
         </Typography>
         <Button
@@ -277,8 +281,10 @@ const UserManagement: React.FC = () => {
           startIcon={<AddIcon />}
           onClick={handleCreate}
           sx={{
-            backgroundColor: "#8B4513",
-            "&:hover": { backgroundColor: "#A0522D" },
+            backgroundColor: "white",
+            color: "#8B4513",
+            fontWeight: 600,
+            "&:hover": { backgroundColor: "#f5f5f5" },
           }}
         >
           Add User

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { api } from "../utils/api";
 import {
   Box,
   Typography,
@@ -31,7 +32,6 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Person as PersonIcon,
   Schedule as ScheduleIcon,
   CheckCircle as CheckCircleIcon,
   RadioButtonUnchecked as UncheckedIcon,
@@ -62,8 +62,6 @@ interface Todo {
   description: string;
   priority: PriorityValue;
   status: TodoStatusValue;
-  assignedUserId?: string;
-  assignedUserName?: string;
   createdUserId: string;
   createdUserName: string;
   dueDate?: Date;
@@ -81,65 +79,26 @@ const TodoManagement: React.FC = () => {
     description: string;
     priority: PriorityValue;
     status: TodoStatusValue;
-    assignedUserId: string;
+
     dueDate: string;
   }>({
     title: "",
     description: "",
     priority: Priority.MEDIUM,
     status: TodoStatus.PENDING,
-    assignedUserId: "",
     dueDate: "",
   });
 
-  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
-
   useEffect(() => {
     loadTodos();
-    loadUsers();
   }, []);
 
-  const loadUsers = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/users", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(
-          data.map(
-            (user: { id: string; firstName: string; lastName: string }) => ({
-              id: user.id,
-              name: `${user.firstName} ${user.lastName}`,
-            })
-          )
-        );
-      } else {
-        console.error("Failed to load users");
-      }
-    } catch (error) {
-      console.error("Error loading users:", error);
-    }
-  };
+  // users and assign-to removed - todos are admin reminders
 
   const loadTodos = async () => {
     try {
-      const response = await fetch("http://localhost:5000/todos", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setTodos(data);
-      } else {
-        console.error("Failed to load todos");
-        setTodos([]);
-      }
+      const response = await api.get("/todos");
+      setTodos(response.data || []);
     } catch (error) {
       console.error("Error loading todos:", error);
       setTodos([]);
@@ -153,7 +112,6 @@ const TodoManagement: React.FC = () => {
       description: "",
       priority: Priority.MEDIUM,
       status: TodoStatus.PENDING,
-      assignedUserId: "",
       dueDate: "",
     });
     setDialogOpen(true);
@@ -166,7 +124,7 @@ const TodoManagement: React.FC = () => {
       description: todo.description,
       priority: todo.priority,
       status: todo.status,
-      assignedUserId: todo.assignedUserId || "",
+
       dueDate: todo.dueDate ? moment(todo.dueDate).format("YYYY-MM-DD") : "",
     });
     setDialogOpen(true);
@@ -176,26 +134,20 @@ const TodoManagement: React.FC = () => {
     try {
       const todoData = {
         ...todoForm,
-        dueDate: todoForm.dueDate ? new Date(todoForm.dueDate) : undefined,
+        dueDate: todoForm.dueDate
+          ? new Date(todoForm.dueDate).toISOString()
+          : null,
       };
 
-      const url = selectedTodo
-        ? `http://localhost:5000/todos/${selectedTodo.id}`
-        : "http://localhost:5000/todos";
+      let response;
+      if (selectedTodo) {
+        response = await api.patch(`/todos/${selectedTodo.id}`, todoData);
+      } else {
+        response = await api.post("/todos", todoData);
+      }
 
-      const method = selectedTodo ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(todoData),
-      });
-
-      if (response.ok) {
-        loadTodos();
+      if (response.status === 201 || response.status === 200) {
+        await loadTodos();
         setDialogOpen(false);
       } else {
         console.error("Failed to save todo");
@@ -208,15 +160,9 @@ const TodoManagement: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this todo?")) {
       try {
-        const response = await fetch(`http://localhost:5000/todos/${id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-
-        if (response.ok) {
-          loadTodos();
+        const response = await api.delete(`/todos/${id}`);
+        if (response.status === 200) {
+          await loadTodos();
         } else {
           console.error("Failed to delete todo");
         }
@@ -228,18 +174,9 @@ const TodoManagement: React.FC = () => {
 
   const handleToggleComplete = async (id: string) => {
     try {
-      const response = await fetch(
-        `http://localhost:5000/todos/${id}/toggle-complete`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        loadTodos();
+      const response = await api.patch(`/todos/${id}/toggle-complete`);
+      if (response.status === 200) {
+        await loadTodos();
       } else {
         console.error("Failed to toggle todo completion");
       }
@@ -491,17 +428,7 @@ const TodoManagement: React.FC = () => {
                 />
 
                 <List dense sx={{ p: 0 }}>
-                  {todo.assignedUserName && (
-                    <ListItem sx={{ px: 0 }}>
-                      <ListItemIcon sx={{ minWidth: 32 }}>
-                        <PersonIcon fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={todo.assignedUserName}
-                        secondary="Assigned to"
-                      />
-                    </ListItem>
-                  )}
+                  {/* assigned user removed - todos are admin reminders */}
 
                   {todo.dueDate && (
                     <ListItem sx={{ px: 0 }}>
@@ -637,24 +564,7 @@ const TodoManagement: React.FC = () => {
               </FormControl>
             </Grid>
 
-            <Grid size={{ xs: 6 }}>
-              <FormControl fullWidth>
-                <InputLabel>Assign To</InputLabel>
-                <Select
-                  value={todoForm.assignedUserId}
-                  onChange={(e) =>
-                    setTodoForm({ ...todoForm, assignedUserId: e.target.value })
-                  }
-                >
-                  <MenuItem value="">Unassigned</MenuItem>
-                  {users.map((user) => (
-                    <MenuItem key={user.id} value={user.id}>
-                      {user.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+            {/* Assign To removed - todos are admin reminders */}
 
             <Grid size={{ xs: 6 }}>
               <TextField
