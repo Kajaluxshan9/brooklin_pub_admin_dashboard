@@ -8,19 +8,20 @@ import {
   TextField,
   Switch,
   FormControlLabel,
-  Chip,
   Alert,
   CircularProgress,
   Snackbar,
+  Chip,
 } from "@mui/material";
 import {
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-  Schedule as ScheduleIcon,
 } from "@mui/icons-material";
 import moment from "moment-timezone";
 import { useAuth } from "../contexts/AuthContext";
+import { PageHeader } from "../components/common/PageHeader";
+import { StatusChip } from "../components/common/StatusChip";
 
 // Timezone constant
 const TIMEZONE = "America/Toronto";
@@ -437,102 +438,32 @@ const OpeningHours: React.FC = () => {
 
   return (
     <Box sx={{ maxWidth: "100%", width: "100%" }}>
-      {/* Header Section */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          justifyContent: "space-between",
-          alignItems: { xs: "flex-start", sm: "center" },
-          mb: 4,
-          gap: 2,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 700,
-              color: "text.primary",
-              mb: 1,
-              fontSize: { xs: "1.75rem", sm: "2.125rem" },
-            }}
-          >
-            Opening Hours Management
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              color: "text.secondary",
-              fontSize: "1.1rem",
-            }}
-          >
-            Manage your pub's operating hours for each day of the week
-          </Typography>
-        </Box>
-
-        {/* Current Status */}
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: { xs: "flex-start", sm: "flex-end" },
-            gap: 1,
-          }}
-        >
-          <Chip
-            icon={<ScheduleIcon />}
+      {/* Header Section with Status */}
+      <PageHeader
+        title="Opening Hours Management"
+        subtitle="Manage your pub's operating hours for each day of the week"
+        statusChip={
+          <StatusChip
+            status={status.isOpen ? "open" : "closed"}
             label={status.isOpen ? "Currently Open" : "Currently Closed"}
-            color={status.isOpen ? "success" : "error"}
-            variant="filled"
-            sx={{
-              px: 2,
-              py: 1,
-              fontSize: "0.95rem",
-              fontWeight: 600,
-              borderRadius: 2,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-            }}
           />
+        }
+      />
+
+      {/* Status Message */}
+      {status.message && (
+        <Box sx={{ mb: 3 }}>
           <Typography
-            variant="caption"
+            variant="body2"
             sx={{
               color: "text.secondary",
-              textAlign: { xs: "left", sm: "right" },
+              fontSize: "0.95rem",
             }}
           >
             {status.message}
           </Typography>
-          <Typography
-            variant="caption"
-            sx={{ color: "text.disabled", fontSize: "0.75rem" }}
-          >
-            Current time:{" "}
-            {moment().tz(TIMEZONE).format("dddd, MMM Do - h:mm A")}
-          </Typography>
         </Box>
-      </Box>
-
-      {/* Info Alert */}
-      <Alert
-        severity="info"
-        sx={{
-          mb: 4,
-          borderRadius: 2,
-          border: "1px solid",
-          borderColor: "primary.light",
-          backgroundColor: "primary.50",
-          "& .MuiAlert-icon": {
-            color: "primary.main",
-          },
-        }}
-      >
-        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-          All times are in Toronto timezone (America/Toronto). Overnight hours
-          (e.g., Tuesday 11 AM to Wednesday 2 AM) are supported.
-        </Typography>
-      </Alert>
-
+      )}
       {/* Opening Hours Cards */}
       <Box
         sx={{

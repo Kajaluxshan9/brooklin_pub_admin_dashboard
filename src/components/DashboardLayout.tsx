@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import {
   Box,
@@ -16,6 +16,7 @@ import {
   Avatar,
   Menu,
   MenuItem,
+  Chip,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -28,9 +29,11 @@ import {
   Star as SpecialsIcon,
   Event as EventIcon,
   Schedule as ScheduleIcon,
+  AccessTime as AccessTimeIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import moment from "moment-timezone";
 
 const drawerWidth = 280;
 
@@ -47,9 +50,23 @@ const navigation = [
 const DashboardLayout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [currentTime, setCurrentTime] = useState<string>("");
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+
+  // Update clock every second
+  useEffect(() => {
+    const updateClock = () => {
+      const now = moment().tz("America/Toronto");
+      setCurrentTime(now.format("MMM DD, YYYY • h:mm:ss A"));
+    };
+
+    updateClock(); // Initial update
+    const interval = setInterval(updateClock, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -77,8 +94,9 @@ const DashboardLayout: React.FC = () => {
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <Toolbar
         sx={{
-          bgcolor: "#8B4513", // Brown header
-          color: "white",
+          bgcolor: "#FFFFFF",
+          borderBottom: "1px solid #E8E3DC",
+          color: "#2D2416",
           minHeight: { xs: 56, sm: 64 },
           px: 3,
         }}
@@ -93,62 +111,67 @@ const DashboardLayout: React.FC = () => {
             variant="h6"
             noWrap
             component="div"
-            sx={{ fontWeight: 700, fontSize: "1.2rem" }}
+            sx={{
+              fontWeight: 700,
+              fontSize: "1.125rem",
+              color: "#C87941",
+              letterSpacing: "-0.01em",
+            }}
           >
-            Brooklin Pub
+            The Brooklin Pub
           </Typography>
         </Box>
       </Toolbar>
-      <Divider sx={{ borderColor: "#d7ccc8" }} />
-      <Box sx={{ flex: 1, overflow: "auto", bgcolor: "#faf6f2" }}>
-        <List sx={{ pt: 2, px: 2 }}>
+      <Divider sx={{ borderColor: "#E8DDD0" }} />
+      <Box sx={{ flex: 1, overflow: "auto", bgcolor: "#FFFFFF", p: 2 }}>
+        <List sx={{ pt: 1 }}>
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 
             return (
-              <ListItem key={item.name} disablePadding sx={{ mb: 1 }}>
+              <ListItem key={item.name} disablePadding sx={{ mb: 0.5 }}>
                 <ListItemButton
                   selected={isActive}
                   onClick={() => navigate(item.path)}
                   sx={{
-                    borderRadius: 2,
-                    minHeight: 48,
+                    borderRadius: "10px",
+                    minHeight: 44,
                     px: 2,
-                    py: 1.5,
-                    transition: "all 0.2s ease-in-out",
+                    py: 1.25,
+                    transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
                     "&.Mui-selected": {
-                      backgroundColor: "#8B4513",
+                      backgroundColor: "#C87941",
                       color: "white",
-                      boxShadow: "0 3px 10px rgba(139, 69, 19, 0.3)",
+                      boxShadow: "0 1px 3px 0 rgba(200, 121, 65, 0.22)",
                       "&:hover": {
-                        backgroundColor: "#A0522D",
-                        transform: "translateY(-1px)",
-                        boxShadow: "0 4px 15px rgba(139, 69, 19, 0.4)",
+                        backgroundColor: "#D4842D",
+                        boxShadow: "0 4px 6px -1px rgba(200, 121, 65, 0.22)",
                       },
                       "& .MuiListItemIcon-root": {
                         color: "white",
                       },
                     },
                     "&:hover": {
-                      backgroundColor: isActive
-                        ? "#A0522D"
-                        : "rgba(139, 69, 19, 0.1)",
-                      transform: isActive ? "translateY(-1px)" : "none",
+                      backgroundColor: isActive ? "#D4842D" : "#FFF3E6",
                     },
                   }}
                 >
                   <ListItemIcon
-                    sx={{ minWidth: 40, color: isActive ? "white" : "#8B4513" }}
+                    sx={{
+                      minWidth: 40,
+                      color: isActive ? "white" : "#C87941",
+                      transition: "color 0.15s",
+                    }}
                   >
-                    <Icon />
+                    <Icon fontSize="small" />
                   </ListItemIcon>
                   <ListItemText
                     primary={item.name}
                     primaryTypographyProps={{
-                      fontWeight: isActive ? 700 : 600,
-                      fontSize: "0.95rem",
-                      color: isActive ? "white" : "#5d4037",
+                      fontWeight: isActive ? 600 : 400,
+                      fontSize: "0.875rem",
+                      color: isActive ? "white" : "#000000",
                     }}
                   />
                 </ListItemButton>
@@ -164,15 +187,16 @@ const DashboardLayout: React.FC = () => {
     <Box sx={{ display: "flex" }}>
       <AppBar
         position="fixed"
-        elevation={0}
+        elevation={4}
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
           bgcolor: "white",
-          color: "#3e2723",
-          borderBottom: "2px solid #d7ccc8",
-          backdropFilter: "blur(10px)",
-          boxShadow: "0 2px 10px rgba(139, 69, 19, 0.1)",
+          color: "#2C1810",
+          borderBottom: "none",
+          backdropFilter: "blur(20px)",
+          boxShadow:
+            "0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)",
         }}
       >
         <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
@@ -184,37 +208,32 @@ const DashboardLayout: React.FC = () => {
             sx={{
               mr: 2,
               display: { sm: "none" },
-              color: "#8B4513",
-              "&:hover": { backgroundColor: "rgba(139, 69, 19, 0.1)" },
+              color: "#C87941",
+              "&:hover": { backgroundColor: "#FFF3E6" },
             }}
           >
             <MenuIcon />
           </IconButton>
-          <Typography
-            variant="h5"
-            noWrap
-            component="div"
-            sx={{
-              flexGrow: 1,
-              fontWeight: 700,
-              color: "#8B4513",
-              fontSize: { xs: "1.25rem", sm: "1.5rem" },
-            }}
-          >
-            Admin Dashboard
-          </Typography>
+          <Box sx={{ flexGrow: 1 }} />
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Typography
-              variant="body2"
+            {/* Real-time Clock */}
+            <Chip
+              icon={<AccessTimeIcon sx={{ fontSize: "1rem" }} />}
+              label={currentTime}
+              variant="outlined"
+              size="medium"
               sx={{
-                mr: 1,
-                display: { xs: "none", md: "block" },
-                fontWeight: 600,
-                color: "#5d4037",
+                display: { xs: "none", md: "flex" },
+                borderColor: "#E8DDD0",
+                color: "#6B5D4F",
+                fontWeight: 500,
+                fontSize: "0.875rem",
+                backgroundColor: "#FFF8F0",
+                "& .MuiChip-icon": {
+                  color: "#C87941",
+                },
               }}
-            >
-              Welcome, {user?.firstName}
-            </Typography>
+            />
             <IconButton
               size="large"
               edge="end"
@@ -223,10 +242,10 @@ const DashboardLayout: React.FC = () => {
               aria-haspopup="true"
               onClick={handleProfileMenuOpen}
               sx={{
-                transition: "all 0.2s ease-in-out",
+                transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
                 "&:hover": {
                   transform: "scale(1.05)",
-                  backgroundColor: "rgba(139, 69, 19, 0.1)",
+                  backgroundColor: "#FFF3E6",
                 },
               }}
             >
@@ -234,10 +253,11 @@ const DashboardLayout: React.FC = () => {
                 sx={{
                   width: 40,
                   height: 40,
-                  bgcolor: "#8B4513",
-                  fontWeight: 700,
-                  boxShadow: "0 3px 10px rgba(139, 69, 19, 0.3)",
-                  border: "2px solid #d7ccc8",
+                  bgcolor: "#C87941",
+                  fontWeight: 600,
+                  fontSize: "0.938rem",
+                  boxShadow: "0 1px 3px 0 rgba(200, 121, 65, 0.22)",
+                  border: "2px solid #E8DDD0",
                 }}
               >
                 {user?.firstName?.charAt(0)}
@@ -258,12 +278,12 @@ const DashboardLayout: React.FC = () => {
           elevation: 8,
           sx: {
             overflow: "visible",
-            filter: "drop-shadow(0px 4px 16px rgba(139, 69, 19, 0.2))",
+            filter: "drop-shadow(0px 10px 15px rgba(200, 121, 65, 0.12))",
             mt: 1.5,
-            borderRadius: 3,
-            minWidth: 180,
-            backgroundColor: "#faf6f2",
-            border: "1px solid #d7ccc8",
+            borderRadius: 2,
+            minWidth: 200,
+            backgroundColor: "#FFFFFF",
+            border: "1px solid #E8DDD0",
             "& .MuiAvatar-root": {
               width: 32,
               height: 32,
@@ -272,17 +292,17 @@ const DashboardLayout: React.FC = () => {
             },
             "& .MuiMenuItem-root": {
               px: 2,
-              py: 1.5,
-              borderRadius: 2,
+              py: 1.25,
+              borderRadius: 1.5,
               mx: 1,
-              my: 0.5,
-              transition: "all 0.2s ease-in-out",
-              color: "#5d4037",
-              fontWeight: 600,
+              my: 0.25,
+              transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
+              color: "#6B4E3D",
+              fontWeight: 500,
+              fontSize: "0.875rem",
               "&:hover": {
-                backgroundColor: "rgba(139, 69, 19, 0.1)",
-                transform: "translateX(4px)",
-                color: "#8B4513",
+                backgroundColor: "#FFF3E6",
+                color: "#C87941",
               },
             },
           },
@@ -291,12 +311,12 @@ const DashboardLayout: React.FC = () => {
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
         <MenuItem onClick={() => navigate("/settings")}>
-          <AccountCircle sx={{ mr: 1, color: "#8B4513" }} />
+          <AccountCircle sx={{ mr: 1.5, color: "#C87941", fontSize: 20 }} />
           Profile Settings
         </MenuItem>
-        <Divider sx={{ borderColor: "#d7ccc8" }} />
+        <Divider sx={{ borderColor: "#E8DDD0", my: 0.5 }} />
         <MenuItem onClick={handleLogout}>
-          <LogoutIcon sx={{ mr: 1, color: "#8B4513" }} />
+          <LogoutIcon sx={{ mr: 1.5, color: "#C87941", fontSize: 20 }} />
           Logout
         </MenuItem>
       </Menu>
@@ -330,9 +350,10 @@ const DashboardLayout: React.FC = () => {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: drawerWidth,
-              bgcolor: "#faf6f2",
-              borderRight: "2px solid #d7ccc8",
-              boxShadow: "0 0 20px rgba(139, 69, 19, 0.1)",
+              bgcolor: "#FFFFFF",
+              borderRight: "1px solid #E8DDD0",
+              boxShadow:
+                "0 4px 6px -1px rgba(200, 121, 65, 0.12), 0 2px 4px -1px rgba(200, 121, 65, 0.08)",
             },
           }}
           open
@@ -346,8 +367,8 @@ const DashboardLayout: React.FC = () => {
         sx={{
           flexGrow: 1,
           minHeight: "100vh",
-          bgcolor: "#faf6f2", // Light brown background
-          transition: "all 0.3s ease-in-out",
+          bgcolor: "#FFF8F0",
+          transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
           width: { sm: `calc(100% - ${drawerWidth}px)` },
         }}
       >

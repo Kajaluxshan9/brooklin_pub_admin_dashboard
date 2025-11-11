@@ -39,6 +39,11 @@ import {
   Schedule as ScheduleIcon,
 } from "@mui/icons-material";
 import moment from "moment-timezone";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { PageHeader } from "../components/common/PageHeader";
+import { StatusChip } from "../components/common/StatusChip";
+import { ActionButtons } from "../components/common/ActionButtons";
 
 interface DashboardStats {
   menuItems: number;
@@ -84,6 +89,8 @@ interface Todo {
 // User interface removed (unused)
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     menuItems: 0,
     activeMenuItems: 0,
@@ -131,7 +138,7 @@ const Dashboard: React.FC = () => {
         });
 
         // Set menu category data
-        const categoryColors = ["#8B4513", "#D2691E", "#B8860B", "#CD853F"];
+        const categoryColors = ["#C87941", "#D4842D", "#E49B5F", "#F5A94C"];
         setMenuCategoryData(
           summary.menu.categories.map(
             (category: { name: string; itemCount: number }, index: number) => ({
@@ -253,7 +260,7 @@ const Dashboard: React.FC = () => {
       const categories =
         categoriesResponse.status === 200 ? categoriesResponse.data : [];
 
-      const categoryColors = ["#8B4513", "#D2691E", "#B8860B", "#CD853F"];
+      const categoryColors = ["#C87941", "#D4842D", "#E49B5F", "#F5A94C"];
       setMenuCategoryData(
         categories.map(
           (
@@ -443,43 +450,48 @@ const Dashboard: React.FC = () => {
       value: stats.activeMenuItems,
       total: stats.menuItems,
       icon: RestaurantIcon,
-      color: "#8B4513",
+      color: "#C87941",
       progress:
         stats.menuItems > 0
           ? (stats.activeMenuItems / stats.menuItems) * 100
           : 0,
+      path: "/menu",
     },
     {
       title: "Menu Categories",
       value: menuCategoryData.length,
       total: menuCategoryData.length,
       icon: RestaurantIcon,
-      color: "#D2691E",
+      color: "#D4842D",
       progress: 100,
+      path: "/menu",
     },
     {
       title: "Upcoming Events",
       value: stats.events,
       total: stats.events,
       icon: EventIcon,
-      color: "#B8860B",
+      color: "#E49B5F",
       progress: 100,
+      path: "/events",
     },
     {
       title: "Active Specials",
       value: stats.specials,
       total: stats.specials,
       icon: SpecialsIcon,
-      color: "#CD853F",
+      color: "#F5A94C",
       progress: 100,
+      path: "/specials",
     },
     {
       title: "Active Users",
       value: stats.activeUsers,
       total: stats.users,
       icon: PeopleIcon,
-      color: "#A0522D",
+      color: "#A68B65",
       progress: stats.users > 0 ? (stats.activeUsers / stats.users) * 100 : 0,
+      path: "/users",
     },
   ];
 
@@ -510,99 +522,70 @@ const Dashboard: React.FC = () => {
       sx={{
         width: "100%",
         maxWidth: "100%",
-        backgroundColor: "#faf6f2",
+        backgroundColor: "transparent",
         minHeight: "100vh",
-        p: 2,
       }}
     >
       {/* Header Section */}
-      <Box
-        sx={{
-          mb: 4,
-          p: 3,
-          backgroundColor: "#8B4513",
-          borderRadius: 3,
-          boxShadow: "0 4px 12px rgba(139, 69, 19, 0.3)",
-        }}
-      >
-        <Typography
-          variant="h3"
-          sx={{
-            fontWeight: 800,
-            color: "white",
-            mb: 1,
-            fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
-          }}
-        >
-          Dashboard Overview
-        </Typography>
-        <Typography
-          variant="h6"
-          sx={{
-            color: "rgba(255, 255, 255, 0.9)",
-            fontWeight: 500,
-            fontSize: { xs: "1rem", sm: "1.25rem" },
-          }}
-        >
-          Welcome back! Here's what's happening at Brooklin Pub today.
-        </Typography>
-      </Box>
+      <PageHeader
+        title={`Welcome, ${user?.firstName || 'Admin'}!`}
+        subtitle="Here's what's happening at Brooklin Pub today."
+      />
 
       {/* Stats Cards */}
-      <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mb: 5 }}>
+      <Grid container spacing={{ xs: 2, sm: 2.5 }} sx={{ mb: 4 }}>
         {statsCards.map((card) => {
           const Icon = card.icon;
           return (
             <Grid size={{ xs: 12, sm: 6, lg: 2.4 }} key={card.title}>
               <Card
+                onClick={() => navigate(card.path)}
                 sx={{
                   height: "100%",
-                  borderRadius: 3,
-                  border: "1px solid #d7ccc8",
+                  borderRadius: 2.5,
+                  border: "1px solid #E8E3DC",
                   background: "white",
-                  boxShadow: "0 4px 12px rgba(139, 69, 19, 0.15)",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  boxShadow:
+                    "0 1px 3px 0 rgba(212, 165, 116, 0.1), 0 1px 2px 0 rgba(212, 165, 116, 0.06)",
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                   cursor: "pointer",
                   position: "relative",
-                  overflow: "hidden",
+                  overflow: "visible",
                   "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: "0 8px 25px rgba(139, 69, 19, 0.25)",
-                  },
-                  "&::before": {
-                    content: '""',
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 4,
-                    background: card.color,
+                    transform: "translateY(-2px)",
+                    boxShadow:
+                      "0 10px 15px -3px rgba(200, 121, 65, 0.12), 0 4px 6px -2px rgba(200, 121, 65, 0.08)",
+                    borderColor: "#C87941",
                   },
                 }}
               >
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                <CardContent sx={{ p: 2.5 }}>
+                  <Box
+                    sx={{ display: "flex", alignItems: "flex-start", mb: 2.5 }}
+                  >
                     <Box
                       sx={{
-                        p: 2,
+                        p: 1.5,
                         borderRadius: 2,
-                        bgcolor: `rgba(139, 69, 19, 0.1)`,
+                        bgcolor: `${card.color}15`,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        mr: 2,
+                        mr: 1.5,
                       }}
                     >
-                      <Icon sx={{ fontSize: 32, color: card.color }} />
+                      <Icon sx={{ fontSize: 28, color: card.color }} />
                     </Box>
                     <Box sx={{ flex: 1 }}>
                       <Typography
-                        variant="h6"
+                        variant="body2"
                         sx={{
-                          fontWeight: 700,
-                          color: "#3e2723",
-                          fontSize: "1rem",
-                          lineHeight: 1.2,
+                          fontWeight: 500,
+                          color: "#6B5D4F",
+                          fontSize: "0.813rem",
+                          lineHeight: 1.3,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
                         }}
                       >
                         {card.title}
@@ -610,13 +593,13 @@ const Dashboard: React.FC = () => {
                     </Box>
                   </Box>
 
-                  <Box sx={{ mb: 2 }}>
+                  <Box sx={{ mb: 1.5 }}>
                     <Typography
                       variant="h3"
                       sx={{
-                        fontWeight: 800,
-                        color: card.color,
-                        fontSize: { xs: "2rem", sm: "2.5rem" },
+                        fontWeight: 700,
+                        color: "#2D2416",
+                        fontSize: { xs: "1.75rem", sm: "2rem" },
                         lineHeight: 1,
                         mb: 0.5,
                       }}
@@ -627,8 +610,9 @@ const Dashboard: React.FC = () => {
                       <Typography
                         variant="body2"
                         sx={{
-                          color: "#5d4037",
-                          fontWeight: 600,
+                          color: "#AFA69A",
+                          fontWeight: 400,
+                          fontSize: "0.813rem",
                         }}
                       >
                         of {card.total.toLocaleString()} total
@@ -681,26 +665,27 @@ const Dashboard: React.FC = () => {
       </Grid>
 
       {/* Content Sections */}
-      <Grid container spacing={{ xs: 2, sm: 3 }}>
+      <Grid container spacing={{ xs: 2, sm: 2.5 }}>
         {/* Recent Activity */}
         <Grid size={{ xs: 12, lg: 6 }}>
           <Paper
             sx={{
-              p: 4,
-              borderRadius: 3,
+              p: 3,
+              borderRadius: 2.5,
               height: "fit-content",
               backgroundColor: "white",
-              boxShadow: "0 4px 12px rgba(139, 69, 19, 0.15)",
-              border: "1px solid #d7ccc8",
+              boxShadow:
+                "0 1px 3px 0 rgba(212, 165, 116, 0.1), 0 1px 2px 0 rgba(212, 165, 116, 0.06)",
+              border: "1px solid #E8E3DC",
             }}
           >
             <Typography
               variant="h6"
               sx={{
                 mb: 3,
-                fontWeight: 700,
-                fontSize: "1.25rem",
-                color: "#8B4513",
+                fontWeight: 600,
+                fontSize: "1.125rem",
+                color: "#2D2416",
               }}
             >
               Recent Activity
@@ -722,19 +707,19 @@ const Dashboard: React.FC = () => {
                   >
                     <ListItemIcon>
                       {activity.type === "menu" && (
-                        <RestaurantIcon sx={{ color: "#8B4513" }} />
+                        <RestaurantIcon sx={{ color: "#C87941" }} />
                       )}
                       {activity.type === "user" && (
-                        <PeopleIcon sx={{ color: "#A0522D" }} />
+                        <PeopleIcon sx={{ color: "#D4842D" }} />
                       )}
                       {activity.type === "event" && (
-                        <EventIcon sx={{ color: "#D2691E" }} />
+                        <EventIcon sx={{ color: "#E49B5F" }} />
                       )}
                       {activity.type === "special" && (
-                        <SpecialsIcon sx={{ color: "#CD853F" }} />
+                        <SpecialsIcon sx={{ color: "#F5A94C" }} />
                       )}
                       {activity.type === "system" && (
-                        <CheckCircleIcon sx={{ color: "#B8860B" }} />
+                        <CheckCircleIcon sx={{ color: "#E8B67D" }} />
                       )}
                     </ListItemIcon>
                     <ListItemText
@@ -792,7 +777,7 @@ const Dashboard: React.FC = () => {
                   sx={{
                     fontWeight: 700,
                     fontSize: "1.25rem",
-                    color: "#8B4513",
+                    color: "#C87941",
                   }}
                 >
                   Tasks & To-Do
@@ -803,8 +788,8 @@ const Dashboard: React.FC = () => {
                   size="small"
                   onClick={handleCreateTodo}
                   sx={{
-                    backgroundColor: "#8B4513",
-                    "&:hover": { backgroundColor: "#A0522D" },
+                    backgroundColor: "#C87941",
+                    "&:hover": { backgroundColor: "#A45F2D" },
                     textTransform: "none",
                     fontWeight: 600,
                   }}
@@ -846,7 +831,7 @@ const Dashboard: React.FC = () => {
                     <Typography
                       variant="h4"
                       fontWeight={700}
-                      sx={{ color: "#D2691E" }}
+                      sx={{ color: "#C87941" }}
                     >
                       {stats.todos - stats.completedTodos}
                     </Typography>
@@ -862,9 +847,9 @@ const Dashboard: React.FC = () => {
                   sx={{
                     height: 8,
                     borderRadius: 4,
-                    backgroundColor: "rgba(139, 69, 19, 0.2)",
+                    backgroundColor: "rgba(200, 121, 65, 0.2)",
                     "& .MuiLinearProgress-bar": {
-                      backgroundColor: "#8B4513",
+                      backgroundColor: "#C87941",
                       borderRadius: 4,
                     },
                   }}
@@ -894,9 +879,9 @@ const Dashboard: React.FC = () => {
                             icon={<UncheckedIcon />}
                             checkedIcon={<CheckCircleIcon />}
                             sx={{
-                              color: "#8B4513",
+                              color: "#C87941",
                               "&.Mui-checked": {
-                                color: "#8B4513",
+                                color: "#C87941",
                               },
                             }}
                           />
@@ -922,11 +907,18 @@ const Dashboard: React.FC = () => {
                               >
                                 {todo.title}
                               </Typography>
-                              <Chip
+                              <StatusChip
+                                status={
+                                  todo.priority === "urgent"
+                                    ? "error"
+                                    : todo.priority === "high"
+                                    ? "warning"
+                                    : todo.priority === "medium"
+                                    ? "info"
+                                    : "success"
+                                }
                                 label={todo.priority}
                                 size="small"
-                                color={getPriorityColor(todo.priority)}
-                                sx={{ height: 20, fontSize: "0.7rem" }}
                               />
                             </Box>
                           }
@@ -952,30 +944,11 @@ const Dashboard: React.FC = () => {
                             )
                           }
                         />
-                        <IconButton
+                        <ActionButtons
                           size="small"
-                          onClick={() => handleEditTodo(todo)}
-                          sx={{
-                            color: "#8B4513",
-                            "&:hover": {
-                              backgroundColor: "rgba(139, 69, 19, 0.1)",
-                            },
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteTodo(todo.id)}
-                          sx={{
-                            color: "#D32F2F",
-                            "&:hover": {
-                              backgroundColor: "rgba(211, 47, 47, 0.1)",
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                          onEdit={() => handleEditTodo(todo)}
+                          onDelete={() => handleDeleteTodo(todo.id)}
+                        />
                       </ListItem>
                     ))
                 ) : (
@@ -1008,7 +981,7 @@ const Dashboard: React.FC = () => {
           },
         }}
       >
-        <DialogTitle sx={{ color: "#8B4513", fontWeight: 600 }}>
+        <DialogTitle sx={{ color: "#C87941", fontWeight: 600 }}>
           {selectedTodo ? "Edit Task" : "Create New Task"}
         </DialogTitle>
         <DialogContent>
@@ -1024,14 +997,14 @@ const Dashboard: React.FC = () => {
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     "&:hover fieldset": {
-                      borderColor: "#8B4513",
+                      borderColor: "#C87941",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#8B4513",
+                      borderColor: "#C87941",
                     },
                   },
                   "& .MuiInputLabel-root.Mui-focused": {
-                    color: "#8B4513",
+                    color: "#C87941",
                   },
                 }}
               />
@@ -1049,21 +1022,21 @@ const Dashboard: React.FC = () => {
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     "&:hover fieldset": {
-                      borderColor: "#8B4513",
+                      borderColor: "#C87941",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#8B4513",
+                      borderColor: "#C87941",
                     },
                   },
                   "& .MuiInputLabel-root.Mui-focused": {
-                    color: "#8B4513",
+                    color: "#C87941",
                   },
                 }}
               />
             </Grid>
             <Grid size={{ xs: 6 }}>
               <FormControl fullWidth>
-                <InputLabel sx={{ "&.Mui-focused": { color: "#8B4513" } }}>
+                <InputLabel sx={{ "&.Mui-focused": { color: "#C87941" } }}>
                   Priority
                 </InputLabel>
                 <Select
@@ -1080,7 +1053,7 @@ const Dashboard: React.FC = () => {
                   }
                   sx={{
                     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "#8B4513",
+                      borderColor: "#C87941",
                     },
                   }}
                 >
@@ -1093,7 +1066,7 @@ const Dashboard: React.FC = () => {
             </Grid>
             <Grid size={{ xs: 6 }}>
               <FormControl fullWidth>
-                <InputLabel sx={{ "&.Mui-focused": { color: "#8B4513" } }}>
+                <InputLabel sx={{ "&.Mui-focused": { color: "#C87941" } }}>
                   Status
                 </InputLabel>
                 <Select
@@ -1110,7 +1083,7 @@ const Dashboard: React.FC = () => {
                   }
                   sx={{
                     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "#8B4513",
+                      borderColor: "#C87941",
                     },
                   }}
                 >
@@ -1138,14 +1111,14 @@ const Dashboard: React.FC = () => {
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     "&:hover fieldset": {
-                      borderColor: "#8B4513",
+                      borderColor: "#C87941",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#8B4513",
+                      borderColor: "#C87941",
                     },
                   },
                   "& .MuiInputLabel-root.Mui-focused": {
-                    color: "#8B4513",
+                    color: "#C87941",
                   },
                 }}
               />
@@ -1169,8 +1142,8 @@ const Dashboard: React.FC = () => {
             variant="contained"
             onClick={handleSaveTodo}
             sx={{
-              backgroundColor: "#8B4513",
-              "&:hover": { backgroundColor: "#A0522D" },
+              backgroundColor: "#C87941",
+              "&:hover": { backgroundColor: "#A45F2D" },
               fontWeight: 600,
             }}
           >

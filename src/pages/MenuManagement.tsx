@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -35,20 +35,47 @@ import {
   Search as SearchIcon,
   KeyboardArrowUp as ArrowUpIcon,
   KeyboardArrowDown as ArrowDownIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
   CloudUpload as UploadIcon,
+  CloudUpload as CloudUploadIcon,
   Close as CloseIcon,
   Image as ImageIcon,
 } from "@mui/icons-material";
 import { DataGrid, GridActionsCellItem } from "@mui/x-data-grid";
 import type { GridColDef } from "@mui/x-data-grid";
+import { PageHeader } from "../components/common/PageHeader";
+import { StatusChip } from "../components/common/StatusChip";
+import {
+  uploadImages,
+  parseBackendError,
+  getErrorMessage,
+} from "../utils/uploadHelpers";
+
+interface PrimaryCategory {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl?: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+  categories?: MenuCategory[];
+}
 
 interface MenuCategory {
   id: string;
   name: string;
   description: string;
+  imageUrl?: string;
   isActive: boolean;
   sortOrder: number;
+  primaryCategoryId?: string;
+  primaryCategory?: PrimaryCategory;
+  menuItems?: MenuItem[];
   createdAt: Date;
+  updatedAt: Date;
 }
 
 interface BackendMenuItem {
@@ -95,16 +122,34 @@ interface SnackbarState {
 
 const MenuManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
+  const [primaryCategories, setPrimaryCategories] = useState<PrimaryCategory[]>(
+    []
+  );
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+  const [primaryCategoryDialog, setPrimaryCategoryDialog] = useState(false);
   const [categoryDialog, setCategoryDialog] = useState(false);
   const [itemDialog, setItemDialog] = useState(false);
+  const [selectedPrimaryCategory, setSelectedPrimaryCategory] =
+    useState<PrimaryCategory | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory | null>(
     null
   );
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: "",
@@ -112,9 +157,19 @@ const MenuManagement: React.FC = () => {
   });
 
   // Form states
+  const [primaryCategoryForm, setPrimaryCategoryForm] = useState({
+    name: "",
+    description: "",
+    imageUrl: "",
+    isActive: true,
+    sortOrder: 0,
+  });
+
   const [categoryForm, setCategoryForm] = useState({
     name: "",
     description: "",
+    imageUrl: "",
+    primaryCategoryId: "",
     isActive: true,
     sortOrder: 0,
   });
@@ -138,19 +193,55 @@ const MenuManagement: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
-  useEffect(() => {
-    loadCategories();
-    loadMenuItems();
-  }, []);
+  const filteredCategories = useMemo(() => {
+    if (!debouncedSearchTerm) return categories;
+    return categories.filter((category) =>
+      category.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    );
+  }, [categories, debouncedSearchTerm]);
 
-  const showSnackbar = (
-    message: string,
-    severity: SnackbarState["severity"] = "success"
-  ) => {
-    setSnackbar({ open: true, message, severity });
-  };
+  const showSnackbar = useCallback(
+    (message: string, severity: SnackbarState["severity"] = "success") => {
+      setSnackbar({ open: true, message, severity });
+    },
+    []
+  );
 
-  const loadCategories = async () => {
+  const loadPrimaryCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        "http://localhost:5000/menu/primary-categories",
+        {
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setPrimaryCategories(
+          data.map((cat: PrimaryCategory) => ({
+            ...cat,
+            createdAt: new Date(cat.createdAt),
+          }))
+        );
+      } else {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to fetch primary categories");
+      }
+    } catch (error) {
+      console.error("Error fetching primary categories:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to load primary categories";
+      showSnackbar(errorMessage, "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [showSnackbar]);
+
+  const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("http://localhost:5000/menu/categories", {
@@ -165,19 +256,21 @@ const MenuManagement: React.FC = () => {
             createdAt: new Date(cat.createdAt),
           }))
         );
-        showSnackbar("Categories loaded successfully");
       } else {
-        throw new Error("Failed to fetch categories");
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to fetch categories");
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
-      showSnackbar("Failed to load categories", "error");
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to load categories";
+      showSnackbar(errorMessage, "error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [showSnackbar]);
 
-  const loadMenuItems = async () => {
+  const loadMenuItems = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("http://localhost:5000/menu/items", {
@@ -199,7 +292,6 @@ const MenuManagement: React.FC = () => {
             imageUrls: item.imageUrls || [],
           }))
         );
-        showSnackbar("Menu items loaded successfully");
       } else {
         throw new Error("Failed to fetch menu items");
       }
@@ -209,7 +301,13 @@ const MenuManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showSnackbar]);
+
+  useEffect(() => {
+    loadPrimaryCategories();
+    loadCategories();
+    loadMenuItems();
+  }, [loadPrimaryCategories, loadCategories, loadMenuItems]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -220,9 +318,13 @@ const MenuManagement: React.FC = () => {
     setCategoryForm({
       name: "",
       description: "",
+      imageUrl: "",
+      primaryCategoryId: "",
       isActive: true,
       sortOrder: categories.length,
     });
+    setSelectedFiles([]);
+    setImagePreviews([]);
     setCategoryDialog(true);
   };
 
@@ -231,9 +333,13 @@ const MenuManagement: React.FC = () => {
     setCategoryForm({
       name: category.name,
       description: category.description,
+      imageUrl: category.imageUrl || "",
+      primaryCategoryId: category.primaryCategoryId || "",
       isActive: category.isActive,
       sortOrder: category.sortOrder,
     });
+    setSelectedFiles([]);
+    setImagePreviews([]);
     setCategoryDialog(true);
   };
 
@@ -259,11 +365,6 @@ const MenuManagement: React.FC = () => {
   };
 
   const handleEditItem = (item: MenuItem) => {
-    // Debug: log item and its images to help diagnose missing previews
-    // eslint-disable-next-line no-console
-    console.log("handleEditItem item:", item);
-    // eslint-disable-next-line no-console
-    console.log("existing imageUrls:", item.imageUrls);
     setSelectedItem(item);
     setItemForm({
       name: item.name,
@@ -285,6 +386,187 @@ const MenuManagement: React.FC = () => {
     setSelectedFiles([]);
     setImagePreviews([]);
     setItemDialog(true);
+  };
+
+  // Primary Category handlers
+  const handleCreatePrimaryCategory = () => {
+    setSelectedPrimaryCategory(null);
+    setPrimaryCategoryForm({
+      name: "",
+      description: "",
+      imageUrl: "",
+      isActive: true,
+      sortOrder: primaryCategories.length,
+    });
+    setSelectedFiles([]);
+    setImagePreviews([]);
+    setPrimaryCategoryDialog(true);
+  };
+
+  const handleEditPrimaryCategory = (primaryCategory: PrimaryCategory) => {
+    setSelectedPrimaryCategory(primaryCategory);
+    setPrimaryCategoryForm({
+      name: primaryCategory.name,
+      description: primaryCategory.description,
+      imageUrl: primaryCategory.imageUrl || "",
+      isActive: primaryCategory.isActive,
+      sortOrder: primaryCategory.sortOrder,
+    });
+    setSelectedFiles([]);
+    setImagePreviews([]);
+    setPrimaryCategoryDialog(true);
+  };
+
+  const handleMovePrimaryCategoryOrder = async (
+    primaryCategoryId: string,
+    direction: "up" | "down"
+  ) => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `http://localhost:5000/menu/primary-categories/${primaryCategoryId}/move`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ direction }),
+        }
+      );
+
+      if (response.ok) {
+        await loadPrimaryCategories();
+        showSnackbar(`Primary category moved ${direction} successfully`);
+      } else {
+        const errorMessage = await parseBackendError(response);
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      console.error(`Error moving primary category ${direction}:`, error);
+      showSnackbar(getErrorMessage(error), "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSavePrimaryCategory = async () => {
+    try {
+      setLoading(true);
+
+      // Upload image if a new file is selected
+      let imageUrl = primaryCategoryForm.imageUrl;
+      if (selectedFiles.length > 0) {
+        setUploadingImage(true);
+        try {
+          const uploadedUrls = await uploadImages(selectedFiles);
+          imageUrl = uploadedUrls[0];
+        } catch (uploadError) {
+          showSnackbar(getErrorMessage(uploadError), "error");
+          return;
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+
+      const url = selectedPrimaryCategory
+        ? `http://localhost:5000/menu/primary-categories/${selectedPrimaryCategory.id}`
+        : "http://localhost:5000/menu/primary-categories";
+
+      const method = selectedPrimaryCategory ? "PATCH" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ ...primaryCategoryForm, imageUrl }),
+      });
+
+      if (response.ok) {
+        await loadPrimaryCategories();
+        showSnackbar(
+          `Primary category ${
+            selectedPrimaryCategory ? "updated" : "created"
+          } successfully`
+        );
+        setPrimaryCategoryDialog(false);
+        setSelectedFiles([]);
+        setImagePreviews([]);
+      } else {
+        const errorMessage = await parseBackendError(response);
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      console.error("Error saving primary category:", error);
+      showSnackbar(getErrorMessage(error), "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePrimaryCategory = async (id: string) => {
+    if (
+      window.confirm("Are you sure you want to delete this primary category?")
+    ) {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `http://localhost:5000/menu/primary-categories/${id}`,
+          {
+            method: "DELETE",
+            credentials: "include",
+          }
+        );
+
+        if (response.ok) {
+          await loadPrimaryCategories();
+          showSnackbar("Primary category deleted successfully");
+        } else {
+          const errorMessage = await parseBackendError(response);
+          throw new Error(errorMessage);
+        }
+      } catch (error) {
+        console.error("Error deleting primary category:", error);
+        showSnackbar(getErrorMessage(error), "error");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Update handleFileSelect to support category images
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const fileArray = Array.from(files);
+
+    // Validate file types
+    const validTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+    const invalidFiles = fileArray.filter(
+      (file) => !validTypes.includes(file.type)
+    );
+
+    if (invalidFiles.length > 0) {
+      showSnackbar("Only JPEG, PNG, and WebP images are allowed", "error");
+      return;
+    }
+
+    // Validate file sizes (1MB limit)
+    const oversizedFiles = fileArray.filter((file) => file.size > 1024 * 1024);
+
+    if (oversizedFiles.length > 0) {
+      showSnackbar("Image files must be less than 1MB", "error");
+      return;
+    }
+
+    setSelectedFiles(fileArray);
+
+    // Create previews
+    const previews = fileArray.map((file) => URL.createObjectURL(file));
+    setImagePreviews(previews);
   };
 
   const handleMoveCategoryOrder = async (
@@ -351,9 +633,25 @@ const MenuManagement: React.FC = () => {
     }
   };
 
-  const handleSaveCategory = async () => {
+  const handleSaveCategory = useCallback(async () => {
     try {
       setLoading(true);
+
+      // Upload image if a new file is selected
+      let imageUrl = categoryForm.imageUrl;
+      if (selectedFiles.length > 0) {
+        setUploadingImage(true);
+        try {
+          const uploadedUrls = await uploadImages(selectedFiles);
+          imageUrl = uploadedUrls[0];
+        } catch (uploadError) {
+          showSnackbar(getErrorMessage(uploadError), "error");
+          return;
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+
       const url = selectedCategory
         ? `http://localhost:5000/menu/categories/${selectedCategory.id}`
         : "http://localhost:5000/menu/categories";
@@ -366,11 +664,13 @@ const MenuManagement: React.FC = () => {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(categoryForm),
+        body: JSON.stringify({ ...categoryForm, imageUrl }),
       });
 
       if (response.ok) {
         setCategoryDialog(false);
+        setSelectedFiles([]);
+        setImagePreviews([]);
         await loadCategories();
         showSnackbar(
           selectedCategory
@@ -378,47 +678,57 @@ const MenuManagement: React.FC = () => {
             : "Category created successfully"
         );
       } else {
-        throw new Error("Failed to save category");
+        const errorMessage = await parseBackendError(response);
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("Error saving category:", error);
-      showSnackbar("Failed to save category", "error");
+      showSnackbar(getErrorMessage(error), "error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    selectedCategory,
+    categoryForm,
+    selectedFiles,
+    loadCategories,
+    showSnackbar,
+  ]);
 
-  const handleDeleteCategory = async (id: string) => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete this category? This will also delete all associated menu items."
-      )
-    ) {
-      try {
-        setLoading(true);
-        const response = await fetch(
-          `http://localhost:5000/menu/categories/${id}`,
-          {
-            method: "DELETE",
-            credentials: "include",
+  const handleDeleteCategory = useCallback(
+    async (id: string) => {
+      if (
+        window.confirm(
+          "Are you sure you want to delete this category? This will also delete all associated menu items."
+        )
+      ) {
+        try {
+          setLoading(true);
+          const response = await fetch(
+            `http://localhost:5000/menu/categories/${id}`,
+            {
+              method: "DELETE",
+              credentials: "include",
+            }
+          );
+
+          if (response.ok) {
+            await loadCategories();
+            await loadMenuItems();
+            showSnackbar("Category deleted successfully");
+          } else {
+            throw new Error("Failed to delete category");
           }
-        );
-
-        if (response.ok) {
-          await loadCategories();
-          await loadMenuItems();
-          showSnackbar("Category deleted successfully");
-        } else {
-          throw new Error("Failed to delete category");
+        } catch (error) {
+          console.error("Error deleting category:", error);
+          showSnackbar("Failed to delete category", "error");
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error("Error deleting category:", error);
-        showSnackbar("Failed to delete category", "error");
-      } finally {
-        setLoading(false);
       }
-    }
-  };
+    },
+    [loadCategories, loadMenuItems, showSnackbar]
+  );
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -634,33 +944,201 @@ const MenuManagement: React.FC = () => {
     }
   };
 
-  const categoryColumns: GridColDef[] = [
+  // Primary Category DataGrid columns
+  const primaryCategoryColumns: GridColDef[] = [
+    {
+      field: "imageUrl",
+      headerName: "Image",
+      width: 120,
+      sortable: false,
+      renderCell: (params) =>
+        params.value ? (
+          <Box
+            component="img"
+            src={params.value}
+            alt="Primary Category"
+            sx={{
+              width: 60,
+              height: 60,
+              objectFit: "cover",
+              borderRadius: 1.5,
+              border: "1px solid #E8E3DC",
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              width: 60,
+              height: 60,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: "#F5F5F5",
+              borderRadius: 1.5,
+              border: "1px solid #E8E3DC",
+            }}
+          >
+            <ImageIcon sx={{ color: "#999" }} />
+          </Box>
+        ),
+    },
     {
       field: "name",
       headerName: "Name",
-      width: 200,
+      width: 300,
       sortable: true,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
     },
     {
       field: "description",
       headerName: "Description",
-      width: 300,
+      width: 400,
       sortable: false,
-    },
-    {
-      field: "sortOrder",
-      headerName: "Order",
-      width: 100,
-      sortable: true,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
     },
     {
       field: "isActive",
       headerName: "Status",
       width: 120,
+      sortable: true,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
       renderCell: (params) => (
-        <Chip
+        <StatusChip status={params.value ? "active" : "inactive"} />
+      ),
+    },
+    {
+      field: "actions",
+      headerName: "Actions",
+      width: 180,
+      sortable: false,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
+      renderCell: (params) => (
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <IconButton
+            size="small"
+            onClick={() => handleMovePrimaryCategoryOrder(params.row.id, "up")}
+            sx={{ color: "#000000" }}
+            disabled={params.row.sortOrder === 0}
+          >
+            <ArrowUpwardIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() =>
+              handleMovePrimaryCategoryOrder(params.row.id, "down")
+            }
+            sx={{ color: "#000000" }}
+            disabled={params.row.sortOrder === primaryCategories.length - 1}
+          >
+            <ArrowDownwardIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handleEditPrimaryCategory(params.row)}
+            sx={{ color: "#000000" }}
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handleDeletePrimaryCategory(params.row.id)}
+            sx={{ color: "#D32F2F" }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ];
+
+  const categoryColumns: GridColDef[] = [
+    {
+      field: "imageUrl",
+      headerName: "Image",
+      width: 120,
+      sortable: false,
+      renderCell: (params) =>
+        params.value ? (
+          <Box
+            component="img"
+            src={params.value}
+            alt="Category"
+            sx={{
+              width: 60,
+              height: 60,
+              objectFit: "cover",
+              borderRadius: 1.5,
+              border: "1px solid #E8E3DC",
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              width: 60,
+              height: 60,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: "#F5F5F5",
+              borderRadius: 1.5,
+              border: "1px solid #E8E3DC",
+            }}
+          >
+            <ImageIcon sx={{ color: "#999" }} />
+          </Box>
+        ),
+    },
+    {
+      field: "name",
+      headerName: "Name",
+      width: 250,
+      sortable: true,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
+    },
+    {
+      field: "description",
+      headerName: "Description",
+      width: 350,
+      sortable: false,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
+    },
+    {
+      field: "isActive",
+      headerName: "Status",
+      width: 120,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
+      renderCell: (params) => (
+        <StatusChip
+          status={params.value ? "active" : "inactive"}
           label={params.value ? "Active" : "Inactive"}
-          color={params.value ? "success" : "default"}
           size="small"
         />
       ),
@@ -707,21 +1185,79 @@ const MenuManagement: React.FC = () => {
 
   const itemColumns: GridColDef[] = [
     {
+      field: "imageUrls",
+      headerName: "Image",
+      width: 120,
+      sortable: false,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
+      renderCell: (params) => {
+        const imageUrl = params.row.imageUrls?.[0];
+        return imageUrl ? (
+          <Box
+            component="img"
+            src={imageUrl}
+            alt={params.row.name}
+            sx={{
+              width: 60,
+              height: 60,
+              objectFit: "cover",
+              borderRadius: 1.5,
+              border: "1px solid #E8E3DC",
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              width: 60,
+              height: 60,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: "#F5F5F5",
+              borderRadius: 1.5,
+              border: "1px solid #E8E3DC",
+            }}
+          >
+            <ImageIcon sx={{ color: "#999" }} />
+          </Box>
+        );
+      },
+    },
+    {
       field: "name",
       headerName: "Name",
-      width: 200,
+      width: 220,
       sortable: true,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
     },
     {
       field: "categoryName",
       headerName: "Category",
       width: 150,
       sortable: true,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
     },
     {
       field: "price",
       headerName: "Price",
       width: 100,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
       renderCell: (params) => {
         const price = parseFloat(params.value);
         return isNaN(price) ? "$0.00" : `$${price.toFixed(2)}`;
@@ -729,29 +1265,14 @@ const MenuManagement: React.FC = () => {
       sortable: true,
     },
     {
-      field: "sortOrder",
-      headerName: "Order",
-      width: 80,
-      sortable: true,
-    },
-    {
-      field: "images",
-      headerName: "Images",
-      width: 100,
-      renderCell: (params) => (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <ImageIcon fontSize="small" />
-          <Typography variant="caption">
-            {params.row.imageUrls?.length || 0}
-          </Typography>
-        </Box>
-      ),
-      sortable: false,
-    },
-    {
       field: "dietary",
       headerName: "Dietary",
       width: 200,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
       renderCell: (params) => (
         <Box>
           {params.row.isVegetarian && (
@@ -772,10 +1293,15 @@ const MenuManagement: React.FC = () => {
       field: "isAvailable",
       headerName: "Available",
       width: 120,
+      renderHeader: (params) => (
+        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+          {params.colDef.headerName}
+        </Typography>
+      ),
       renderCell: (params) => (
-        <Chip
+        <StatusChip
+          status={params.value ? "active" : "inactive"}
           label={params.value ? "Available" : "Unavailable"}
-          color={params.value ? "success" : "default"}
           size="small"
         />
       ),
@@ -832,54 +1358,54 @@ const MenuManagement: React.FC = () => {
   );
 
   return (
-    <Box sx={{ backgroundColor: "#faf6f2", minHeight: "100vh", p: 3 }}>
+    <Box sx={{ minHeight: "100vh" }}>
       {loading && (
         <LinearProgress
           sx={{
             mb: 2,
-            backgroundColor: "rgba(139, 69, 19, 0.2)",
-            "& .MuiLinearProgress-bar": { backgroundColor: "#8B4513" },
+            backgroundColor: "rgba(200, 121, 65, 0.15)",
+            "& .MuiLinearProgress-bar": { backgroundColor: "#C87941" },
           }}
         />
       )}
 
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-          p: 3,
-          backgroundColor: "#8B4513",
-          borderRadius: 3,
-          boxShadow: "0 4px 12px rgba(139, 69, 19, 0.3)",
-        }}
-      >
-        <Typography variant="h4" sx={{ fontWeight: 600, color: "white" }}>
-          Menu Management
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={activeTab === 0 ? handleCreateCategory : handleCreateItem}
-          sx={{
-            backgroundColor: "white",
-            color: "#8B4513",
-            fontWeight: 600,
-            "&:hover": { backgroundColor: "#f5f5f5" },
-          }}
-        >
-          {activeTab === 0 ? "Add Category" : "Add Menu Item"}
-        </Button>
-      </Box>
+      <PageHeader
+        title="Menu Management"
+        subtitle="Manage your menu categories and items"
+        action={
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={
+              activeTab === 0
+                ? handleCreatePrimaryCategory
+                : activeTab === 1
+                ? handleCreateCategory
+                : handleCreateItem
+            }
+            sx={{
+              backgroundColor: "#C87941",
+              color: "white",
+              fontWeight: 600,
+              "&:hover": { backgroundColor: "#A45F2D" },
+            }}
+          >
+            {activeTab === 0
+              ? "Add Primary Category"
+              : activeTab === 1
+              ? "Add Category"
+              : "Add Menu Item"}
+          </Button>
+        }
+      />
 
       <Paper
         sx={{
           width: "100%",
           mb: 2,
           borderRadius: 3,
-          border: "1px solid #d7ccc8",
-          boxShadow: "0 4px 12px rgba(139, 69, 19, 0.15)",
+          border: "1px solid #E8DDD0",
+          boxShadow: "0 2px 8px rgba(200, 121, 65, 0.12)",
         }}
       >
         <Tabs
@@ -887,24 +1413,27 @@ const MenuManagement: React.FC = () => {
           onChange={handleTabChange}
           sx={{
             borderBottom: 1,
-            borderColor: "#d7ccc8",
+            borderColor: "#E8DDD0",
             "& .MuiTab-root": {
-              color: "#6d4c41",
+              color: "#6B4E3D",
               fontWeight: 600,
+              fontSize: "0.938rem",
               "&.Mui-selected": {
-                color: "#8B4513",
+                color: "#C87941",
               },
             },
             "& .MuiTabs-indicator": {
-              backgroundColor: "#8B4513",
+              backgroundColor: "#C87941",
+              height: 3,
             },
           }}
         >
+          <Tab label="Primary Categories" />
           <Tab label="Categories" />
           <Tab label="Menu Items" />
         </Tabs>
 
-        {activeTab === 1 && (
+        {activeTab === 2 && (
           <Box sx={{ p: 2 }}>
             <TextField
               fullWidth
@@ -914,7 +1443,7 @@ const MenuManagement: React.FC = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: "#6d4c41" }} />
+                    <SearchIcon sx={{ color: "#C87941" }} />
                   </InputAdornment>
                 ),
               }}
@@ -923,14 +1452,14 @@ const MenuManagement: React.FC = () => {
                 "& .MuiOutlinedInput-root": {
                   backgroundColor: "white",
                   "&:hover fieldset": {
-                    borderColor: "#8B4513",
+                    borderColor: "#C87941",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#8B4513",
+                    borderColor: "#C87941",
                   },
                 },
                 "& .MuiInputLabel-root.Mui-focused": {
-                  color: "#8B4513",
+                  color: "#C87941",
                 },
               }}
             />
@@ -948,7 +1477,62 @@ const MenuManagement: React.FC = () => {
         >
           {activeTab === 0 ? (
             <DataGrid
-              rows={categories}
+              rows={primaryCategories}
+              columns={primaryCategoryColumns}
+              initialState={{
+                pagination: {
+                  paginationModel: { page: 0, pageSize: 10 },
+                },
+              }}
+              pageSizeOptions={[10, 25, 50]}
+              disableRowSelectionOnClick
+              sx={{
+                border: 0,
+                "& .MuiDataGrid-root": {
+                  backgroundColor: "white",
+                },
+                "& .MuiDataGrid-columnHeaders": {
+                  backgroundColor: "#C87941",
+                  color: "white",
+                  fontWeight: 700,
+                  fontSize: "0.938rem",
+                  "& .MuiDataGrid-columnHeader": {
+                    "&:focus": {
+                      outline: "none",
+                    },
+                  },
+                },
+                "& .MuiDataGrid-row": {
+                  "&:hover": {
+                    backgroundColor: "#FFF3E6",
+                  },
+                  "&.Mui-selected": {
+                    backgroundColor: "#FFEBD4",
+                    "&:hover": {
+                      backgroundColor: "#FFE4C8",
+                    },
+                  },
+                },
+                "& .MuiDataGrid-cell": {
+                  borderBottom: "1px solid #E8DDD0",
+                  color: "#2C1810",
+                  fontSize: "0.875rem",
+                },
+                "& .MuiDataGrid-footerContainer": {
+                  backgroundColor: "#FFF8F0",
+                  borderTop: "1px solid #E8DDD0",
+                },
+                "& .MuiTablePagination-root": {
+                  color: "#6B4E3D",
+                },
+                "& .MuiTablePagination-selectIcon": {
+                  color: "#C87941",
+                },
+              }}
+            />
+          ) : activeTab === 1 ? (
+            <DataGrid
+              rows={filteredCategories}
               columns={categoryColumns}
               initialState={{
                 pagination: {
@@ -963,9 +1547,10 @@ const MenuManagement: React.FC = () => {
                   backgroundColor: "white",
                 },
                 "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "#8B4513",
+                  backgroundColor: "#C87941",
                   color: "white",
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  fontSize: "0.938rem",
                   "& .MuiDataGrid-columnHeader": {
                     "&:focus": {
                       outline: "none",
@@ -974,28 +1559,29 @@ const MenuManagement: React.FC = () => {
                 },
                 "& .MuiDataGrid-row": {
                   "&:hover": {
-                    backgroundColor: "rgba(139, 69, 19, 0.05)",
+                    backgroundColor: "#FFF3E6",
                   },
                   "&.Mui-selected": {
-                    backgroundColor: "rgba(139, 69, 19, 0.1)",
+                    backgroundColor: "#FFEBD4",
                     "&:hover": {
-                      backgroundColor: "rgba(139, 69, 19, 0.15)",
+                      backgroundColor: "#FFE4C8",
                     },
                   },
                 },
                 "& .MuiDataGrid-cell": {
-                  borderBottom: "1px solid #e0d4c8",
-                  color: "#3e2723",
+                  borderBottom: "1px solid #E8DDD0",
+                  color: "#2C1810",
+                  fontSize: "0.875rem",
                 },
                 "& .MuiDataGrid-footerContainer": {
-                  backgroundColor: "#faf6f2",
-                  borderTop: "1px solid #d7ccc8",
+                  backgroundColor: "#FFF8F0",
+                  borderTop: "1px solid #E8DDD0",
                 },
                 "& .MuiTablePagination-root": {
-                  color: "#5d4037",
+                  color: "#6B4E3D",
                 },
                 "& .MuiTablePagination-selectIcon": {
-                  color: "#5d4037",
+                  color: "#C87941",
                 },
               }}
             />
@@ -1016,9 +1602,10 @@ const MenuManagement: React.FC = () => {
                   backgroundColor: "white",
                 },
                 "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "#8B4513",
+                  backgroundColor: "#C87941",
                   color: "white",
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  fontSize: "0.938rem",
                   "& .MuiDataGrid-columnHeader": {
                     "&:focus": {
                       outline: "none",
@@ -1027,28 +1614,29 @@ const MenuManagement: React.FC = () => {
                 },
                 "& .MuiDataGrid-row": {
                   "&:hover": {
-                    backgroundColor: "rgba(139, 69, 19, 0.05)",
+                    backgroundColor: "#FFF3E6",
                   },
                   "&.Mui-selected": {
-                    backgroundColor: "rgba(139, 69, 19, 0.1)",
+                    backgroundColor: "#FFEBD4",
                     "&:hover": {
-                      backgroundColor: "rgba(139, 69, 19, 0.15)",
+                      backgroundColor: "#FFE4C8",
                     },
                   },
                 },
                 "& .MuiDataGrid-cell": {
-                  borderBottom: "1px solid #e0d4c8",
-                  color: "#3e2723",
+                  borderBottom: "1px solid #E8DDD0",
+                  color: "#2C1810",
+                  fontSize: "0.875rem",
                 },
                 "& .MuiDataGrid-footerContainer": {
-                  backgroundColor: "#faf6f2",
-                  borderTop: "1px solid #d7ccc8",
+                  backgroundColor: "#FFF8F0",
+                  borderTop: "1px solid #E8DDD0",
                 },
                 "& .MuiTablePagination-root": {
-                  color: "#5d4037",
+                  color: "#6B4E3D",
                 },
                 "& .MuiTablePagination-selectIcon": {
-                  color: "#5d4037",
+                  color: "#C87941",
                 },
               }}
             />
@@ -1056,10 +1644,192 @@ const MenuManagement: React.FC = () => {
         </Box>
       </Paper>
 
+      {/* Primary Category Dialog */}
+      <Dialog
+        open={primaryCategoryDialog}
+        onClose={() => {
+          setPrimaryCategoryDialog(false);
+          setSelectedFiles([]);
+          setImagePreviews([]);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {selectedPrimaryCategory
+            ? "Edit Primary Category"
+            : "Create Primary Category"}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                label="Primary Category Name"
+                required
+                value={primaryCategoryForm.name}
+                onChange={(e) =>
+                  setPrimaryCategoryForm({
+                    ...primaryCategoryForm,
+                    name: e.target.value,
+                  })
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                label="Description"
+                multiline
+                rows={3}
+                value={primaryCategoryForm.description}
+                onChange={(e) =>
+                  setPrimaryCategoryForm({
+                    ...primaryCategoryForm,
+                    description: e.target.value,
+                  })
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                  Category Image
+                </Typography>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<CloudUploadIcon />}
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? "Uploading..." : "Upload Image"}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/jpeg,image/png,image/jpg,image/webp"
+                    onChange={handleFileSelect}
+                  />
+                </Button>
+                {(imagePreviews.length > 0 || primaryCategoryForm.imageUrl) && (
+                  <Box
+                    sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}
+                  >
+                    {imagePreviews.length > 0
+                      ? imagePreviews.map((preview, index) => (
+                          <Box
+                            key={index}
+                            sx={{
+                              position: "relative",
+                              width: 100,
+                              height: 100,
+                              border: "1px solid #E8E3DC",
+                              borderRadius: 1,
+                            }}
+                          >
+                            <img
+                              src={preview}
+                              alt={`Preview ${index + 1}`}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                borderRadius: "4px",
+                              }}
+                            />
+                          </Box>
+                        ))
+                      : primaryCategoryForm.imageUrl && (
+                          <Box
+                            sx={{
+                              position: "relative",
+                              width: 100,
+                              height: 100,
+                              border: "1px solid #E8E3DC",
+                              borderRadius: 1,
+                            }}
+                          >
+                            <img
+                              src={primaryCategoryForm.imageUrl}
+                              alt="Current"
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                borderRadius: "4px",
+                              }}
+                            />
+                          </Box>
+                        )}
+                  </Box>
+                )}
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mt: 1, display: "block" }}
+                >
+                  Supported formats: JPEG, PNG, WebP. Max size: 1MB
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                label="Sort Order"
+                type="number"
+                value={primaryCategoryForm.sortOrder}
+                onChange={(e) =>
+                  setPrimaryCategoryForm({
+                    ...primaryCategoryForm,
+                    sortOrder: parseInt(e.target.value) || 0,
+                  })
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography variant="body2">Active:</Typography>
+                <Switch
+                  checked={primaryCategoryForm.isActive}
+                  onChange={(e) =>
+                    setPrimaryCategoryForm({
+                      ...primaryCategoryForm,
+                      isActive: e.target.checked,
+                    })
+                  }
+                />
+              </Box>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setPrimaryCategoryDialog(false);
+              setSelectedFiles([]);
+              setImagePreviews([]);
+            }}
+            color="inherit"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSavePrimaryCategory}
+            variant="contained"
+            disabled={loading || uploadingImage || !primaryCategoryForm.name}
+          >
+            {selectedPrimaryCategory ? "Update" : "Create"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Category Dialog */}
       <Dialog
         open={categoryDialog}
-        onClose={() => setCategoryDialog(false)}
+        onClose={() => {
+          setCategoryDialog(false);
+          setSelectedFiles([]);
+          setImagePreviews([]);
+        }}
         maxWidth="sm"
         fullWidth
       >
@@ -1072,6 +1842,7 @@ const MenuManagement: React.FC = () => {
               <TextField
                 fullWidth
                 label="Category Name"
+                required
                 value={categoryForm.name}
                 onChange={(e) =>
                   setCategoryForm({ ...categoryForm, name: e.target.value })
@@ -1093,6 +1864,111 @@ const MenuManagement: React.FC = () => {
                 }
               />
             </Grid>
+            <Grid size={{ xs: 12 }}>
+              <FormControl fullWidth required>
+                <InputLabel>Primary Category</InputLabel>
+                <Select
+                  value={categoryForm.primaryCategoryId || ""}
+                  onChange={(e) =>
+                    setCategoryForm({
+                      ...categoryForm,
+                      primaryCategoryId: e.target.value,
+                    })
+                  }
+                >
+                  <MenuItem value="">
+                    <em>Select Primary Category</em>
+                  </MenuItem>
+                  {primaryCategories
+                    .filter((pc) => pc.isActive)
+                    .map((pc) => (
+                      <MenuItem key={pc.id} value={pc.id}>
+                        {pc.name}
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                  Category Image
+                </Typography>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<CloudUploadIcon />}
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? "Uploading..." : "Upload Image"}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/jpeg,image/png,image/jpg,image/webp"
+                    onChange={handleFileSelect}
+                  />
+                </Button>
+                {(imagePreviews.length > 0 || categoryForm.imageUrl) && (
+                  <Box
+                    sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}
+                  >
+                    {imagePreviews.length > 0
+                      ? imagePreviews.map((preview, index) => (
+                          <Box
+                            key={index}
+                            sx={{
+                              position: "relative",
+                              width: 100,
+                              height: 100,
+                              border: "1px solid #E8E3DC",
+                              borderRadius: 1,
+                            }}
+                          >
+                            <img
+                              src={preview}
+                              alt={`Preview ${index + 1}`}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                borderRadius: "4px",
+                              }}
+                            />
+                          </Box>
+                        ))
+                      : categoryForm.imageUrl && (
+                          <Box
+                            sx={{
+                              position: "relative",
+                              width: 100,
+                              height: 100,
+                              border: "1px solid #E8E3DC",
+                              borderRadius: 1,
+                            }}
+                          >
+                            <img
+                              src={categoryForm.imageUrl}
+                              alt="Current"
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                borderRadius: "4px",
+                              }}
+                            />
+                          </Box>
+                        )}
+                  </Box>
+                )}
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mt: 1, display: "block" }}
+                >
+                  Supported formats: JPEG, PNG, WebP. Max size: 1MB
+                </Typography>
+              </Box>
+            </Grid>
             <Grid size={{ xs: 6 }}>
               <TextField
                 fullWidth
@@ -1102,35 +1978,54 @@ const MenuManagement: React.FC = () => {
                 onChange={(e) =>
                   setCategoryForm({
                     ...categoryForm,
-                    sortOrder: parseInt(e.target.value),
+                    sortOrder: parseInt(e.target.value) || 0,
                   })
                 }
               />
             </Grid>
             <Grid size={{ xs: 6 }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={categoryForm.isActive}
-                    onChange={(e) =>
-                      setCategoryForm({
-                        ...categoryForm,
-                        isActive: e.target.checked,
-                      })
-                    }
-                  />
-                }
-                label="Active"
-              />
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  height: "100%",
+                }}
+              >
+                <Typography variant="body2">Active:</Typography>
+                <Switch
+                  checked={categoryForm.isActive}
+                  onChange={(e) =>
+                    setCategoryForm({
+                      ...categoryForm,
+                      isActive: e.target.checked,
+                    })
+                  }
+                />
+              </Box>
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCategoryDialog(false)}>Cancel</Button>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setCategoryDialog(false);
+              setSelectedFiles([]);
+              setImagePreviews([]);
+            }}
+            color="inherit"
+          >
+            Cancel
+          </Button>
           <Button
             variant="contained"
             onClick={handleSaveCategory}
-            disabled={loading}
+            disabled={
+              loading ||
+              uploadingImage ||
+              !categoryForm.name ||
+              !categoryForm.primaryCategoryId
+            }
           >
             {selectedCategory ? "Update" : "Create"}
           </Button>
@@ -1254,10 +2149,19 @@ const MenuManagement: React.FC = () => {
               </Box>
 
               {(itemForm.imageUrls.length > 0 || imagePreviews.length > 0) && (
-                <Grid container spacing={2}>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
                   {/* Existing images */}
                   {itemForm.imageUrls.map((url, index) => (
-                    <Grid item xs={6} sm={4} md={3} key={`existing-${index}`}>
+                    <Box
+                      sx={{
+                        width: {
+                          xs: "calc(50% - 8px)",
+                          sm: "calc(33.333% - 8px)",
+                          md: "calc(25% - 8px)",
+                        },
+                      }}
+                      key={`existing-${index}`}
+                    >
                       <Card sx={{ position: "relative" }}>
                         <CardMedia
                           component="img"
@@ -1283,11 +2187,20 @@ const MenuManagement: React.FC = () => {
                           <CloseIcon fontSize="small" />
                         </IconButton>
                       </Card>
-                    </Grid>
+                    </Box>
                   ))}
                   {/* New image previews */}
                   {imagePreviews.map((preview, index) => (
-                    <Grid item xs={6} sm={4} md={3} key={`new-${index}`}>
+                    <Box
+                      sx={{
+                        width: {
+                          xs: "calc(50% - 8px)",
+                          sm: "calc(33.333% - 8px)",
+                          md: "calc(25% - 8px)",
+                        },
+                      }}
+                      key={`new-${index}`}
+                    >
                       <Card sx={{ position: "relative" }}>
                         <CardMedia
                           component="img"
@@ -1314,9 +2227,9 @@ const MenuManagement: React.FC = () => {
                           <CloseIcon fontSize="small" />
                         </IconButton>
                       </Card>
-                    </Grid>
+                    </Box>
                   ))}
-                </Grid>
+                </Box>
               )}
             </Grid>
 
@@ -1426,4 +2339,4 @@ const MenuManagement: React.FC = () => {
   );
 };
 
-export default MenuManagement;
+export default React.memo(MenuManagement);

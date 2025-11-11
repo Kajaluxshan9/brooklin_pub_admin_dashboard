@@ -47,38 +47,90 @@ const LoginPage: React.FC = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #8B4513 0%, #D2691E 100%)",
+        background:
+          "linear-gradient(135deg, #E8C9A3 0%, #F9F6F2 50%, #E0D0BA 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         p: 2,
+        position: "relative",
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage:
+            "radial-gradient(circle at 20% 50%, rgba(212, 165, 116, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(201, 168, 124, 0.1) 0%, transparent 50%)",
+          pointerEvents: "none",
+        },
       }}
     >
       <Paper
-        elevation={8}
+        elevation={0}
         sx={{
-          p: 4,
+          p: 5,
           width: "100%",
-          maxWidth: 400,
-          borderRadius: 2,
+          maxWidth: 440,
+          borderRadius: 3,
+          backgroundColor: "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(20px)",
+          boxShadow:
+            "0 20px 25px -5px rgba(212, 165, 116, 0.1), 0 10px 10px -5px rgba(212, 165, 116, 0.04)",
+          border: "1px solid rgba(232, 227, 220, 0.5)",
+          position: "relative",
+          zIndex: 1,
         }}
       >
-        <Box sx={{ textAlign: "center", mb: 3 }}>
-          <img
-            src="/brooklinpub-logo.png"
-            alt="Brooklin Pub"
-            style={logoStyle}
-          />
-          <Typography variant="h4" component="h1" gutterBottom>
+        <Box sx={{ textAlign: "center", mb: 4 }}>
+          <Box
+            sx={{
+              display: "inline-flex",
+              p: 2,
+              borderRadius: 2,
+              bgcolor: "#F9F6F2",
+              mb: 2,
+            }}
+          >
+            <img
+              src="/brooklinpub-logo.png"
+              alt="Brooklin Pub"
+              style={{ ...logoStyle, display: "block" }}
+            />
+          </Box>
+          <Typography
+            variant="h4"
+            component="h1"
+            gutterBottom
+            sx={{
+              fontWeight: 700,
+              color: "#2D2416",
+              mb: 1,
+              fontSize: "1.75rem",
+            }}
+          >
             Admin Dashboard
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ fontSize: "0.938rem", color: "#6B5D4F" }}
+          >
             Sign in to manage Brooklin Pub
           </Typography>
         </Box>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert
+            severity="error"
+            sx={{
+              mb: 3,
+              borderRadius: 2,
+              border: "1px solid #FCA5A5",
+              bgcolor: "#FEF2F2",
+            }}
+          >
             {error}
           </Alert>
         )}
@@ -94,6 +146,15 @@ const LoginPage: React.FC = () => {
             required
             autoFocus
             disabled={loading}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                bgcolor: "#FEFDFB",
+                transition: "all 0.15s",
+                "&:hover": {
+                  bgcolor: "#ffffff",
+                },
+              },
+            }}
           />
           <TextField
             fullWidth
@@ -104,6 +165,15 @@ const LoginPage: React.FC = () => {
             margin="normal"
             required
             disabled={loading}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                bgcolor: "#FEFDFB",
+                transition: "all 0.15s",
+                "&:hover": {
+                  bgcolor: "#ffffff",
+                },
+              },
+            }}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -111,6 +181,10 @@ const LoginPage: React.FC = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     edge="end"
                     disabled={loading}
+                    sx={{
+                      color: "#E49B5F",
+                      "&:hover": { bgcolor: "#F9F6F2" },
+                    }}
                   >
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
@@ -122,7 +196,26 @@ const LoginPage: React.FC = () => {
             type="submit"
             fullWidth
             variant="contained"
-            sx={{ mt: 3, mb: 2, py: 1.5 }}
+            sx={{
+              mt: 4,
+              mb: 2,
+              py: 1.5,
+              bgcolor: "#E49B5F",
+              fontSize: "1rem",
+              fontWeight: 600,
+              textTransform: "none",
+              borderRadius: 2,
+              boxShadow: "0 1px 3px 0 rgba(212, 165, 116, 0.3)",
+              transition: "all 0.15s",
+              "&:hover": {
+                bgcolor: "#C9A87C",
+                transform: "translateY(-1px)",
+                boxShadow: "0 4px 6px -1px rgba(212, 165, 116, 0.3)",
+              },
+              "&:active": {
+                transform: "translateY(0)",
+              },
+            }}
             startIcon={<LoginIcon />}
             disabled={loading}
           >
@@ -135,3 +228,4 @@ const LoginPage: React.FC = () => {
 };
 
 export default LoginPage;
+

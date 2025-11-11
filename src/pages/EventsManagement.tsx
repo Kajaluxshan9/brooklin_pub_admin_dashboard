@@ -36,9 +36,11 @@ import {
   Event as EventIcon,
   Schedule as ScheduleIcon,
   MusicNote as MusicIcon,
-  SportsBar as SportsIcon,
-  Quiz as QuizIcon,
-  Celebration as CelebrationIcon,
+  SportsFootball as SportsIcon,
+  EmojiEvents as TriviaIcon,
+  Cake as PartyIcon,
+  Mic as KaraokeIcon,
+  Stars as SpecialIcon,
   CloudUpload as UploadIcon,
   Close as CloseIcon,
   Image as ImageIcon,
@@ -47,6 +49,7 @@ import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import moment from "moment-timezone";
+import { EVENT_TYPE_COLORS } from "../utils/standardColors";
 
 const TIMEZONE = "America/Toronto";
 
@@ -320,11 +323,13 @@ const EventsManagement: React.FC = () => {
       case EventType.SPORTS_VIEWING:
         return <SportsIcon />;
       case EventType.TRIVIA_NIGHT:
-        return <QuizIcon />;
+        return <TriviaIcon />;
       case EventType.PRIVATE_PARTY:
-        return <CelebrationIcon />;
+        return <PartyIcon />;
       case EventType.KARAOKE:
-        return <MusicIcon />;
+        return <KaraokeIcon />;
+      case EventType.SPECIAL_EVENT:
+        return <SpecialIcon />;
       default:
         return <EventIcon />;
     }
@@ -333,17 +338,19 @@ const EventsManagement: React.FC = () => {
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case EventType.LIVE_MUSIC:
-        return "#8B4513"; // Saddle Brown
+        return EVENT_TYPE_COLORS.LIVE_MUSIC; // Blue - Info
       case EventType.SPORTS_VIEWING:
-        return "#A0522D"; // Sienna
+        return EVENT_TYPE_COLORS.SPORTS_VIEWING; // Green - Success
       case EventType.TRIVIA_NIGHT:
-        return "#D2691E"; // Chocolate
+        return EVENT_TYPE_COLORS.TRIVIA_NIGHT; // Orange - Warning
       case EventType.PRIVATE_PARTY:
-        return "#CD853F"; // Peru
+        return EVENT_TYPE_COLORS.PRIVATE_PARTY; // Terracotta - Brand
       case EventType.KARAOKE:
-        return "#DEB887"; // Burlywood
+        return EVENT_TYPE_COLORS.KARAOKE; // Purple
+      case EventType.SPECIAL_EVENT:
+        return EVENT_TYPE_COLORS.SPECIAL_EVENT; // Blue - Info
       default:
-        return "#8B4513"; // Default brown
+        return EVENT_TYPE_COLORS.LIVE_MUSIC; // Default blue
     }
   };
 
@@ -363,7 +370,7 @@ const EventsManagement: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterMoment}>
-      <Box sx={{ p: 3, backgroundColor: "#faf6f2", minHeight: "100vh" }}>
+      <Box sx={{ p: 3, backgroundColor: "#FFF8F0", minHeight: "100vh" }}>
         {/* Header */}
         <Box
           sx={{
@@ -372,13 +379,13 @@ const EventsManagement: React.FC = () => {
             alignItems: "center",
             mb: 4,
             p: 3,
-            backgroundColor: "#8B4513",
+            backgroundColor: "white",
             borderRadius: 3,
-            color: "white",
-            boxShadow: "0 4px 12px rgba(139, 69, 19, 0.3)",
+            border: "1px solid #E8DDD0",
+            boxShadow: "0 2px 8px rgba(200, 121, 65, 0.12)",
           }}
         >
-          <Typography variant="h4" sx={{ fontWeight: 700, color: "white" }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: "#2C1810" }}>
             Events Management
           </Typography>
           <Button
@@ -386,9 +393,9 @@ const EventsManagement: React.FC = () => {
             startIcon={<AddIcon />}
             onClick={handleCreate}
             sx={{
-              backgroundColor: "white",
-              color: "#8B4513",
-              "&:hover": { backgroundColor: "#f5f5f5" },
+              backgroundColor: "#C87941",
+              color: "white",
+              "&:hover": { backgroundColor: "#A45F2D" },
               fontWeight: 600,
               px: 3,
               py: 1.5,
@@ -483,7 +490,7 @@ const EventsManagement: React.FC = () => {
                       <Typography
                         variant="h6"
                         component="div"
-                        sx={{ fontWeight: 700, color: "#3e2723" }}
+                        sx={{ fontWeight: 700, color: "#2C1810" }}
                       >
                         {event.title}
                       </Typography>
@@ -493,7 +500,7 @@ const EventsManagement: React.FC = () => {
                         sx={{
                           backgroundColor: getEventTypeColor(event.type),
                           color: "white",
-                          fontSize: "0.7rem",
+                          fontSize: "0.75rem",
                           fontWeight: 600,
                           mt: 0.5,
                         }}
@@ -504,26 +511,26 @@ const EventsManagement: React.FC = () => {
                   <Typography
                     variant="body2"
                     color="text.secondary"
-                    sx={{ mb: 2, color: "#5d4037", lineHeight: 1.6 }}
+                    sx={{ mb: 2, color: "#6B4E3D", lineHeight: 1.6 }}
                   >
                     {event.description}
                   </Typography>
 
-                  <Divider sx={{ my: 2, backgroundColor: "#d7ccc8" }} />
+                  <Divider sx={{ my: 2, backgroundColor: "#E8DDD0" }} />
 
                   <List dense sx={{ p: 0 }}>
                     <ListItem sx={{ px: 0 }}>
                       <ListItemIcon sx={{ minWidth: 32 }}>
                         <ScheduleIcon
                           fontSize="small"
-                          sx={{ color: "#8d6e63" }}
+                          sx={{ color: "#C87941" }}
                         />
                       </ListItemIcon>
                       <ListItemText
                         primary={
                           <Typography
                             variant="body2"
-                            sx={{ fontWeight: 600, color: "#3e2723" }}
+                            sx={{ fontWeight: 600, color: "#2C1810" }}
                           >
                             Display Period
                           </Typography>
@@ -531,7 +538,7 @@ const EventsManagement: React.FC = () => {
                         secondary={
                           <Typography
                             variant="caption"
-                            sx={{ color: "#5d4037" }}
+                            sx={{ color: "#6B4E3D" }}
                           >
                             {moment
                               .tz(event.displayStartDate, TIMEZONE)
@@ -547,13 +554,13 @@ const EventsManagement: React.FC = () => {
 
                     <ListItem sx={{ px: 0 }}>
                       <ListItemIcon sx={{ minWidth: 32 }}>
-                        <EventIcon fontSize="small" sx={{ color: "#8d6e63" }} />
+                        <EventIcon fontSize="small" sx={{ color: "#C87941" }} />
                       </ListItemIcon>
                       <ListItemText
                         primary={
                           <Typography
                             variant="body2"
-                            sx={{ fontWeight: 600, color: "#3e2723" }}
+                            sx={{ fontWeight: 600, color: "#2C1810" }}
                           >
                             Event Time
                           </Typography>
@@ -561,7 +568,7 @@ const EventsManagement: React.FC = () => {
                         secondary={
                           <Typography
                             variant="caption"
-                            sx={{ color: "#5d4037" }}
+                            sx={{ color: "#6B4E3D" }}
                           >
                             {moment
                               .tz(event.eventStartDate, TIMEZONE)
@@ -580,14 +587,14 @@ const EventsManagement: React.FC = () => {
                         <ListItemIcon sx={{ minWidth: 32 }}>
                           <ImageIcon
                             fontSize="small"
-                            sx={{ color: "#8d6e63" }}
+                            sx={{ color: "#C87941" }}
                           />
                         </ListItemIcon>
                         <ListItemText
                           primary={
                             <Typography
                               variant="caption"
-                              sx={{ color: "#5d4037" }}
+                              sx={{ color: "#6B4E3D" }}
                             >
                               {event.imageUrls.length} images
                             </Typography>
@@ -603,8 +610,9 @@ const EventsManagement: React.FC = () => {
                     size="small"
                     onClick={() => handleEdit(event)}
                     sx={{
-                      color: "#8B4513",
-                      "&:hover": { backgroundColor: "rgba(139, 69, 19, 0.1)" },
+                      color: "#C87941",
+                      fontWeight: 600,
+                      "&:hover": { backgroundColor: "#FFF3E6" },
                     }}
                   >
                     <EditIcon sx={{ fontSize: 16, mr: 0.5 }} />
@@ -642,7 +650,7 @@ const EventsManagement: React.FC = () => {
         >
           <DialogTitle
             sx={{
-              backgroundColor: "#8B4513",
+              backgroundColor: "#C87941",
               color: "white",
               fontWeight: 700,
               fontSize: "1.25rem",
@@ -663,16 +671,16 @@ const EventsManagement: React.FC = () => {
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       backgroundColor: "white",
-                      "&:hover fieldset": { borderColor: "#8B4513" },
-                      "&.Mui-focused fieldset": { borderColor: "#8B4513" },
+                      "&:hover fieldset": { borderColor: "#C87941" },
+                      "&.Mui-focused fieldset": { borderColor: "#C87941" },
                     },
-                    "& .MuiInputLabel-root.Mui-focused": { color: "#8B4513" },
+                    "& .MuiInputLabel-root.Mui-focused": { color: "#C87941" },
                   }}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth>
-                  <InputLabel sx={{ "&.Mui-focused": { color: "#8B4513" } }}>
+                  <InputLabel sx={{ "&.Mui-focused": { color: "#C87941" } }}>
                     Event Type
                   </InputLabel>
                   <Select
@@ -687,10 +695,10 @@ const EventsManagement: React.FC = () => {
                     sx={{
                       backgroundColor: "white",
                       "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#8B4513",
+                        borderColor: "#C87941",
                       },
                       "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#8B4513",
+                        borderColor: "#C87941",
                       },
                     }}
                   >
@@ -725,10 +733,10 @@ const EventsManagement: React.FC = () => {
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       backgroundColor: "white",
-                      "&:hover fieldset": { borderColor: "#8B4513" },
-                      "&.Mui-focused fieldset": { borderColor: "#8B4513" },
+                      "&:hover fieldset": { borderColor: "#C87941" },
+                      "&.Mui-focused fieldset": { borderColor: "#C87941" },
                     },
-                    "& .MuiInputLabel-root.Mui-focused": { color: "#8B4513" },
+                    "& .MuiInputLabel-root.Mui-focused": { color: "#C87941" },
                   }}
                 />
               </Grid>
@@ -737,7 +745,7 @@ const EventsManagement: React.FC = () => {
               <Grid size={{ xs: 12 }}>
                 <Typography
                   variant="h6"
-                  sx={{ color: "#8B4513", fontWeight: 600, mb: 2 }}
+                  sx={{ color: "#C87941", fontWeight: 600, mb: 2 }}
                 >
                   Display Period
                 </Typography>
@@ -755,11 +763,11 @@ const EventsManagement: React.FC = () => {
                       sx: {
                         "& .MuiOutlinedInput-root": {
                           backgroundColor: "white",
-                          "&:hover fieldset": { borderColor: "#8B4513" },
-                          "&.Mui-focused fieldset": { borderColor: "#8B4513" },
+                          "&:hover fieldset": { borderColor: "#C87941" },
+                          "&.Mui-focused fieldset": { borderColor: "#C87941" },
                         },
                         "& .MuiInputLabel-root.Mui-focused": {
-                          color: "#8B4513",
+                          color: "#C87941",
                         },
                       },
                     },
@@ -779,11 +787,11 @@ const EventsManagement: React.FC = () => {
                       sx: {
                         "& .MuiOutlinedInput-root": {
                           backgroundColor: "white",
-                          "&:hover fieldset": { borderColor: "#8B4513" },
-                          "&.Mui-focused fieldset": { borderColor: "#8B4513" },
+                          "&:hover fieldset": { borderColor: "#C87941" },
+                          "&.Mui-focused fieldset": { borderColor: "#C87941" },
                         },
                         "& .MuiInputLabel-root.Mui-focused": {
-                          color: "#8B4513",
+                          color: "#C87941",
                         },
                       },
                     },
@@ -795,7 +803,7 @@ const EventsManagement: React.FC = () => {
               <Grid size={{ xs: 12 }}>
                 <Typography
                   variant="h6"
-                  sx={{ color: "#8B4513", fontWeight: 600, mb: 2 }}
+                  sx={{ color: "#C87941", fontWeight: 600, mb: 2 }}
                 >
                   Event Period
                 </Typography>
@@ -813,11 +821,11 @@ const EventsManagement: React.FC = () => {
                       sx: {
                         "& .MuiOutlinedInput-root": {
                           backgroundColor: "white",
-                          "&:hover fieldset": { borderColor: "#8B4513" },
-                          "&.Mui-focused fieldset": { borderColor: "#8B4513" },
+                          "&:hover fieldset": { borderColor: "#C87941" },
+                          "&.Mui-focused fieldset": { borderColor: "#C87941" },
                         },
                         "& .MuiInputLabel-root.Mui-focused": {
-                          color: "#8B4513",
+                          color: "#C87941",
                         },
                       },
                     },
@@ -837,11 +845,11 @@ const EventsManagement: React.FC = () => {
                       sx: {
                         "& .MuiOutlinedInput-root": {
                           backgroundColor: "white",
-                          "&:hover fieldset": { borderColor: "#8B4513" },
-                          "&.Mui-focused fieldset": { borderColor: "#8B4513" },
+                          "&:hover fieldset": { borderColor: "#C87941" },
+                          "&.Mui-focused fieldset": { borderColor: "#C87941" },
                         },
                         "& .MuiInputLabel-root.Mui-focused": {
-                          color: "#8B4513",
+                          color: "#C87941",
                         },
                       },
                     },
@@ -853,7 +861,7 @@ const EventsManagement: React.FC = () => {
               <Grid size={{ xs: 12 }}>
                 <Typography
                   variant="h6"
-                  sx={{ color: "#8B4513", fontWeight: 600, mb: 2 }}
+                  sx={{ color: "#C87941", fontWeight: 600, mb: 2 }}
                 >
                   Event Images (Max 5, 1MB each)
                 </Typography>
@@ -864,10 +872,10 @@ const EventsManagement: React.FC = () => {
                     startIcon={<UploadIcon />}
                     disabled={loading || eventForm.imageUrls.length >= 5}
                     sx={{
-                      borderColor: "#8B4513",
-                      color: "#8B4513",
+                      borderColor: "#C87941",
+                      color: "#C87941",
                       "&:hover": {
-                        borderColor: "#A0522D",
+                        borderColor: "#A45F2D",
                         backgroundColor: "rgba(139, 69, 19, 0.1)",
                       },
                     }}
@@ -942,10 +950,10 @@ const EventsManagement: React.FC = () => {
                       }
                       sx={{
                         "& .MuiSwitch-switchBase.Mui-checked": {
-                          color: "#8B4513",
+                          color: "#C87941",
                         },
                         "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
-                          { backgroundColor: "#8B4513" },
+                          { backgroundColor: "#C87941" },
                       }}
                     />
                   }
@@ -970,8 +978,8 @@ const EventsManagement: React.FC = () => {
               onClick={handleSave}
               disabled={loading}
               sx={{
-                backgroundColor: "#8B4513",
-                "&:hover": { backgroundColor: "#A0522D" },
+                backgroundColor: "#C87941",
+                "&:hover": { backgroundColor: "#A45F2D" },
                 fontWeight: 600,
               }}
             >

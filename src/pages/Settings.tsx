@@ -19,6 +19,7 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../utils/api";
+import { PageHeader } from "../components/common/PageHeader";
 
 // Comprehensive country codes list with flags - moved outside component for stability
 const COUNTRY_CODES = [
@@ -312,23 +313,13 @@ const Settings: React.FC = () => {
         p: { xs: 2, md: 3 },
         maxWidth: "1200px",
         margin: "0 auto",
-        backgroundColor: "#faf6f2",
         minHeight: "100vh",
       }}
     >
-      <Box
-        sx={{
-          mb: 4,
-          p: 3,
-          backgroundColor: "#8B4513",
-          borderRadius: 3,
-          boxShadow: "0 4px 12px rgba(139, 69, 19, 0.3)",
-        }}
-      >
-        <Typography variant="h4" sx={{ fontWeight: 700, color: "white" }}>
-          Settings
-        </Typography>
-      </Box>
+      <PageHeader
+        title="Settings"
+        subtitle="Manage your profile and security preferences"
+      />
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {/* Profile Settings Section */}
@@ -342,7 +333,7 @@ const Settings: React.FC = () => {
         >
           <CardContent sx={{ p: 4 }}>
             <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
-              <PersonIcon sx={{ mr: 2, color: "#8B4513", fontSize: 32 }} />
+              <PersonIcon sx={{ mr: 2, color: "#C87941", fontSize: 32 }} />
               <Typography
                 variant="h5"
                 sx={{ fontWeight: 600, color: "#3e2723" }}
@@ -560,8 +551,8 @@ const Settings: React.FC = () => {
                     onClick={handleSaveProfile}
                     disabled={loading || !hasProfileChanges()}
                     sx={{
-                      backgroundColor: "#8B4513",
-                      "&:hover": { backgroundColor: "#A0522D" },
+                      backgroundColor: "#C87941",
+                      "&:hover": { backgroundColor: "#A45F2D" },
                       borderRadius: 2,
                       py: 1.5,
                       px: 4,
@@ -587,7 +578,7 @@ const Settings: React.FC = () => {
         >
           <CardContent sx={{ p: 4 }}>
             <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
-              <SecurityIcon sx={{ mr: 2, color: "#8B4513", fontSize: 32 }} />
+              <SecurityIcon sx={{ mr: 2, color: "#C87941", fontSize: 32 }} />
               <Typography
                 variant="h5"
                 sx={{ fontWeight: 600, color: "#3e2723" }}
@@ -604,7 +595,7 @@ const Settings: React.FC = () => {
                 backgroundColor: "rgba(139, 69, 19, 0.1)",
                 color: "#5d4037",
                 "& .MuiAlert-icon": {
-                  color: "#8B4513",
+                  color: "#C87941",
                 },
               }}
             >
@@ -665,8 +656,8 @@ const Settings: React.FC = () => {
                   !passwordForm.confirmPassword
                 }
                 sx={{
-                  backgroundColor: "#A0522D",
-                  "&:hover": { backgroundColor: "#8B4513" },
+                  backgroundColor: "#A45F2D",
+                  "&:hover": { backgroundColor: "#C87941" },
                   borderRadius: 2,
                   py: 1.5,
                   px: 4,
@@ -700,3 +691,4 @@ const Settings: React.FC = () => {
 };
 
 export default Settings;
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -35,16 +35,19 @@ import {
   Schedule as ScheduleIcon,
   CalendarToday as CalendarTodayIcon,
   Image as ImageIcon,
+  AcUnit as SeasonalIcon,
 } from "@mui/icons-material";
 import { DateTimePicker } from "@mui/x-date-pickers";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import moment from "moment-timezone";
 import { api } from "../utils/api";
+import { StatusChip } from "../components/common/StatusChip";
+import { ActionButtons } from "../components/common/ActionButtons";
 
 const TIMEZONE = "America/Toronto";
 
-type SpecialType = "daily" | "seasonal";
+type SpecialType = "daily" | "game_time" | "day_time" | "chef" | "seasonal";
 type SpecialCategory = "regular" | "late_night";
 
 type DayOfWeek =
@@ -58,6 +61,9 @@ type DayOfWeek =
 
 const SpecialTypeValues = {
   DAILY: "daily" as SpecialType,
+  GAME_TIME: "game_time" as SpecialType,
+  DAY_TIME: "day_time" as SpecialType,
+  CHEF: "chef" as SpecialType,
   SEASONAL: "seasonal" as SpecialType,
 };
 
@@ -157,13 +163,18 @@ const SpecialsManagement: React.FC = () => {
     fetchSpecials();
   }, [fetchSpecials]);
 
-  const handleOpenDialog = (special?: Special, presetType?: SpecialType, presetCategory?: SpecialCategory) => {
+  const handleOpenDialog = (
+    special?: Special,
+    presetType?: SpecialType,
+    presetCategory?: SpecialCategory
+  ) => {
     if (special) {
       setEditingSpecial(special);
       setSpecialForm({
         type: special.type,
         dayOfWeek: special.dayOfWeek || DayOfWeekValues.MONDAY,
-        specialCategory: special.specialCategory || SpecialCategoryValues.REGULAR,
+        specialCategory:
+          special.specialCategory || SpecialCategoryValues.REGULAR,
         title: special.title,
         description: special.description,
         displayStartDate: special.displayStartDate
@@ -285,7 +296,7 @@ const SpecialsManagement: React.FC = () => {
         showSnackbar("Image size must be less than 1MB", "error");
         return;
       }
-      if (!file.type.startsWith('image/')) {
+      if (!file.type.startsWith("image/")) {
         showSnackbar("Only image files are allowed", "error");
         return;
       }
@@ -318,12 +329,12 @@ const SpecialsManagement: React.FC = () => {
 
   const handleRemoveImage = async (index: number) => {
     const imageUrl = specialForm.imageUrls[index];
-    
+
     // If it's an existing S3 URL, attempt to delete it from server
-    if (imageUrl && imageUrl.startsWith('https://')) {
+    if (imageUrl && imageUrl.startsWith("https://")) {
       try {
         await api.delete("/upload/images", {
-          data: { urls: [imageUrl] }
+          data: { urls: [imageUrl] },
         });
       } catch (error) {
         console.error("Error deleting image from server:", error);
@@ -375,15 +386,10 @@ const SpecialsManagement: React.FC = () => {
             >
               {special.title}
             </Typography>
-            <Chip
+            <StatusChip
+              status={special.isActive ? "active" : "inactive"}
               label={special.isActive ? "Active" : "Inactive"}
-              color={special.isActive ? "success" : "default"}
               size="small"
-              sx={{
-                fontWeight: 600,
-                borderRadius: 2,
-                "& .MuiChip-label": { px: 1.5 },
-              }}
             />
           </Box>
           <Typography
@@ -402,9 +408,15 @@ const SpecialsManagement: React.FC = () => {
                   alignItems: "center",
                   gap: 1,
                   p: 1.5,
-                  bgcolor: special.specialCategory === SpecialCategoryValues.LATE_NIGHT ? "secondary.light" : "primary.light",
+                  bgcolor:
+                    special.specialCategory === SpecialCategoryValues.LATE_NIGHT
+                      ? "secondary.light"
+                      : "primary.light",
                   borderRadius: 2,
-                  color: special.specialCategory === SpecialCategoryValues.LATE_NIGHT ? "secondary.contrastText" : "primary.contrastText",
+                  color:
+                    special.specialCategory === SpecialCategoryValues.LATE_NIGHT
+                      ? "secondary.contrastText"
+                      : "primary.contrastText",
                 }}
               >
                 <ScheduleIcon fontSize="small" />
@@ -413,7 +425,8 @@ const SpecialsManagement: React.FC = () => {
                     ? special.dayOfWeek.charAt(0).toUpperCase() +
                       special.dayOfWeek.slice(1)
                     : "N/A"}
-                  {special.specialCategory === SpecialCategoryValues.LATE_NIGHT && " (Late Night)"}
+                  {special.specialCategory ===
+                    SpecialCategoryValues.LATE_NIGHT && " (Late Night)"}
                 </Typography>
               </Box>
             )}
@@ -469,19 +482,11 @@ const SpecialsManagement: React.FC = () => {
             gap: 1,
           }}
         >
-          <Button
+          <ActionButtons
             size="small"
-            startIcon={<EditIcon />}
-            onClick={() => handleOpenDialog(special)}
-            sx={{
-              textTransform: "none",
-              fontWeight: 500,
-              borderRadius: 2,
-              "&:hover": { bgcolor: "primary.light" },
-            }}
-          >
-            Edit
-          </Button>
+            onEdit={() => handleOpenDialog(special)}
+            onDelete={() => handleDelete(special.id)}
+          />
           <Button
             size="small"
             color={special.isActive ? "warning" : "success"}
@@ -494,32 +499,44 @@ const SpecialsManagement: React.FC = () => {
           >
             {special.isActive ? "Deactivate" : "Activate"}
           </Button>
-          <Button
-            size="small"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={() => handleDelete(special.id)}
-            sx={{
-              textTransform: "none",
-              fontWeight: 500,
-              borderRadius: 2,
-            }}
-          >
-            Delete
-          </Button>
         </CardActions>
       </Card>
     </Grid>
   );
 
-  const dailySpecials = specials.filter(
-    (s) => s.type === SpecialTypeValues.DAILY && s.specialCategory !== SpecialCategoryValues.LATE_NIGHT
+  const dailySpecials = useMemo(
+    () =>
+      specials.filter(
+        (s) =>
+          s.type === SpecialTypeValues.DAILY &&
+          s.specialCategory !== SpecialCategoryValues.LATE_NIGHT
+      ),
+    [specials]
   );
-  const lateNightSpecials = specials.filter(
-    (s) => s.type === SpecialTypeValues.DAILY && s.specialCategory === SpecialCategoryValues.LATE_NIGHT
+  const lateNightSpecials = useMemo(
+    () =>
+      specials.filter(
+        (s) =>
+          s.type === SpecialTypeValues.DAILY &&
+          s.specialCategory === SpecialCategoryValues.LATE_NIGHT
+      ),
+    [specials]
   );
-  const seasonalSpecials = specials.filter(
-    (s) => s.type === SpecialTypeValues.SEASONAL
+  const gameTimeSpecials = useMemo(
+    () => specials.filter((s) => s.type === SpecialTypeValues.GAME_TIME),
+    [specials]
+  );
+  const dayTimeSpecials = useMemo(
+    () => specials.filter((s) => s.type === SpecialTypeValues.DAY_TIME),
+    [specials]
+  );
+  const chefSpecials = useMemo(
+    () => specials.filter((s) => s.type === SpecialTypeValues.CHEF),
+    [specials]
+  );
+  const seasonalSpecials = useMemo(
+    () => specials.filter((s) => s.type === SpecialTypeValues.SEASONAL),
+    [specials]
   );
 
   return (
@@ -535,15 +552,16 @@ const SpecialsManagement: React.FC = () => {
           sx={{
             maxWidth: 1400,
             mx: "auto",
-            backgroundColor: "background.paper",
+            backgroundColor: "white",
             borderRadius: 3,
-            boxShadow: "0 4px 20px rgba(139, 69, 19, 0.1)",
+            boxShadow: "0 2px 12px rgba(200, 121, 65, 0.12)",
             overflow: "hidden",
+            border: "1px solid #E8DDD0",
           }}
         >
           <Box
             sx={{
-              background: "linear-gradient(135deg, #8B4513 0%, #CD853F 100%)",
+              background: "linear-gradient(135deg, #C87941 0%, #D4842D 100%)",
               p: 3,
               color: "white",
             }}
@@ -555,7 +573,7 @@ const SpecialsManagement: React.FC = () => {
             >
               Specials Management
             </Typography>
-            <Typography variant="body1" sx={{ opacity: 0.9 }}>
+            <Typography variant="body1" sx={{ opacity: 0.95, fontWeight: 500 }}>
               Manage your daily and seasonal specials with ease
             </Typography>
           </Box>
@@ -566,10 +584,10 @@ const SpecialsManagement: React.FC = () => {
                 sx={{
                   height: 3,
                   borderRadius: 2,
-                  backgroundColor: "grey.200",
+                  backgroundColor: "#FFF3E6",
                   "& .MuiLinearProgress-bar": {
                     background:
-                      "linear-gradient(90deg, #8B4513 0%, #CD853F 100%)",
+                      "linear-gradient(90deg, #C87941 0%, #D4842D 100%)",
                   },
                 }}
               />
@@ -607,6 +625,9 @@ const SpecialsManagement: React.FC = () => {
               >
                 <Tab label="Daily Specials" />
                 <Tab label="Late Night Specials" />
+                <Tab label="Game Time Specials" />
+                <Tab label="Day Time Specials" />
+                <Tab label="Chef Specials" />
                 <Tab label="Seasonal Specials" />
               </Tabs>
             </Box>
@@ -617,7 +638,14 @@ const SpecialsManagement: React.FC = () => {
 
             {activeTab === 0 && (
               <Box>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 3,
+                  }}
+                >
                   <Typography
                     variant="h6"
                     gutterBottom
@@ -628,21 +656,27 @@ const SpecialsManagement: React.FC = () => {
                   <Button
                     variant="contained"
                     startIcon={<AddIcon />}
-                    onClick={() => handleOpenDialog(undefined, SpecialTypeValues.DAILY, SpecialCategoryValues.REGULAR)}
+                    onClick={() =>
+                      handleOpenDialog(
+                        undefined,
+                        SpecialTypeValues.DAILY,
+                        SpecialCategoryValues.REGULAR
+                      )
+                    }
                     sx={{
                       background:
-                        "linear-gradient(135deg, #8B4513 0%, #CD853F 100%)",
-                      boxShadow: "0 4px 12px rgba(139, 69, 19, 0.3)",
+                        "linear-gradient(135deg, #C87941 0%, #D4842D 100%)",
+                      boxShadow: "0 2px 8px rgba(200, 121, 65, 0.22)",
                       borderRadius: 2,
                       px: 3,
                       py: 1.5,
-                      fontSize: "0.9rem",
+                      fontSize: "0.938rem",
                       fontWeight: 600,
                       textTransform: "none",
                       "&:hover": {
                         background:
-                          "linear-gradient(135deg, #654321 0%, #8B4513 100%)",
-                        boxShadow: "0 6px 16px rgba(139, 69, 19, 0.4)",
+                          "linear-gradient(135deg, #A45F2D 0%, #B5661A 100%)",
+                        boxShadow: "0 4px 12px rgba(200, 121, 65, 0.3)",
                         transform: "translateY(-2px)",
                       },
                       transition: "all 0.3s ease",
@@ -687,7 +721,14 @@ const SpecialsManagement: React.FC = () => {
 
             {activeTab === 1 && (
               <Box>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 3,
+                  }}
+                >
                   <Typography
                     variant="h6"
                     gutterBottom
@@ -698,7 +739,13 @@ const SpecialsManagement: React.FC = () => {
                   <Button
                     variant="contained"
                     startIcon={<AddIcon />}
-                    onClick={() => handleOpenDialog(undefined, SpecialTypeValues.DAILY, SpecialCategoryValues.LATE_NIGHT)}
+                    onClick={() =>
+                      handleOpenDialog(
+                        undefined,
+                        SpecialTypeValues.DAILY,
+                        SpecialCategoryValues.LATE_NIGHT
+                      )
+                    }
                     sx={{
                       background:
                         "linear-gradient(135deg, #4A148C 0%, #7B1FA2 100%)",
@@ -743,7 +790,8 @@ const SpecialsManagement: React.FC = () => {
                       variant="body1"
                       sx={{ color: "text.secondary", mb: 3 }}
                     >
-                      Create late night specials for all days of the week to attract night owls and late diners.
+                      Create late night specials for all days of the week to
+                      attract night owls and late diners.
                     </Typography>
                   </Box>
                 ) : (
@@ -756,18 +804,262 @@ const SpecialsManagement: React.FC = () => {
 
             {activeTab === 2 && (
               <Box>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 3,
+                  }}
+                >
                   <Typography
                     variant="h6"
                     gutterBottom
                     sx={{ color: "text.primary", fontWeight: 600, mb: 0 }}
                   >
-                    🎄 Seasonal Specials
+                    🏈 Game Time Specials
                   </Typography>
                   <Button
                     variant="contained"
                     startIcon={<AddIcon />}
-                    onClick={() => handleOpenDialog(undefined, SpecialTypeValues.SEASONAL)}
+                    onClick={() =>
+                      handleOpenDialog(undefined, SpecialTypeValues.GAME_TIME)
+                    }
+                    sx={{
+                      background:
+                        "linear-gradient(135deg, #FF5722 0%, #FF9800 100%)",
+                      boxShadow: "0 4px 12px rgba(255, 87, 34, 0.3)",
+                      borderRadius: 2,
+                      px: 3,
+                      py: 1.5,
+                      fontSize: "0.9rem",
+                      fontWeight: 600,
+                      textTransform: "none",
+                      "&:hover": {
+                        background:
+                          "linear-gradient(135deg, #D84315 0%, #FF5722 100%)",
+                        boxShadow: "0 6px 16px rgba(255, 87, 34, 0.4)",
+                        transform: "translateY(-2px)",
+                      },
+                    }}
+                  >
+                    Add Game Time Special
+                  </Button>
+                </Box>
+                {gameTimeSpecials.length === 0 ? (
+                  <Box
+                    sx={{
+                      textAlign: "center",
+                      py: 8,
+                      backgroundColor: "background.default",
+                      borderRadius: 3,
+                      border: "2px dashed",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Typography
+                      variant="h5"
+                      sx={{ color: "text.secondary", mb: 2 }}
+                    >
+                      No Game Time Specials Yet
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      sx={{ color: "text.secondary", mb: 3 }}
+                    >
+                      Create game time specials to attract sports fans during
+                      game hours.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                    {gameTimeSpecials.map(renderSpecialCard)}
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            {activeTab === 3 && (
+              <Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 3,
+                  }}
+                >
+                  <Typography
+                    variant="h6"
+                    gutterBottom
+                    sx={{ color: "text.primary", fontWeight: 600, mb: 0 }}
+                  >
+                    ☀️ Day Time Specials
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() =>
+                      handleOpenDialog(undefined, SpecialTypeValues.DAY_TIME)
+                    }
+                    sx={{
+                      background:
+                        "linear-gradient(135deg, #2196F3 0%, #64B5F6 100%)",
+                      boxShadow: "0 4px 12px rgba(33, 150, 243, 0.3)",
+                      borderRadius: 2,
+                      px: 3,
+                      py: 1.5,
+                      fontSize: "0.9rem",
+                      fontWeight: 600,
+                      textTransform: "none",
+                      "&:hover": {
+                        background:
+                          "linear-gradient(135deg, #1976D2 0%, #2196F3 100%)",
+                        boxShadow: "0 6px 16px rgba(33, 150, 243, 0.4)",
+                        transform: "translateY(-2px)",
+                      },
+                    }}
+                  >
+                    Add Day Time Special
+                  </Button>
+                </Box>
+                {dayTimeSpecials.length === 0 ? (
+                  <Box
+                    sx={{
+                      textAlign: "center",
+                      py: 8,
+                      backgroundColor: "background.default",
+                      borderRadius: 3,
+                      border: "2px dashed",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Typography
+                      variant="h5"
+                      sx={{ color: "text.secondary", mb: 2 }}
+                    >
+                      No Day Time Specials Yet
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      sx={{ color: "text.secondary", mb: 3 }}
+                    >
+                      Create day time specials for lunch and afternoon crowds.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                    {dayTimeSpecials.map(renderSpecialCard)}
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            {activeTab === 4 && (
+              <Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 3,
+                  }}
+                >
+                  <Typography
+                    variant="h6"
+                    gutterBottom
+                    sx={{ color: "text.primary", fontWeight: 600, mb: 0 }}
+                  >
+                    👨‍🍳 Chef Specials
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() =>
+                      handleOpenDialog(undefined, SpecialTypeValues.CHEF)
+                    }
+                    sx={{
+                      background:
+                        "linear-gradient(135deg, #9C27B0 0%, #BA68C8 100%)",
+                      boxShadow: "0 4px 12px rgba(156, 39, 176, 0.3)",
+                      borderRadius: 2,
+                      px: 3,
+                      py: 1.5,
+                      fontSize: "0.9rem",
+                      fontWeight: 600,
+                      textTransform: "none",
+                      "&:hover": {
+                        background:
+                          "linear-gradient(135deg, #7B1FA2 0%, #9C27B0 100%)",
+                        boxShadow: "0 6px 16px rgba(156, 39, 176, 0.4)",
+                        transform: "translateY(-2px)",
+                      },
+                    }}
+                  >
+                    Add Chef Special
+                  </Button>
+                </Box>
+                {chefSpecials.length === 0 ? (
+                  <Box
+                    sx={{
+                      textAlign: "center",
+                      py: 8,
+                      backgroundColor: "background.default",
+                      borderRadius: 3,
+                      border: "2px dashed",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Typography
+                      variant="h5"
+                      sx={{ color: "text.secondary", mb: 2 }}
+                    >
+                      No Chef Specials Yet
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      sx={{ color: "text.secondary", mb: 3 }}
+                    >
+                      Create chef specials featuring signature dishes from your
+                      culinary team.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                    {chefSpecials.map(renderSpecialCard)}
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            {activeTab === 5 && (
+              <Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 3,
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <SeasonalIcon
+                      sx={{ color: "#2E7D32", fontSize: "1.75rem" }}
+                    />
+                    <Typography
+                      variant="h6"
+                      gutterBottom
+                      sx={{ color: "text.primary", fontWeight: 600, mb: 0 }}
+                    >
+                      Seasonal Specials
+                    </Typography>
+                  </Box>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() =>
+                      handleOpenDialog(undefined, SpecialTypeValues.SEASONAL)
+                    }
                     sx={{
                       background:
                         "linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)",
@@ -833,14 +1125,15 @@ const SpecialsManagement: React.FC = () => {
             sx={{
               "& .MuiDialog-paper": {
                 borderRadius: 3,
-                boxShadow: "0 20px 40px rgba(139, 69, 19, 0.3)",
+                boxShadow: "0 8px 24px rgba(200, 121, 65, 0.2)",
                 overflow: "visible",
+                border: "1px solid #E8DDD0",
               },
             }}
           >
             <DialogTitle
               sx={{
-                background: "linear-gradient(135deg, #8B4513 0%, #CD853F 100%)",
+                background: "linear-gradient(135deg, #C87941 0%, #D4842D 100%)",
                 color: "white",
                 fontSize: "1.5rem",
                 fontWeight: 700,
@@ -881,6 +1174,15 @@ const SpecialsManagement: React.FC = () => {
                     >
                       <MenuItem value={SpecialTypeValues.DAILY}>
                         Daily Special
+                      </MenuItem>
+                      <MenuItem value={SpecialTypeValues.GAME_TIME}>
+                        Game Time Special
+                      </MenuItem>
+                      <MenuItem value={SpecialTypeValues.DAY_TIME}>
+                        Day Time Special
+                      </MenuItem>
+                      <MenuItem value={SpecialTypeValues.CHEF}>
+                        Chef Special
                       </MenuItem>
                       <MenuItem value={SpecialTypeValues.SEASONAL}>
                         Seasonal Special
@@ -937,7 +1239,8 @@ const SpecialsManagement: React.FC = () => {
                           onChange={(e) =>
                             setSpecialForm({
                               ...specialForm,
-                              specialCategory: e.target.value as SpecialCategory,
+                              specialCategory: e.target
+                                .value as SpecialCategory,
                             })
                           }
                         >
@@ -982,7 +1285,8 @@ const SpecialsManagement: React.FC = () => {
                   />
                 </Grid>
 
-                {specialForm.type === SpecialTypeValues.SEASONAL && (
+                {(specialForm.type === SpecialTypeValues.SEASONAL ||
+                  specialForm.type === SpecialTypeValues.GAME_TIME) && (
                   <>
                     <Grid size={{ xs: 12 }}>
                       <Typography variant="h6" gutterBottom>
@@ -1149,17 +1453,17 @@ const SpecialsManagement: React.FC = () => {
                 variant="contained"
                 sx={{
                   background:
-                    "linear-gradient(135deg, #8B4513 0%, #CD853F 100%)",
+                    "linear-gradient(135deg, #C87941 0%, #D4842D 100%)",
                   textTransform: "none",
                   fontWeight: 600,
                   px: 4,
                   py: 1.5,
                   borderRadius: 2,
-                  boxShadow: "0 4px 12px rgba(139, 69, 19, 0.3)",
+                  boxShadow: "0 2px 8px rgba(200, 121, 65, 0.22)",
                   "&:hover": {
                     background:
-                      "linear-gradient(135deg, #654321 0%, #8B4513 100%)",
-                    boxShadow: "0 6px 16px rgba(139, 69, 19, 0.4)",
+                      "linear-gradient(135deg, #A45F2D 0%, #B5661A 100%)",
+                    boxShadow: "0 4px 12px rgba(200, 121, 65, 0.3)",
                   },
                 }}
               >
@@ -1188,4 +1492,4 @@ const SpecialsManagement: React.FC = () => {
   );
 };
 
-export default SpecialsManagement;
+export default React.memo(SpecialsManagement);

@@ -39,6 +39,9 @@ import {
 } from "@mui/icons-material";
 import moment from "moment-timezone";
 import { useAuth } from "../contexts/AuthContext";
+import { PageHeader } from "../components/common/PageHeader";
+import { StatusChip } from "../components/common/StatusChip";
+import { ActionButtons } from "../components/common/ActionButtons";
 
 const UserRole = {
   SUPER_ADMIN: "super_admin",
@@ -181,6 +184,12 @@ const UserManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
+    // Check if trying to delete self
+    if (currentUser?.id === id) {
+      alert("Error: You cannot delete your own account. Please ask another administrator to perform this action.");
+      return;
+    }
+
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
         const response = await fetch(`http://localhost:5000/users/${id}`, {
@@ -191,10 +200,13 @@ const UserManagement: React.FC = () => {
         if (response.ok) {
           loadUsers();
         } else {
+          const errorData = await response.json();
+          alert(`Failed to delete user: ${errorData.message || 'Unknown error'}`);
           console.error("Failed to delete user");
         }
       } catch (error) {
         console.error("Error deleting user:", error);
+        alert("Error: Failed to delete user. Please try again.");
       }
     }
   };
@@ -213,6 +225,13 @@ const UserManagement: React.FC = () => {
   };
 
   const handleToggleStatus = async (userId: string) => {
+    // Check if trying to inactivate self
+    if (currentUser?.id === userId) {
+      alert("Error: You cannot change your own account status. Please ask another administrator to perform this action.");
+      handleMenuClose();
+      return;
+    }
+
     try {
       const response = await fetch(
         `http://localhost:5000/users/${userId}/toggle-status`,
@@ -225,10 +244,13 @@ const UserManagement: React.FC = () => {
       if (response.ok) {
         loadUsers();
       } else {
+        const errorData = await response.json();
+        alert(`Failed to toggle user status: ${errorData.message || 'Unknown error'}`);
         console.error("Failed to toggle user status");
       }
     } catch (error) {
       console.error("Error toggling user status:", error);
+      alert("Error: Failed to toggle user status. Please try again.");
     }
     handleMenuClose();
   };
@@ -247,11 +269,11 @@ const UserManagement: React.FC = () => {
   const getRoleColor = (role: UserRoleValue) => {
     switch (role) {
       case UserRole.SUPER_ADMIN:
-        return "#8B4513";
+        return "#C87941";
       case UserRole.ADMIN:
-        return "#D2691E";
+        return "#D4842D";
       default:
-        return "#B8860B";
+        return "#E49B5F";
     }
   };
 
@@ -260,36 +282,26 @@ const UserManagement: React.FC = () => {
   };
 
   return (
-    <Box sx={{ backgroundColor: "#faf6f2", minHeight: "100vh", p: 3 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-          p: 3,
-          backgroundColor: "#8B4513",
-          borderRadius: 3,
-          boxShadow: "0 4px 12px rgba(139, 69, 19, 0.3)",
-        }}
-      >
-        <Typography variant="h4" sx={{ fontWeight: 600, color: "white" }}>
-          User Management
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleCreate}
-          sx={{
-            backgroundColor: "white",
-            color: "#8B4513",
-            fontWeight: 600,
-            "&:hover": { backgroundColor: "#f5f5f5" },
-          }}
-        >
-          Add User
-        </Button>
-      </Box>
+    <Box sx={{ backgroundColor: "#FFF8F0", minHeight: "100vh", p: 3 }}>
+      <PageHeader
+        title="User Management"
+        subtitle="Manage admin users and their access permissions"
+        action={
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleCreate}
+            sx={{
+              backgroundColor: "#C87941",
+              color: "white",
+              fontWeight: 600,
+              "&:hover": { backgroundColor: "#A45F2D" },
+            }}
+          >
+            Add User
+          </Button>
+        }
+      />
 
       <Grid container spacing={3}>
         {users.map((user) => (
@@ -366,19 +378,23 @@ const UserManagement: React.FC = () => {
                 </Box>
 
                 <Box sx={{ mb: 2 }}>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
                   >
-                    Status:
-                    <Chip
+                    <Typography variant="body2" color="text.secondary">
+                      Status:
+                    </Typography>
+                    <StatusChip
+                      status={user.isActive ? "active" : "inactive"}
                       label={user.isActive ? "Active" : "Inactive"}
-                      color={user.isActive ? "success" : "default"}
                       size="small"
-                      sx={{ ml: 1 }}
                     />
-                  </Typography>
+                  </Box>
 
                   {user.lastLogin && (
                     <Typography variant="body2" color="text.secondary">
@@ -396,21 +412,16 @@ const UserManagement: React.FC = () => {
                 </Box>
               </CardContent>
 
-              <CardActions>
-                <Button size="small" onClick={() => handleEdit(user)}>
-                  <EditIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                  Edit
-                </Button>
-                {user.role !== UserRole.SUPER_ADMIN && (
-                  <Button
-                    size="small"
-                    color="error"
-                    onClick={() => handleDelete(user.id)}
-                  >
-                    <DeleteIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                    Delete
-                  </Button>
-                )}
+              <CardActions sx={{ justifyContent: "flex-end", px: 2, pb: 2 }}>
+                <ActionButtons
+                  size="small"
+                  onEdit={() => handleEdit(user)}
+                  onDelete={
+                    user.role !== UserRole.SUPER_ADMIN
+                      ? () => handleDelete(user.id)
+                      : undefined
+                  }
+                />
               </CardActions>
             </Card>
           </Grid>
