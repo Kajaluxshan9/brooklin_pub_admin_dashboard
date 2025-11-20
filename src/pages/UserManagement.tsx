@@ -40,6 +40,7 @@ import {
 } from "@mui/icons-material";
 import moment from "moment-timezone";
 import { useAuth } from "../contexts/AuthContext";
+import logger from "../utils/logger";
 import { useGlobalToast } from "../contexts/ToastContext";
 import { PageHeader } from "../components/common/PageHeader";
 import { StatusChip } from "../components/common/StatusChip";
@@ -116,11 +117,11 @@ const UserManagement: React.FC = () => {
 
         setUsers(filteredUsers);
       } else {
-        console.error("Failed to load users");
+        logger.error("Failed to load users");
         setUsers([]);
       }
     } catch (error) {
-      console.error("Error loading users:", error);
+      logger.error("Error loading users:", error);
       setUsers([]);
     }
   }, [currentUser]);
@@ -191,11 +192,11 @@ const UserManagement: React.FC = () => {
         );
       } else {
         const errorData = await response.json();
-        console.error("Failed to save user:", errorData);
+        logger.error("Failed to save user:", errorData);
         showToast(`Failed to save user: ${errorData.message || 'Unknown error'}`, "error");
       }
     } catch (error) {
-      console.error("Error saving user:", error);
+      logger.error("Error saving user:", error);
       alert("Error saving user. Please try again.");
     }
   };
@@ -223,10 +224,10 @@ const UserManagement: React.FC = () => {
           alert(
             `Failed to delete user: ${errorData.message || "Unknown error"}`
           );
-          console.error("Failed to delete user");
+          logger.error("Failed to delete user");
         }
       } catch (error) {
-        console.error("Error deleting user:", error);
+        logger.error("Error deleting user:", error);
         alert("Error: Failed to delete user. Please try again.");
       }
     }
@@ -267,7 +268,7 @@ const UserManagement: React.FC = () => {
         );
       }
     } catch (error) {
-      console.error("Error resending verification:", error);
+      logger.error("Error resending verification:", error);
       alert("Error: Failed to resend verification email. Please try again.");
     }
     handleMenuClose();
@@ -301,10 +302,10 @@ const UserManagement: React.FC = () => {
             errorData.message || "Unknown error"
           }`
         );
-        console.error("Failed to toggle user status");
+        logger.error("Failed to toggle user status");
       }
     } catch (error) {
-      console.error("Error toggling user status:", error);
+      logger.error("Error toggling user status:", error);
       alert("Error: Failed to toggle user status. Please try again.");
     }
     handleMenuClose();

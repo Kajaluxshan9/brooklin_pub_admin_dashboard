@@ -42,6 +42,7 @@ import { api } from "../utils/api";
 import { StatusChip } from "../components/common/StatusChip";
 import { ActionButtons } from "../components/common/ActionButtons";
 import { PageHeader } from "../components/common/PageHeader";
+import logger from "../utils/logger";
 
 const TIMEZONE = "America/Toronto";
 
@@ -320,7 +321,7 @@ const SpecialsManagement: React.FC = () => {
         throw new Error("Invalid response from server");
       }
     } catch (error) {
-      console.error("Upload error:", error);
+      logger.error("Upload error:", error);
       showSnackbar("Error uploading images", "error");
     }
   };
@@ -335,7 +336,7 @@ const SpecialsManagement: React.FC = () => {
           data: { urls: [imageUrl] },
         });
       } catch (error) {
-        console.error("Error deleting image from server:", error);
+        logger.error("Error deleting image from server:", error);
         // Continue with local removal even if server deletion fails
       }
     }

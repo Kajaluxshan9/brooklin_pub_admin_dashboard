@@ -11,6 +11,8 @@ interface EnvConfig {
   VITE_ENABLE_ANALYTICS?: string;
 }
 
+import logger from '../utils/logger';
+
 const REQUIRED_ENV_VARS: (keyof EnvConfig)[] = ['VITE_API_BASE_URL'];
 
 const OPTIONAL_ENV_VARS: (keyof EnvConfig)[] = [
@@ -47,9 +49,9 @@ export function validateEnvironment(): void {
 
   // Print warnings
   if (warnings.length > 0) {
-    console.warn('\n⚠️  Environment Configuration Warnings:');
-    warnings.forEach((warning) => console.warn(`   ${warning}`));
-    console.warn('');
+    logger.warn('\n⚠️  Environment Configuration Warnings:');
+    warnings.forEach((warning) => logger.warn(`   ${warning}`));
+    logger.warn('');
   }
 
   // Throw error if required variables are missing
@@ -80,10 +82,10 @@ ${OPTIONAL_ENV_VARS.map((v) => `  📝 ${v}`).join('\n')}
 
   // Success message
   if (import.meta.env.DEV) {
-    console.log('✅ Environment variables validated successfully');
-    console.log(`   API Base URL: ${import.meta.env.VITE_API_BASE_URL}`);
-    console.log(`   Mode: ${import.meta.env.MODE}`);
-    console.log('');
+    logger.log('✅ Environment variables validated successfully');
+    logger.log(`   API Base URL: ${import.meta.env.VITE_API_BASE_URL}`);
+    logger.log(`   Mode: ${import.meta.env.MODE}`);
+    logger.log('');
   }
 }
 

@@ -31,6 +31,7 @@ import {
   Snackbar,
 } from "@mui/material";
 import { PageHeader } from "../components/common/PageHeader";
+import logger from "../utils/logger";
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -130,11 +131,11 @@ const EventsManagement: React.FC = () => {
         const data = await response.json();
         setEvents(data);
       } else {
-        console.error("Failed to load events");
+        logger.error("Failed to load events");
         setEvents([]);
       }
     } catch (error) {
-      console.error("Error loading events:", error);
+      logger.error("Error loading events:", error);
       setEvents([]);
     }
   };
@@ -154,7 +155,6 @@ const EventsManagement: React.FC = () => {
     });
     setDialogOpen(true);
   };
-
   const handleEdit = (event: Event) => {
     setSelectedEvent(event);
     setEventForm({
@@ -218,7 +218,7 @@ const EventsManagement: React.FC = () => {
         showSnackbar("Error uploading images", "error");
       }
     } catch (error) {
-      console.error("Upload error:", error);
+      logger.error("Upload error:", error);
       showSnackbar("Error uploading images", "error");
     } finally {
       setLoading(false);
@@ -237,7 +237,7 @@ const EventsManagement: React.FC = () => {
           body: JSON.stringify({ urls: [imageUrl] }),
         });
       } catch (error) {
-        console.error("Error deleting image from server:", error);
+        logger.error("Error deleting image from server:", error);
       }
     }
 
@@ -290,7 +290,7 @@ const EventsManagement: React.FC = () => {
         showSnackbar("Failed to save event", "error");
       }
     } catch (error) {
-      console.error("Error saving event:", error);
+      logger.error("Error saving event:", error);
       showSnackbar("Error saving event", "error");
     } finally {
       setLoading(false);
@@ -312,7 +312,7 @@ const EventsManagement: React.FC = () => {
           showSnackbar("Failed to delete event", "error");
         }
       } catch (error) {
-        console.error("Error deleting event:", error);
+        logger.error("Error deleting event:", error);
         showSnackbar("Error deleting event", "error");
       }
     }

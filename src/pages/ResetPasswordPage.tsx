@@ -96,10 +96,17 @@ export default function ResetPasswordPage() {
         navigate("/login");
       }, 3000);
     } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-          "Failed to reset password. The link may have expired. Please request a new one."
-      );
+      // Extract error message from Error object or response
+      let errorMessage = "Failed to reset password. The link may have expired. Please request a new one.";
+
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (err.response?.data?.message) {
+        const msg = err.response.data.message;
+        errorMessage = Array.isArray(msg) ? msg.join('. ') : msg;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

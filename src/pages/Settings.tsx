@@ -20,6 +20,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../utils/api";
 import { PageHeader } from "../components/common/PageHeader";
+import logger from "../utils/logger";
 
 // Comprehensive country codes list with flags - moved outside component for stability
 const COUNTRY_CODES = [
@@ -269,7 +270,7 @@ const Settings: React.FC = () => {
         showNotification("Failed to update profile", "error");
       }
     } catch (error) {
-      console.error("Error updating profile:", error);
+      logger.error("Error updating profile:", error);
       showNotification("Error updating profile", "error");
     } finally {
       setLoading(false);
@@ -300,7 +301,7 @@ const Settings: React.FC = () => {
         showNotification("Failed to change password", "error");
       }
     } catch (error) {
-      console.error("Error changing password:", error);
+      logger.error("Error changing password:", error);
       showNotification("Error changing password", "error");
     } finally {
       setPasswordLoading(false);

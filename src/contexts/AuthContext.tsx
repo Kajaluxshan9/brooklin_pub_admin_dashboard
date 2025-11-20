@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import moment from "moment-timezone";
 import { api } from "../utils/api";
+import logger from "../utils/logger";
 
 interface User {
   id: string;
@@ -43,7 +44,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const response = await api.get("/auth/me");
       setUser(response.data);
     } catch {
-      console.log("No active session");
+      logger.info("No active session");
     } finally {
       setLoading(false);
     }
@@ -65,7 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     try {
       await api.post("/auth/logout");
     } catch (error) {
-      console.log("Logout error:", error);
+      logger.error("Logout error:", error);
     } finally {
       setUser(null);
     }

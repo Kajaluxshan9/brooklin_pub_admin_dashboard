@@ -49,6 +49,7 @@ import {
 import { DataGrid, GridActionsCellItem } from "@mui/x-data-grid";
 import type { GridColDef } from "@mui/x-data-grid";
 import { PageHeader } from "../components/common/PageHeader";
+import logger from "../utils/logger";
 import { StatusChip } from "../components/common/StatusChip";
 import {
   uploadImages,
@@ -241,7 +242,7 @@ const MenuManagement: React.FC = () => {
         throw new Error(errorText || "Failed to fetch primary categories");
       }
     } catch (error) {
-      console.error("Error fetching primary categories:", error);
+      logger.error("Error fetching primary categories:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -272,7 +273,7 @@ const MenuManagement: React.FC = () => {
         throw new Error(errorText || "Failed to fetch categories");
       }
     } catch (error) {
-      console.error("Error fetching categories:", error);
+      logger.error("Error fetching categories:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Failed to load categories";
       showSnackbar(errorMessage, "error");
@@ -307,7 +308,7 @@ const MenuManagement: React.FC = () => {
         throw new Error("Failed to fetch menu items");
       }
     } catch (error) {
-      console.error("Error fetching menu items:", error);
+      logger.error("Error fetching menu items:", error);
       showSnackbar("Failed to load menu items", "error");
     } finally {
       setLoading(false);
@@ -454,7 +455,7 @@ const MenuManagement: React.FC = () => {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error(`Error moving primary category ${direction}:`, error);
+        logger.error(`Error moving primary category ${direction}:`, error);
       showSnackbar(getErrorMessage(error), "error");
     } finally {
       setLoading(false);
@@ -510,7 +511,7 @@ const MenuManagement: React.FC = () => {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error("Error saving primary category:", error);
+        logger.error("Error saving primary category:", error);
       showSnackbar(getErrorMessage(error), "error");
     } finally {
       setLoading(false);
@@ -539,7 +540,7 @@ const MenuManagement: React.FC = () => {
           throw new Error(errorMessage);
         }
       } catch (error) {
-        console.error("Error deleting primary category:", error);
+          logger.error("Error deleting primary category:", error);
         showSnackbar(getErrorMessage(error), "error");
       } finally {
         setLoading(false);
@@ -605,7 +606,7 @@ const MenuManagement: React.FC = () => {
         throw new Error(`Failed to move category ${direction}`);
       }
     } catch (error) {
-      console.error(`Error moving category ${direction}:`, error);
+        logger.error(`Error moving category ${direction}:`, error);
       showSnackbar(`Failed to move category ${direction}`, "error");
     } finally {
       setLoading(false);
@@ -637,7 +638,7 @@ const MenuManagement: React.FC = () => {
         throw new Error(`Failed to move menu item ${direction}`);
       }
     } catch (error) {
-      console.error(`Error moving menu item ${direction}:`, error);
+      logger.error(`Error moving menu item ${direction}:`, error);
       showSnackbar(`Failed to move menu item ${direction}`, "error");
     } finally {
       setLoading(false);
@@ -693,7 +694,7 @@ const MenuManagement: React.FC = () => {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error("Error saving category:", error);
+      logger.error("Error saving category:", error);
       showSnackbar(getErrorMessage(error), "error");
     } finally {
       setLoading(false);
@@ -731,7 +732,7 @@ const MenuManagement: React.FC = () => {
             throw new Error("Failed to delete category");
           }
         } catch (error) {
-          console.error("Error deleting category:", error);
+            logger.error("Error deleting category:", error);
           showSnackbar("Failed to delete category", "error");
         } finally {
           setLoading(false);
@@ -797,7 +798,7 @@ const MenuManagement: React.FC = () => {
         ...prev,
         imageUrls: prev.imageUrls.filter((_, i) => i !== index),
       }));
-      
+
       showSnackbar("Image will be deleted when you save changes", "info");
     } else {
       // Removing a new file preview (not yet uploaded)
@@ -828,7 +829,7 @@ const MenuManagement: React.FC = () => {
         throw new Error(`Upload failed: ${errorText}`);
       }
     } catch (error) {
-      console.error("Error uploading images:", error);
+      logger.error("Error uploading images:", error);
       showSnackbar("Failed to upload images to server", "error");
       throw error;
     }
@@ -913,9 +914,9 @@ const MenuManagement: React.FC = () => {
               credentials: "include",
               body: JSON.stringify({ urls: imagesToDelete }),
             });
-            console.log(`Deleted ${imagesToDelete.length} image(s) from S3`);
+            logger.debug(`Deleted ${imagesToDelete.length} image(s) from S3`);
           } catch (error) {
-            console.error("Error deleting images from S3:", error);
+            logger.error("Error deleting images from S3:", error);
             // Don't show error to user as the item was saved successfully
           }
         }
@@ -938,7 +939,7 @@ const MenuManagement: React.FC = () => {
         );
       }
     } catch (error) {
-      console.error("Error saving menu item:", error);
+        logger.error("Error saving menu item:", error);
       showSnackbar("Failed to save menu item", "error");
     } finally {
       setLoading(false);
@@ -961,7 +962,7 @@ const MenuManagement: React.FC = () => {
           throw new Error("Failed to delete menu item");
         }
       } catch (error) {
-        console.error("Error deleting menu item:", error);
+        logger.error("Error deleting menu item:", error);
         showSnackbar("Failed to delete menu item", "error");
       } finally {
         setLoading(false);

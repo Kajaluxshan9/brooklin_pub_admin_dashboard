@@ -22,6 +22,7 @@ import {
 import moment from 'moment-timezone';
 import { useAuth } from '../contexts/AuthContext';
 import { PageHeader } from '../components/common/PageHeader';
+import logger from '../utils/logger';
 import { StatusChip } from '../components/common/StatusChip';
 
 // Timezone constant
@@ -157,11 +158,11 @@ const OpeningHours: React.FC = () => {
         const data = await response.json();
         setOpeningHours(data);
       } else {
-        console.warn('Failed to fetch opening hours, using defaults');
+        logger.warn('Failed to fetch opening hours, using defaults');
         initializeDefaultHours();
       }
     } catch (error) {
-      console.error('Error fetching opening hours:', error);
+      logger.error('Error fetching opening hours:', error);
       initializeDefaultHours();
     } finally {
       setLoading(false);
@@ -224,7 +225,7 @@ const OpeningHours: React.FC = () => {
 
       return true;
     } catch (error) {
-      console.error('Error saving opening hours:', error);
+      logger.error('Error saving opening hours:', error);
       return false;
     } finally {
       setSaving(false);

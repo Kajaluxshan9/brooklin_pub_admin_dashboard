@@ -38,6 +38,7 @@ import moment from "moment-timezone";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { PageHeader } from "../components/common/PageHeader";
+import logger from "../utils/logger";
 import { StatusChip } from "../components/common/StatusChip";
 import { ActionButtons } from "../components/common/ActionButtons";
 
@@ -204,7 +205,7 @@ const Dashboard: React.FC = () => {
         await loadDashboardDataFallback();
       }
     } catch (error) {
-      console.error("Error loading dashboard data:", error);
+      logger.error("Error loading dashboard data:", error);
       await loadDashboardDataFallback();
     } finally {
       setLoading(false);
@@ -315,7 +316,7 @@ const Dashboard: React.FC = () => {
 
       setRecentActivities(activities);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      logger.error('Error loading dashboard data:', error);
     }
   };
 
@@ -326,7 +327,7 @@ const Dashboard: React.FC = () => {
         setTodos(response.data || []);
       }
     } catch (error) {
-      console.error('Error loading todos:', error);
+      logger.error('Error loading todos:', error);
     }
   };
 
@@ -383,7 +384,7 @@ const Dashboard: React.FC = () => {
         alert('Failed to save todo. Please try again.');
       }
     } catch (error) {
-      console.error('Error saving todo:', error);
+      logger.error('Error saving todo:', error);
       alert('Error saving todo. Please try again.');
     }
   };
@@ -399,7 +400,7 @@ const Dashboard: React.FC = () => {
           alert('Failed to delete todo. Please try again.');
         }
       } catch (error) {
-        console.error('Error deleting todo:', error);
+        logger.error('Error deleting todo:', error);
         alert('Error deleting todo. Please try again.');
       }
     }
@@ -415,7 +416,7 @@ const Dashboard: React.FC = () => {
         await loadDashboardData();
       }
     } catch (error) {
-      console.error('Error updating todo status:', error);
+      logger.error('Error updating todo status:', error);
     }
   };
 

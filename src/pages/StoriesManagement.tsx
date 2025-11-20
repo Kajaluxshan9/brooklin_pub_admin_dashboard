@@ -29,6 +29,7 @@ import {
 } from '@mui/icons-material';
 import { PageHeader } from '../components/common/PageHeader';
 import { StatusChip } from '../components/common/StatusChip';
+import logger from '../utils/logger';
 
 interface StoryCategory {
   id: string;
@@ -104,7 +105,7 @@ const StoriesManagement: React.FC = () => {
         throw new Error('Failed to load story categories');
       }
     } catch (error) {
-      console.error('Error loading categories:', error);
+      logger.error('Error loading categories:', error);
       showSnackbar('Error loading story categories', 'error');
     } finally {
       setLoading(false);
@@ -168,7 +169,7 @@ const StoriesManagement: React.FC = () => {
         throw new Error('Failed to save category');
       }
     } catch (error) {
-      console.error('Error saving category:', error);
+      logger.error('Error saving category:', error);
       showSnackbar('Error saving category', 'error');
     } finally {
       setLoading(false);
@@ -198,7 +199,7 @@ const StoriesManagement: React.FC = () => {
         throw new Error('Failed to delete category');
       }
     } catch (error) {
-      console.error('Error deleting category:', error);
+      logger.error('Error deleting category:', error);
       showSnackbar('Error deleting category', 'error');
     } finally {
       setLoading(false);
@@ -222,7 +223,7 @@ const StoriesManagement: React.FC = () => {
         throw new Error('Failed to toggle category status');
       }
     } catch (error) {
-      console.error('Error toggling status:', error);
+      logger.error('Error toggling status:', error);
       showSnackbar('Error updating category status', 'error');
     }
   };
@@ -331,7 +332,7 @@ const StoriesManagement: React.FC = () => {
         throw new Error('Failed to create story');
       }
     } catch (error) {
-      console.error('Error saving story:', error);
+      logger.error('Error saving story:', error);
       showSnackbar('Error saving story', 'error');
     } finally {
       setLoading(false);
@@ -357,7 +358,7 @@ const StoriesManagement: React.FC = () => {
         throw new Error('Failed to delete story');
       }
     } catch (error) {
-      console.error('Error deleting story:', error);
+      logger.error('Error deleting story:', error);
       showSnackbar('Error deleting story', 'error');
     } finally {
       setLoading(false);
