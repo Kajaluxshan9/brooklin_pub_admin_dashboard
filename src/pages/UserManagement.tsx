@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { API_BASE_URL } from "../config/env.config";
 import {
   Box,
   Typography,
@@ -39,6 +40,7 @@ import {
 } from "@mui/icons-material";
 import moment from "moment-timezone";
 import { useAuth } from "../contexts/AuthContext";
+import { useGlobalToast } from "../contexts/ToastContext";
 import { PageHeader } from "../components/common/PageHeader";
 import { StatusChip } from "../components/common/StatusChip";
 import { ActionButtons } from "../components/common/ActionButtons";
@@ -58,12 +60,14 @@ interface User {
   phone?: string;
   role: UserRoleValue;
   isActive: boolean;
+  isEmailVerified?: boolean;
   lastLogin?: Date;
   createdAt: Date;
 }
 
 const UserManagement: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const { showToast } = useGlobalToast();
   const [users, setUsers] = useState<User[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -91,7 +95,7 @@ const UserManagement: React.FC = () => {
 
   const loadUsers = useCallback(async () => {
     try {
-      const response = await fetch("http://localhost:5000/users", {
+      const response = await fetch(`${API_BASE_URL}/users`, {
         credentials: "include",
       });
 
@@ -158,10 +162,13 @@ const UserManagement: React.FC = () => {
   const handleSave = async () => {
     try {
       const url = selectedUser
-        ? `http://localhost:5000/users/${selectedUser.id}`
-        : "http://localhost:5000/auth/register";
+        ? `${API_BASE_URL}/users/${selectedUser.id}`
+        : `${API_BASE_URL}/auth/register`;
 
       const method = selectedUser ? "PUT" : "POST";
+
+      // Remove confirmPassword from the data sent to backend
+      const { confirmPassword, ...userData } = userForm;
 
       const response = await fetch(url, {
         method,
@@ -169,30 +176,42 @@ const UserManagement: React.FC = () => {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(userForm),
+        body: JSON.stringify(userData),
       });
 
       if (response.ok) {
         loadUsers();
         setDialogOpen(false);
+        // Show success message with verification info
+        showToast(
+          selectedUser
+            ? "User updated successfully"
+            : "User created successfully. A verification email has been sent.",
+          "success",
+        );
       } else {
-        console.error("Failed to save user");
+        const errorData = await response.json();
+        console.error("Failed to save user:", errorData);
+        showToast(`Failed to save user: ${errorData.message || 'Unknown error'}`, "error");
       }
     } catch (error) {
       console.error("Error saving user:", error);
+      alert("Error saving user. Please try again.");
     }
   };
 
   const handleDelete = async (id: string) => {
     // Check if trying to delete self
     if (currentUser?.id === id) {
-      alert("Error: You cannot delete your own account. Please ask another administrator to perform this action.");
+      alert(
+        "Error: You cannot delete your own account. Please ask another administrator to perform this action."
+      );
       return;
     }
 
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
-        const response = await fetch(`http://localhost:5000/users/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/users/${id}`, {
           method: "DELETE",
           credentials: "include",
         });
@@ -201,7 +220,9 @@ const UserManagement: React.FC = () => {
           loadUsers();
         } else {
           const errorData = await response.json();
-          alert(`Failed to delete user: ${errorData.message || 'Unknown error'}`);
+          alert(
+            `Failed to delete user: ${errorData.message || "Unknown error"}`
+          );
           console.error("Failed to delete user");
         }
       } catch (error) {
@@ -224,17 +245,47 @@ const UserManagement: React.FC = () => {
     setMenuUserId(null);
   };
 
+  const handleResendVerification = async (userId: string) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/auth/resend-verification/${userId}`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message || "Verification email sent successfully");
+      } else {
+        const errorData = await response.json();
+        alert(
+          `Failed to resend verification: ${
+            errorData.message || "Unknown error"
+          }`
+        );
+      }
+    } catch (error) {
+      console.error("Error resending verification:", error);
+      alert("Error: Failed to resend verification email. Please try again.");
+    }
+    handleMenuClose();
+  };
+
   const handleToggleStatus = async (userId: string) => {
     // Check if trying to inactivate self
     if (currentUser?.id === userId) {
-      alert("Error: You cannot change your own account status. Please ask another administrator to perform this action.");
+      alert(
+        "Error: You cannot change your own account status. Please ask another administrator to perform this action."
+      );
       handleMenuClose();
       return;
     }
 
     try {
       const response = await fetch(
-        `http://localhost:5000/users/${userId}/toggle-status`,
+        `${API_BASE_URL}/users/${userId}/toggle-status`,
         {
           method: "PATCH",
           credentials: "include",
@@ -245,7 +296,11 @@ const UserManagement: React.FC = () => {
         loadUsers();
       } else {
         const errorData = await response.json();
-        alert(`Failed to toggle user status: ${errorData.message || 'Unknown error'}`);
+        alert(
+          `Failed to toggle user status: ${
+            errorData.message || "Unknown error"
+          }`
+        );
         console.error("Failed to toggle user status");
       }
     } catch (error) {
@@ -396,6 +451,25 @@ const UserManagement: React.FC = () => {
                     />
                   </Box>
 
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      Email:
+                    </Typography>
+                    <Chip
+                      label={user.isEmailVerified ? "Verified" : "Unverified"}
+                      size="small"
+                      color={user.isEmailVerified ? "success" : "warning"}
+                      sx={{ fontSize: "0.7rem" }}
+                    />
+                  </Box>
+
                   {user.lastLogin && (
                     <Typography variant="body2" color="text.secondary">
                       Last login:{" "}
@@ -455,6 +529,16 @@ const UserManagement: React.FC = () => {
               ? "Deactivate"
               : "Activate"}
           </MenuListItem>
+          {!users.find((u) => u.id === menuUserId)?.isEmailVerified && (
+            <MenuListItem
+              onClick={() => {
+                if (menuUserId) handleResendVerification(menuUserId);
+              }}
+            >
+              <EmailIcon sx={{ fontSize: 16, mr: 1 }} />
+              Resend Verification
+            </MenuListItem>
+          )}
           <Divider />
           <MenuListItem
             onClick={() => {
@@ -602,3 +686,4 @@ const UserManagement: React.FC = () => {
 };
 
 export default UserManagement;
+

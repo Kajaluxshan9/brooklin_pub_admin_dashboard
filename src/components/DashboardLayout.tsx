@@ -17,6 +17,7 @@ import {
   Menu,
   MenuItem,
   Chip,
+  Fade,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -30,20 +31,22 @@ import {
   Event as EventIcon,
   Schedule as ScheduleIcon,
   AccessTime as AccessTimeIcon,
+  PhotoLibrary as StoriesIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import moment from "moment-timezone";
 
-const drawerWidth = 280;
+const drawerWidth = 260;
 
 const navigation = [
   { name: "Dashboard", path: "/", icon: DashboardIcon },
-  { name: "Menu Management", path: "/menu", icon: RestaurantIcon },
+  { name: "Menu", path: "/menu", icon: RestaurantIcon },
   { name: "Specials", path: "/specials", icon: SpecialsIcon },
   { name: "Events", path: "/events", icon: EventIcon },
+  { name: "Stories", path: "/stories", icon: StoriesIcon },
   { name: "Opening Hours", path: "/hours", icon: ScheduleIcon },
-  { name: "User Management", path: "/users", icon: PeopleIcon },
+  { name: "User", path: "/users", icon: PeopleIcon },
   { name: "Settings", path: "/settings", icon: SettingsIcon },
 ];
 
@@ -85,96 +88,212 @@ const DashboardLayout: React.FC = () => {
     await logout();
   };
 
-  const logoStyle = {
-    height: 32,
-    marginRight: 8,
-  };
-
   const drawer = (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <Toolbar
         sx={{
-          bgcolor: "#FFFFFF",
-          borderBottom: "1px solid #E8E3DC",
+          background:
+            "linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 240, 0.95) 100%)",
+          borderBottom: "2px solid rgba(200, 121, 65, 0.15)",
+          backdropFilter: "blur(20px)",
           color: "#2D2416",
-          minHeight: { xs: 56, sm: 64 },
+          minHeight: { xs: 56, sm: 72 },
           px: 3,
+          boxShadow: "0 4px 16px rgba(200, 121, 65, 0.12)",
+          position: "relative",
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            bottom: -2,
+            left: 0,
+            right: 0,
+            height: "2px",
+            background:
+              "linear-gradient(90deg, transparent 0%, #C87941 50%, transparent 100%)",
+            opacity: 0.5,
+          },
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
-          <img
-            src="/brooklinpub-logo.png"
-            alt="Brooklin Pub"
-            style={logoStyle}
-          />
-          <Typography
-            variant="h6"
-            noWrap
-            component="div"
+        <Box
+          sx={{ display: "flex", alignItems: "center", width: "100%", gap: 2 }}
+        >
+          <Box
             sx={{
-              fontWeight: 700,
-              fontSize: "1.125rem",
-              color: "#C87941",
-              letterSpacing: "-0.01em",
+              width: 48,
+              height: 48,
+              borderRadius: 2.5,
+              background: "linear-gradient(135deg, #ffffff 0%, #FFF8F0 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 4px 12px rgba(200, 121, 65, 0.2)",
+              border: "2px solid rgba(200, 121, 65, 0.15)",
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              "&:hover": {
+                transform: "rotate(-5deg) scale(1.05)",
+                boxShadow: "0 6px 16px rgba(200, 121, 65, 0.3)",
+              },
             }}
           >
-            The Brooklin Pub
-          </Typography>
+            <Box
+              component="img"
+              src="/brooklinpub-logo.png"
+              alt="Brooklin Pub"
+              sx={{
+                height: 32,
+                width: 52,
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          </Box>
+          <Box>
+            <Typography
+              variant="h6"
+              noWrap
+              component="div"
+              sx={{
+                fontWeight: 800,
+                fontSize: "1.2rem",
+                background: "linear-gradient(135deg, #C87941 0%, #E89B5C 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                letterSpacing: "-0.02em",
+                lineHeight: 1.2,
+              }}
+            >
+              The Brooklin Pub
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "#8B7355",
+                fontWeight: 600,
+                fontSize: "0.7rem",
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+              }}
+            >
+              Admin Dashboard
+            </Typography>
+          </Box>
         </Box>
       </Toolbar>
-      <Divider sx={{ borderColor: "#E8DDD0" }} />
-      <Box sx={{ flex: 1, overflow: "auto", bgcolor: "#FFFFFF", p: 2 }}>
-        <List sx={{ pt: 1 }}>
-          {navigation.map((item) => {
+      <Divider sx={{ borderColor: "rgba(200, 121, 65, 0.15)" }} />
+      <Box
+        sx={{ flex: 1, overflow: "auto", bgcolor: "#FFFFFF", p: 2.5, pt: 3 }}
+      >
+        <List sx={{ pt: 0 }}>
+          {navigation.map((item, index) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 
             return (
-              <ListItem key={item.name} disablePadding sx={{ mb: 0.5 }}>
-                <ListItemButton
-                  selected={isActive}
-                  onClick={() => navigate(item.path)}
-                  sx={{
-                    borderRadius: "10px",
-                    minHeight: 44,
-                    px: 2,
-                    py: 1.25,
-                    transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "&.Mui-selected": {
-                      backgroundColor: "#C87941",
-                      color: "white",
-                      boxShadow: "0 1px 3px 0 rgba(200, 121, 65, 0.22)",
-                      "&:hover": {
-                        backgroundColor: "#D4842D",
-                        boxShadow: "0 4px 6px -1px rgba(200, 121, 65, 0.22)",
-                      },
-                      "& .MuiListItemIcon-root": {
-                        color: "white",
-                      },
-                    },
-                    "&:hover": {
-                      backgroundColor: isActive ? "#D4842D" : "#FFF3E6",
-                    },
-                  }}
-                >
-                  <ListItemIcon
+              <ListItem key={item.name} disablePadding sx={{ mb: 1 }}>
+                <Fade in timeout={300 + index * 50}>
+                  <ListItemButton
+                    selected={isActive}
+                    onClick={() => navigate(item.path)}
                     sx={{
-                      minWidth: 40,
-                      color: isActive ? "white" : "#C87941",
-                      transition: "color 0.15s",
+                      borderRadius: 3,
+                      minHeight: 52,
+                      px: 2.5,
+                      py: 1.75,
+                      position: "relative",
+                      overflow: "hidden",
+                      transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                      mb: 0.5,
+                      "&::before": {
+                        content: '""',
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 5,
+                        background:
+                          "linear-gradient(180deg, #E89B5C 0%, #C87941 100%)",
+                        borderRadius: "0 4px 4px 0",
+                        transform: isActive ? "scaleY(1)" : "scaleY(0)",
+                        transition:
+                          "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                        boxShadow: isActive
+                          ? "2px 0 8px rgba(200, 121, 65, 0.4)"
+                          : "none",
+                      },
+                      "&::after": {
+                        content: '""',
+                        position: "absolute",
+                        inset: 0,
+                        borderRadius: 3,
+                        padding: "1.5px",
+                        background: isActive
+                          ? "linear-gradient(135deg, #C87941, #E89B5C)"
+                          : "transparent",
+                        WebkitMask:
+                          "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                        WebkitMaskComposite: "xor",
+                        maskComposite: "exclude",
+                        opacity: isActive ? 1 : 0,
+                        transition:
+                          "opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                      },
+                      "&.Mui-selected": {
+                        background:
+                          "linear-gradient(135deg, rgba(200, 121, 65, 0.95) 0%, rgba(232, 155, 92, 0.95) 100%)",
+                        color: "white",
+                        boxShadow:
+                          "0 6px 16px rgba(200, 121, 65, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.2)",
+                        backdropFilter: "blur(10px)",
+                        "&:hover": {
+                          background:
+                            "linear-gradient(135deg, rgba(164, 95, 45, 0.95) 0%, rgba(200, 121, 65, 0.95) 100%)",
+                          boxShadow:
+                            "0 8px 20px rgba(200, 121, 65, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
+                          transform: "translateX(6px) scale(1.02)",
+                        },
+                        "& .MuiListItemIcon-root": {
+                          color: "white",
+                          transform: "scale(1.15)",
+                          filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))",
+                        },
+                      },
+                      "&:hover": {
+                        backgroundColor: isActive
+                          ? "transparent"
+                          : "rgba(200, 121, 65, 0.1)",
+                        transform: isActive
+                          ? "translateX(6px) scale(1.02)"
+                          : "translateX(3px)",
+                        boxShadow: !isActive
+                          ? "0 2px 8px rgba(200, 121, 65, 0.15)"
+                          : undefined,
+                        "& .MuiListItemIcon-root": {
+                          transform: isActive ? "scale(1.15)" : "scale(1.08)",
+                        },
+                      },
                     }}
                   >
-                    <Icon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={item.name}
-                    primaryTypographyProps={{
-                      fontWeight: isActive ? 600 : 400,
-                      fontSize: "0.875rem",
-                      color: isActive ? "white" : "#000000",
-                    }}
-                  />
-                </ListItemButton>
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 42,
+                        color: isActive ? "white" : "#C87941",
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                      }}
+                    >
+                      <Icon fontSize="medium" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={item.name}
+                      primaryTypographyProps={{
+                        fontWeight: isActive ? 700 : 500,
+                        fontSize: "0.925rem",
+                        color: isActive ? "white" : "#2C1810",
+                        letterSpacing: "-0.01em",
+                      }}
+                    />
+                  </ListItemButton>
+                </Fade>
               </ListItem>
             );
           })}
@@ -187,19 +306,40 @@ const DashboardLayout: React.FC = () => {
     <Box sx={{ display: "flex" }}>
       <AppBar
         position="fixed"
-        elevation={4}
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          bgcolor: "white",
+        elevation={0}
+        sx={(theme) => ({
+          // floating rectangular header
+          top: { xs: 6, sm: 8 },
+          left: { xs: 6, sm: `${drawerWidth + 8}px` },
+          right: { xs: 6, sm: 8 },
+          width: {
+            xs: `calc(100% - 1px)`,
+            sm: `calc(100% - ${drawerWidth + 12}px)`,
+          },
+          borderRadius: 1.5,
+          background: "rgba(255, 255, 255, 0.96)",
           color: "#2C1810",
-          borderBottom: "none",
-          backdropFilter: "blur(20px)",
+          border: "1px solid rgba(200, 121, 65, 0.12)",
+          backdropFilter: "blur(28px) saturate(160%)",
+          WebkitBackdropFilter: "blur(28px) saturate(160%)",
           boxShadow:
-            "0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)",
-        }}
+            "0 12px 40px rgba(22, 18, 16, 0.06), 0 6px 20px rgba(200, 121, 65, 0.12)",
+          transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+          zIndex: theme.zIndex.drawer + 30,
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            bottom: -1,
+            left: 12,
+            right: 12,
+            height: "1px",
+            background:
+              "linear-gradient(90deg, transparent 0%, rgba(200, 121, 65, 0.22) 50%, transparent 100%)",
+            borderRadius: "0 0 8px 8px",
+          },
+        })}
       >
-        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 68 }, px: { xs: 2, sm: 4 } }}>
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -215,22 +355,40 @@ const DashboardLayout: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Box sx={{ flexGrow: 1 }} />
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
             {/* Real-time Clock */}
             <Chip
-              icon={<AccessTimeIcon sx={{ fontSize: "1rem" }} />}
+              icon={<AccessTimeIcon sx={{ fontSize: "1.15rem" }} />}
               label={currentTime}
               variant="outlined"
               size="medium"
               sx={{
                 display: { xs: "none", md: "flex" },
-                borderColor: "#E8DDD0",
-                color: "#6B5D4F",
-                fontWeight: 500,
+                borderColor: "rgba(200, 121, 65, 0.3)",
+                borderWidth: "2px",
+                color: "#6B4E3D",
+                fontWeight: 600,
                 fontSize: "0.875rem",
-                backgroundColor: "#FFF8F0",
+                background:
+                  "linear-gradient(135deg, rgba(255, 248, 240, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%)",
+                backdropFilter: "blur(10px)",
+                px: 2,
+                height: 42,
+                borderRadius: 1.5,
+                boxShadow:
+                  "0 2px 8px rgba(200, 121, 65, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.5)",
+                transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                "&:hover": {
+                  borderColor: "#C87941",
+                  background:
+                    "linear-gradient(135deg, rgba(255, 243, 230, 0.98) 0%, rgba(255, 248, 240, 0.98) 100%)",
+                  boxShadow:
+                    "0 6px 16px rgba(200, 121, 65, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.6)",
+                  transform: "translateY(-2px) scale(1.02)",
+                },
                 "& .MuiChip-icon": {
                   color: "#C87941",
+                  filter: "drop-shadow(0 1px 2px rgba(200, 121, 65, 0.3))",
                 },
               }}
             />
@@ -242,22 +400,31 @@ const DashboardLayout: React.FC = () => {
               aria-haspopup="true"
               onClick={handleProfileMenuOpen}
               sx={{
-                transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
+                p: 0.5,
+                transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
                 "&:hover": {
-                  transform: "scale(1.05)",
-                  backgroundColor: "#FFF3E6",
+                  transform: "scale(1.1) rotate(5deg)",
+                  backgroundColor: "transparent",
+                  "& .MuiAvatar-root": {
+                    boxShadow:
+                      "0 8px 24px rgba(200, 121, 65, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.2)",
+                  },
                 },
               }}
             >
               <Avatar
                 sx={{
-                  width: 40,
-                  height: 40,
-                  bgcolor: "#C87941",
-                  fontWeight: 600,
-                  fontSize: "0.938rem",
-                  boxShadow: "0 1px 3px 0 rgba(200, 121, 65, 0.22)",
-                  border: "2px solid #E8DDD0",
+                  width: 44,
+                  height: 44,
+                  background:
+                    "linear-gradient(135deg, #C87941 0%, #E89B5C 50%, #F5A94C 100%)",
+                  fontWeight: 700,
+                  fontSize: "1.05rem",
+                  boxShadow:
+                    "0 6px 16px rgba(200, 121, 65, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.3)",
+                  border: "3px solid rgba(255, 255, 255, 0.95)",
+                  transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                  letterSpacing: "0.5px",
                 }}
               >
                 {user?.firstName?.charAt(0)}
@@ -274,16 +441,32 @@ const DashboardLayout: React.FC = () => {
         open={Boolean(anchorEl)}
         onClose={handleProfileMenuClose}
         onClick={handleProfileMenuClose}
+        TransitionComponent={Fade}
         PaperProps={{
-          elevation: 8,
+          elevation: 0,
           sx: {
             overflow: "visible",
-            filter: "drop-shadow(0px 10px 15px rgba(200, 121, 65, 0.12))",
+            boxShadow:
+              "0 16px 48px rgba(200, 121, 65, 0.22), 0 8px 24px rgba(200, 121, 65, 0.12)",
             mt: 1.5,
-            borderRadius: 2,
-            minWidth: 200,
-            backgroundColor: "#FFFFFF",
-            border: "1px solid #E8DDD0",
+            borderRadius: 4,
+            minWidth: 240,
+            background:
+              "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 240, 0.98) 100%)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(200, 121, 65, 0.2)",
+            "&::before": {
+              content: '""',
+              position: "absolute",
+              top: -8,
+              right: 20,
+              width: 0,
+              height: 0,
+              borderLeft: "8px solid transparent",
+              borderRight: "8px solid transparent",
+              borderBottom: "8px solid rgba(200, 121, 65, 0.2)",
+            },
             "& .MuiAvatar-root": {
               width: 32,
               height: 32,
@@ -291,18 +474,43 @@ const DashboardLayout: React.FC = () => {
               mr: 1,
             },
             "& .MuiMenuItem-root": {
-              px: 2,
-              py: 1.25,
-              borderRadius: 1.5,
-              mx: 1,
-              my: 0.25,
-              transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
+              px: 3,
+              py: 1.75,
+              borderRadius: 2.5,
+              mx: 1.5,
+              my: 0.5,
+              transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
               color: "#6B4E3D",
-              fontWeight: 500,
-              fontSize: "0.875rem",
+              fontWeight: 600,
+              fontSize: "0.938rem",
+              position: "relative",
+              "&::before": {
+                content: '""',
+                position: "absolute",
+                left: 0,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 0,
+                height: "60%",
+                background: "linear-gradient(180deg, #C87941, #E89B5C)",
+                borderRadius: "0 4px 4px 0",
+                transition: "width 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+              },
               "&:hover": {
-                backgroundColor: "#FFF3E6",
+                background:
+                  "linear-gradient(135deg, rgba(200, 121, 65, 0.12) 0%, rgba(232, 155, 92, 0.12) 100%)",
                 color: "#C87941",
+                transform: "translateX(6px)",
+                boxShadow: "0 2px 8px rgba(200, 121, 65, 0.15)",
+                "&::before": {
+                  width: "4px",
+                },
+                "& .MuiSvgIcon-root": {
+                  transform: "scale(1.15) rotate(5deg)",
+                },
+              },
+              "& .MuiSvgIcon-root": {
+                transition: "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
               },
             },
           },
@@ -310,13 +518,35 @@ const DashboardLayout: React.FC = () => {
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
+        <Box
+          sx={{
+            px: 2.5,
+            py: 2,
+            borderBottom: "1px solid rgba(200, 121, 65, 0.12)",
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 700, color: "#2C1810", fontSize: "0.95rem" }}
+          >
+            {user?.firstName} {user?.lastName}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{ color: "#8B7355", fontSize: "0.8rem" }}
+          >
+            {user?.email}
+          </Typography>
+        </Box>
         <MenuItem onClick={() => navigate("/settings")}>
-          <AccountCircle sx={{ mr: 1.5, color: "#C87941", fontSize: 20 }} />
+          <AccountCircle sx={{ mr: 1.5, color: "#C87941", fontSize: 22 }} />
           Profile Settings
         </MenuItem>
-        <Divider sx={{ borderColor: "#E8DDD0", my: 0.5 }} />
+        <Divider
+          sx={{ borderColor: "rgba(200, 121, 65, 0.12)", my: 0.5, mx: 1.5 }}
+        />
         <MenuItem onClick={handleLogout}>
-          <LogoutIcon sx={{ mr: 1.5, color: "#C87941", fontSize: 20 }} />
+          <LogoutIcon sx={{ mr: 1.5, color: "#C87941", fontSize: 22 }} />
           Logout
         </MenuItem>
       </Menu>
@@ -350,10 +580,14 @@ const DashboardLayout: React.FC = () => {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: drawerWidth,
-              bgcolor: "#FFFFFF",
-              borderRight: "1px solid #E8DDD0",
+              bgcolor: "rgba(255, 255, 255, 0.98)",
+              borderRight: "1px solid rgba(200, 121, 65, 0.15)",
               boxShadow:
-                "0 4px 6px -1px rgba(200, 121, 65, 0.12), 0 2px 4px -1px rgba(200, 121, 65, 0.08)",
+                "4px 0 24px rgba(200, 121, 65, 0.1), 2px 0 12px rgba(200, 121, 65, 0.06)",
+              background:
+                "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 247, 0.98) 50%, rgba(255, 248, 240, 0.98) 100%)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
             },
           }}
           open
@@ -367,18 +601,33 @@ const DashboardLayout: React.FC = () => {
         sx={{
           flexGrow: 1,
           minHeight: "100vh",
-          bgcolor: "#FFF8F0",
-          transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+          background:
+            "linear-gradient(180deg, #FFF8F0 0%, #FFFBF7 50%, #FFFFFF 100%)",
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           width: { sm: `calc(100% - ${drawerWidth}px)` },
+          position: "relative",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "300px",
+            background:
+              "radial-gradient(ellipse at top, rgba(200, 121, 65, 0.05) 0%, transparent 70%)",
+            pointerEvents: "none",
+          },
         }}
       >
-        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }} />
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 68 } }} />
         <Box
           sx={{
             p: { xs: 2, sm: 3, md: 4 },
             maxWidth: "100%",
             mx: "auto",
-            minHeight: "calc(100vh - 64px)",
+            minHeight: "calc(100vh - 68px)",
+            position: "relative",
+            zIndex: 1,
           }}
         >
           <Outlet />

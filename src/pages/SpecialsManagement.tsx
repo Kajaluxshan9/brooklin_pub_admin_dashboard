@@ -22,14 +22,11 @@ import {
   Snackbar,
   LinearProgress,
   Tabs,
-  Chip,
   Tab,
 } from "@mui/material";
 import { Grid } from "@mui/material";
 import {
   Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
   CloudUpload as UploadIcon,
   Close as CloseIcon,
   Schedule as ScheduleIcon,
@@ -44,6 +41,7 @@ import moment from "moment-timezone";
 import { api } from "../utils/api";
 import { StatusChip } from "../components/common/StatusChip";
 import { ActionButtons } from "../components/common/ActionButtons";
+import { PageHeader } from "../components/common/PageHeader";
 
 const TIMEZONE = "America/Toronto";
 
@@ -356,14 +354,26 @@ const SpecialsManagement: React.FC = () => {
           display: "flex",
           flexDirection: "column",
           borderRadius: 3,
-          boxShadow: "0 4px 12px rgba(139, 69, 19, 0.15)",
-          border: "1px solid",
-          borderColor: "grey.200",
-          transition: "all 0.3s ease",
+          backgroundColor: "white",
+          boxShadow: "0 4px 16px rgba(200, 121, 65, 0.12)",
+          border: "2px solid",
+          borderColor: "rgba(200, 121, 65, 0.2)",
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          overflow: "hidden",
+          position: "relative",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "4px",
+            background: "linear-gradient(90deg, #C87941 0%, #E89B5C 100%)",
+          },
           "&:hover": {
             transform: "translateY(-4px)",
-            boxShadow: "0 8px 24px rgba(139, 69, 19, 0.25)",
-            borderColor: "primary.light",
+            boxShadow: "0 8px 24px rgba(200, 121, 65, 0.25)",
+            borderColor: "#C87941",
           },
         }}
       >
@@ -539,6 +549,25 @@ const SpecialsManagement: React.FC = () => {
     [specials]
   );
 
+  const getSpecialDefaultsForActiveTab = (tabIndex: number) => {
+    switch (tabIndex) {
+      case 0:
+        return { type: SpecialTypeValues.DAILY, category: SpecialCategoryValues.REGULAR, label: "Daily Special" };
+      case 1:
+        return { type: SpecialTypeValues.DAILY, category: SpecialCategoryValues.LATE_NIGHT, label: "Late Night Special" };
+      case 2:
+        return { type: SpecialTypeValues.GAME_TIME, category: SpecialCategoryValues.REGULAR, label: "Game Time Special" };
+      case 3:
+        return { type: SpecialTypeValues.DAY_TIME, category: SpecialCategoryValues.REGULAR, label: "Day Time Special" };
+      case 4:
+        return { type: SpecialTypeValues.CHEF, category: SpecialCategoryValues.REGULAR, label: "Chef Special" };
+      case 5:
+        return { type: SpecialTypeValues.SEASONAL, category: SpecialCategoryValues.REGULAR, label: "Seasonal Special" };
+      default:
+        return { type: SpecialTypeValues.DAILY, category: SpecialCategoryValues.REGULAR, label: "Special" };
+    }
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterMoment}>
       <Box
@@ -548,6 +577,33 @@ const SpecialsManagement: React.FC = () => {
           p: 3,
         }}
       >
+        {/* Global page header - outside inner container for consistency */}
+        <PageHeader
+          title="Specials Management"
+          subtitle="Manage your daily and seasonal specials with ease"
+          action={
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                const defaults = getSpecialDefaultsForActiveTab(activeTab);
+                handleOpenDialog(undefined, defaults.type, defaults.category);
+              }}
+              sx={{
+                backgroundColor: "#C87941",
+                color: "white",
+                fontWeight: 600,
+                px: 3,
+                borderRadius: 2,
+                boxShadow: "0 6px 20px rgba(200, 121, 65, 0.3)",
+                '&:hover': { backgroundColor: '#A45F2D' },
+              }}
+            >
+              {`Add ${getSpecialDefaultsForActiveTab(activeTab).label}`}
+            </Button>
+          }
+        />
+
         <Box
           sx={{
             maxWidth: 1400,
@@ -559,83 +615,90 @@ const SpecialsManagement: React.FC = () => {
             border: "1px solid #E8DDD0",
           }}
         >
-          <Box
-            sx={{
-              background: "linear-gradient(135deg, #C87941 0%, #D4842D 100%)",
-              p: 3,
-              color: "white",
-            }}
-          >
-            <Typography
-              variant="h4"
-              component="h1"
-              sx={{ fontWeight: 700, mb: 1 }}
-            >
-              Specials Management
-            </Typography>
-            <Typography variant="body1" sx={{ opacity: 0.95, fontWeight: 500 }}>
-              Manage your daily and seasonal specials with ease
-            </Typography>
-          </Box>
-
           {loading && (
-            <Box sx={{ px: 3, py: 1 }}>
-              <LinearProgress
-                sx={{
-                  height: 3,
-                  borderRadius: 2,
-                  backgroundColor: "#FFF3E6",
-                  "& .MuiLinearProgress-bar": {
-                    background:
-                      "linear-gradient(90deg, #C87941 0%, #D4842D 100%)",
-                  },
-                }}
-              />
-            </Box>
+            <LinearProgress
+              sx={{
+                mb: 2,
+                backgroundColor: "rgba(200, 121, 65, 0.15)",
+                "& .MuiLinearProgress-bar": { backgroundColor: "#C87941" },
+              }}
+            />
           )}
 
-          <Box sx={{ p: 3 }}>
-            <Box
+          {/* header moved above outer container */}
+
+          {/* Tabs */}
+          <Box
+            sx={{
+              mb: 3,
+              background:
+                "linear-gradient(135deg, rgba(255, 248, 240, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              borderRadius: 3,
+              p: 1,
+              border: "2px solid rgba(200, 121, 65, 0.2)",
+              boxShadow:
+                "0 8px 24px rgba(200, 121, 65, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.8)",
+            }}
+          >
+            <Tabs
+              value={activeTab}
+              onChange={(_, newValue) => setActiveTab(newValue)}
+              variant="scrollable"
+              scrollButtons="auto"
               sx={{
-                borderBottom: 2,
-                borderColor: "primary.main",
-                mb: 4,
+                "& .MuiTab-root": {
+                  color: "#8B7355",
+                  fontWeight: 700,
+                  fontSize: "1rem",
+                  textTransform: "none",
+                  minHeight: 60,
+                  px: 4,
+                  borderRadius: 2.5,
+                  margin: "4px",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  position: "relative",
+                  "&.Mui-selected": {
+                    color: "#FFFFFF",
+                    background:
+                      "linear-gradient(135deg, #C87941 0%, #E89B5C 100%)",
+                    boxShadow:
+                      "0 6px 20px rgba(200, 121, 65, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.3)",
+                    "&::after": {
+                      content: '""',
+                      position: "absolute",
+                      bottom: 0,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: "60%",
+                      height: "3px",
+                      background:
+                        "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.6) 50%, transparent 100%)",
+                      borderRadius: "3px 3px 0 0",
+                    },
+                  },
+                  "&:hover:not(.Mui-selected)": {
+                    color: "#C87941",
+                    background: "rgba(200, 121, 65, 0.12)",
+                    transform: "translateY(-2px)",
+                  },
+                },
                 "& .MuiTabs-indicator": {
-                  backgroundColor: "primary.main",
-                  height: 3,
-                  borderRadius: 2,
+                  display: "none",
                 },
               }}
             >
-              <Tabs
-                value={activeTab}
-                onChange={(_, newValue) => setActiveTab(newValue)}
-                sx={{
-                  "& .MuiTab-root": {
-                    textTransform: "none",
-                    fontSize: "1rem",
-                    fontWeight: 600,
-                    minHeight: 48,
-                    color: "text.secondary",
-                    "&.Mui-selected": {
-                      color: "primary.main",
-                    },
-                  },
-                }}
-              >
-                <Tab label="Daily Specials" />
-                <Tab label="Late Night Specials" />
-                <Tab label="Game Time Specials" />
-                <Tab label="Day Time Specials" />
-                <Tab label="Chef Specials" />
-                <Tab label="Seasonal Specials" />
-              </Tabs>
-            </Box>
+              <Tab label="Daily Specials" />
+              <Tab label="Late Night" />
+              <Tab label="Game Time" />
+              <Tab label="Day Time" />
+              <Tab label="Chef Specials" />
+              <Tab label="Seasonal" />
+            </Tabs>
+          </Box>
 
-            <Box sx={{ mb: 4 }}>
-              {/* Removed common Add New Special button - now each section has its own button */}
-            </Box>
-
+          <Box sx={{ px: 3, pb: 3 }}>
             {activeTab === 0 && (
               <Box>
                 <Box
@@ -651,39 +714,9 @@ const SpecialsManagement: React.FC = () => {
                     gutterBottom
                     sx={{ color: "text.primary", fontWeight: 600, mb: 0 }}
                   >
-                    🍽️ Daily Specials
+                    Daily Specials
                   </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() =>
-                      handleOpenDialog(
-                        undefined,
-                        SpecialTypeValues.DAILY,
-                        SpecialCategoryValues.REGULAR
-                      )
-                    }
-                    sx={{
-                      background:
-                        "linear-gradient(135deg, #C87941 0%, #D4842D 100%)",
-                      boxShadow: "0 2px 8px rgba(200, 121, 65, 0.22)",
-                      borderRadius: 2,
-                      px: 3,
-                      py: 1.5,
-                      fontSize: "0.938rem",
-                      fontWeight: 600,
-                      textTransform: "none",
-                      "&:hover": {
-                        background:
-                          "linear-gradient(135deg, #A45F2D 0%, #B5661A 100%)",
-                        boxShadow: "0 4px 12px rgba(200, 121, 65, 0.3)",
-                        transform: "translateY(-2px)",
-                      },
-                      transition: "all 0.3s ease",
-                    }}
-                  >
-                    Add Daily Special
-                  </Button>
+                  {/* Add button moved to global PageHeader */}
                 </Box>
                 {dailySpecials.length === 0 ? (
                   <Box
@@ -734,7 +767,7 @@ const SpecialsManagement: React.FC = () => {
                     gutterBottom
                     sx={{ color: "text.primary", fontWeight: 600, mb: 0 }}
                   >
-                    🌙 Late Night Specials
+                    Late Night Specials
                   </Typography>
                   <Button
                     variant="contained"
@@ -817,7 +850,7 @@ const SpecialsManagement: React.FC = () => {
                     gutterBottom
                     sx={{ color: "text.primary", fontWeight: 600, mb: 0 }}
                   >
-                    🏈 Game Time Specials
+                    Game Time Specials
                   </Typography>
                   <Button
                     variant="contained"
@@ -894,7 +927,7 @@ const SpecialsManagement: React.FC = () => {
                     gutterBottom
                     sx={{ color: "text.primary", fontWeight: 600, mb: 0 }}
                   >
-                    ☀️ Day Time Specials
+                    Day Time Specials
                   </Typography>
                   <Button
                     variant="contained"
@@ -970,7 +1003,7 @@ const SpecialsManagement: React.FC = () => {
                     gutterBottom
                     sx={{ color: "text.primary", fontWeight: 600, mb: 0 }}
                   >
-                    👨‍🍳 Chef Specials
+                    Chef Specials
                   </Typography>
                   <Button
                     variant="contained"

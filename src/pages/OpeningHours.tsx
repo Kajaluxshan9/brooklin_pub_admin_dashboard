@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { API_BASE_URL } from '../config/env.config';
 import {
   Box,
   Card,
@@ -12,38 +13,38 @@ import {
   CircularProgress,
   Snackbar,
   Chip,
-} from "@mui/material";
+} from '@mui/material';
 import {
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-} from "@mui/icons-material";
-import moment from "moment-timezone";
-import { useAuth } from "../contexts/AuthContext";
-import { PageHeader } from "../components/common/PageHeader";
-import { StatusChip } from "../components/common/StatusChip";
+} from '@mui/icons-material';
+import moment from 'moment-timezone';
+import { useAuth } from '../contexts/AuthContext';
+import { PageHeader } from '../components/common/PageHeader';
+import { StatusChip } from '../components/common/StatusChip';
 
 // Timezone constant
-const TIMEZONE = "America/Toronto";
+const TIMEZONE = 'America/Toronto';
 
 // Types
 type DayOfWeekValue =
-  | "monday"
-  | "tuesday"
-  | "wednesday"
-  | "thursday"
-  | "friday"
-  | "saturday"
-  | "sunday";
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
 
 const DayOfWeek = {
-  MONDAY: "monday" as DayOfWeekValue,
-  TUESDAY: "tuesday" as DayOfWeekValue,
-  WEDNESDAY: "wednesday" as DayOfWeekValue,
-  THURSDAY: "thursday" as DayOfWeekValue,
-  FRIDAY: "friday" as DayOfWeekValue,
-  SATURDAY: "saturday" as DayOfWeekValue,
-  SUNDAY: "sunday" as DayOfWeekValue,
+  MONDAY: 'monday' as DayOfWeekValue,
+  TUESDAY: 'tuesday' as DayOfWeekValue,
+  WEDNESDAY: 'wednesday' as DayOfWeekValue,
+  THURSDAY: 'thursday' as DayOfWeekValue,
+  FRIDAY: 'friday' as DayOfWeekValue,
+  SATURDAY: 'saturday' as DayOfWeekValue,
+  SUNDAY: 'sunday' as DayOfWeekValue,
 };
 
 interface OpeningHoursData {
@@ -69,7 +70,7 @@ interface EditFormData {
 interface NotificationState {
   open: boolean;
   message: string;
-  type: "success" | "error" | "warning" | "info";
+  type: 'success' | 'error' | 'warning' | 'info';
 }
 
 const OpeningHours: React.FC = () => {
@@ -79,17 +80,17 @@ const OpeningHours: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [editingDay, setEditingDay] = useState<DayOfWeekValue | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({
-    openTime: "",
-    closeTime: "",
+    openTime: '',
+    closeTime: '',
     isActive: true,
     isOpen: true,
     isClosedNextDay: false,
-    specialNote: "",
+    specialNote: '',
   });
   const [notification, setNotification] = useState<NotificationState>({
     open: false,
-    message: "",
-    type: "info",
+    message: '',
+    type: 'info',
   });
 
   // Utility Functions
@@ -98,29 +99,29 @@ const OpeningHours: React.FC = () => {
   };
 
   const isCurrentDay = (day: DayOfWeekValue): boolean => {
-    const currentDayName = moment().tz(TIMEZONE).format("dddd").toLowerCase();
+    const currentDayName = moment().tz(TIMEZONE).format('dddd').toLowerCase();
     return currentDayName === day;
   };
 
   const formatTimeRange = (
     openTime: string,
     closeTime: string,
-    isClosedNextDay?: boolean
+    isClosedNextDay?: boolean,
   ): string => {
-    const openMoment = moment(openTime, "HH:mm");
-    const closeMoment = moment(closeTime, "HH:mm");
+    const openMoment = moment(openTime, 'HH:mm');
+    const closeMoment = moment(closeTime, 'HH:mm');
 
     if (isClosedNextDay || closeMoment.isBefore(openMoment)) {
-      return `${openMoment.format("h:mm A")} - ${closeMoment.format(
-        "h:mm A"
+      return `${openMoment.format('h:mm A')} - ${closeMoment.format(
+        'h:mm A',
       )} (+1 day)`;
     }
-    return `${openMoment.format("h:mm A")} - ${closeMoment.format("h:mm A")}`;
+    return `${openMoment.format('h:mm A')} - ${closeMoment.format('h:mm A')}`;
   };
 
   const showNotification = (
     message: string,
-    type: NotificationState["type"] = "info"
+    type: NotificationState['type'] = 'info',
   ) => {
     setNotification({
       open: true,
@@ -133,13 +134,13 @@ const OpeningHours: React.FC = () => {
     const defaultHours: OpeningHoursData[] = Object.values(DayOfWeek).map(
       (day) => ({
         dayOfWeek: day,
-        openTime: "11:00",
-        closeTime: "23:00",
+        openTime: '11:00',
+        closeTime: '23:00',
         isActive: true,
         isOpen: true,
         isClosedNextDay: false,
-        specialNote: "",
-      })
+        specialNote: '',
+      }),
     );
     setOpeningHours(defaultHours);
   };
@@ -148,19 +149,19 @@ const OpeningHours: React.FC = () => {
   const fetchOpeningHours = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:5000/opening-hours", {
-        credentials: "include",
+      const response = await fetch(`${API_BASE_URL}/opening-hours`, {
+        credentials: 'include',
       });
 
       if (response.ok) {
         const data = await response.json();
         setOpeningHours(data);
       } else {
-        console.warn("Failed to fetch opening hours, using defaults");
+        console.warn('Failed to fetch opening hours, using defaults');
         initializeDefaultHours();
       }
     } catch (error) {
-      console.error("Error fetching opening hours:", error);
+      console.error('Error fetching opening hours:', error);
       initializeDefaultHours();
     } finally {
       setLoading(false);
@@ -169,18 +170,18 @@ const OpeningHours: React.FC = () => {
 
   const saveOpeningHours = async (
     dayOfWeek: DayOfWeekValue,
-    hoursData: EditFormData
+    hoursData: EditFormData,
   ): Promise<boolean> => {
     try {
       setSaving(true);
       const existingHours = openingHours.find(
-        (oh) => oh.dayOfWeek === dayOfWeek
+        (oh) => oh.dayOfWeek === dayOfWeek,
       );
 
       const payload = {
         dayOfWeek,
-        openTime: hoursData.isOpen ? hoursData.openTime : "",
-        closeTime: hoursData.isOpen ? hoursData.closeTime : "",
+        openTime: hoursData.isOpen ? hoursData.openTime : '',
+        closeTime: hoursData.isOpen ? hoursData.closeTime : '',
         isActive: hoursData.isActive,
         isOpen: hoursData.isOpen,
         isClosedNextDay: hoursData.isClosedNextDay,
@@ -188,17 +189,17 @@ const OpeningHours: React.FC = () => {
       };
 
       const url = existingHours?.id
-        ? `http://localhost:5000/opening-hours/${existingHours.id}`
-        : "http://localhost:5000/opening-hours";
+        ? `${API_BASE_URL}/opening-hours/${existingHours.id}`
+        : `${API_BASE_URL}/opening-hours`;
 
-      const method = existingHours?.id ? "PATCH" : "POST";
+      const method = existingHours?.id ? 'PATCH' : 'POST';
 
       const response = await fetch(url, {
         method,
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        credentials: "include",
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
 
@@ -214,8 +215,8 @@ const OpeningHours: React.FC = () => {
           prev.map((oh) =>
             oh.dayOfWeek === dayOfWeek
               ? { ...oh, ...payload, id: result.id || oh.id }
-              : oh
-          )
+              : oh,
+          ),
         );
       } else {
         setOpeningHours((prev) => [...prev, { ...payload, id: result.id }]);
@@ -223,7 +224,7 @@ const OpeningHours: React.FC = () => {
 
       return true;
     } catch (error) {
-      console.error("Error saving opening hours:", error);
+      console.error('Error saving opening hours:', error);
       return false;
     } finally {
       setSaving(false);
@@ -236,12 +237,12 @@ const OpeningHours: React.FC = () => {
 
     // Set form with existing data or defaults
     setEditForm({
-      openTime: dayHours?.openTime || "11:00",
-      closeTime: dayHours?.closeTime || "23:00",
+      openTime: dayHours?.openTime || '11:00',
+      closeTime: dayHours?.closeTime || '23:00',
       isActive: dayHours?.isActive ?? true,
       isOpen: dayHours?.isOpen ?? true,
       isClosedNextDay: dayHours?.isClosedNextDay || false,
-      specialNote: dayHours?.specialNote || "",
+      specialNote: dayHours?.specialNote || '',
     });
 
     setEditingDay(day);
@@ -252,8 +253,8 @@ const OpeningHours: React.FC = () => {
 
     if (editForm.isOpen && (!editForm.openTime || !editForm.closeTime)) {
       showNotification(
-        "Please set both open and close times when marked as open",
-        "warning"
+        'Please set both open and close times when marked as open',
+        'warning',
       );
       return;
     }
@@ -263,21 +264,21 @@ const OpeningHours: React.FC = () => {
     if (success) {
       showNotification(
         `${getDayDisplayName(editingDay)} hours updated successfully`,
-        "success"
+        'success',
       );
       setEditingDay(null);
       setEditForm({
-        openTime: "",
-        closeTime: "",
+        openTime: '',
+        closeTime: '',
         isActive: true,
         isOpen: true,
         isClosedNextDay: false,
-        specialNote: "",
+        specialNote: '',
       });
     } else {
       showNotification(
-        "Failed to save opening hours. Please try again.",
-        "error"
+        'Failed to save opening hours. Please try again.',
+        'error',
       );
     }
   };
@@ -285,20 +286,20 @@ const OpeningHours: React.FC = () => {
   const handleCancel = () => {
     setEditingDay(null);
     setEditForm({
-      openTime: "",
-      closeTime: "",
+      openTime: '',
+      closeTime: '',
       isActive: true,
       isOpen: true,
       isClosedNextDay: false,
-      specialNote: "",
+      specialNote: '',
     });
   };
 
   // Status Calculation
   const getCurrentOpenStatus = () => {
     const now = moment().tz(TIMEZONE);
-    const currentDay = now.format("dddd").toLowerCase() as DayOfWeekValue;
-    const currentTime = now.format("HH:mm");
+    const currentDay = now.format('dddd').toLowerCase() as DayOfWeekValue;
+    const currentTime = now.format('HH:mm');
 
     // Check current day
     const todayHours = openingHours.find((oh) => oh.dayOfWeek === currentDay);
@@ -319,8 +320,8 @@ const OpeningHours: React.FC = () => {
         if (currentTime >= openTime || currentTime <= closeTime) {
           return {
             isOpen: true,
-            message: `Open until ${moment(closeTime, "HH:mm").format(
-              "h:mm A"
+            message: `Open until ${moment(closeTime, 'HH:mm').format(
+              'h:mm A',
             )} (overnight)`,
             day: currentDay,
           };
@@ -330,8 +331,8 @@ const OpeningHours: React.FC = () => {
         if (currentTime >= openTime && currentTime <= closeTime) {
           return {
             isOpen: true,
-            message: `Open until ${moment(closeTime, "HH:mm").format(
-              "h:mm A"
+            message: `Open until ${moment(closeTime, 'HH:mm').format(
+              'h:mm A',
             )}`,
             day: currentDay,
           };
@@ -340,12 +341,12 @@ const OpeningHours: React.FC = () => {
     }
 
     // Check if we're in overnight hours from previous day
-    const previousDay = now.clone().subtract(1, "day");
+    const previousDay = now.clone().subtract(1, 'day');
     const previousDayName = previousDay
-      .format("dddd")
+      .format('dddd')
       .toLowerCase() as DayOfWeekValue;
     const previousDayHours = openingHours.find(
-      (oh) => oh.dayOfWeek === previousDayName
+      (oh) => oh.dayOfWeek === previousDayName,
     );
 
     if (
@@ -363,8 +364,8 @@ const OpeningHours: React.FC = () => {
           isOpen: true,
           message: `Open until ${moment(
             previousDayHours.closeTime,
-            "HH:mm"
-          ).format("h:mm A")} (from ${getDayDisplayName(previousDayName)})`,
+            'HH:mm',
+          ).format('h:mm A')} (from ${getDayDisplayName(previousDayName)})`,
           day: previousDayName,
         };
       }
@@ -375,9 +376,9 @@ const OpeningHours: React.FC = () => {
     const nextOpenMessage = nextOpen
       ? `Next open: ${getDayDisplayName(nextOpen.day)} at ${moment(
           nextOpen.openTime,
-          "HH:mm"
-        ).format("h:mm A")}`
-      : "Opening hours not available";
+          'HH:mm',
+        ).format('h:mm A')}`
+      : 'Opening hours not available';
 
     return {
       isOpen: false,
@@ -388,8 +389,8 @@ const OpeningHours: React.FC = () => {
 
   const findNextOpenDay = (now: moment.Moment) => {
     for (let i = 0; i < 7; i++) {
-      const checkDay = now.clone().add(i, "days");
-      const dayName = checkDay.format("dddd").toLowerCase() as DayOfWeekValue;
+      const checkDay = now.clone().add(i, 'days');
+      const dayName = checkDay.format('dddd').toLowerCase() as DayOfWeekValue;
       const dayHours = openingHours.find((oh) => oh.dayOfWeek === dayName);
 
       if (
@@ -400,7 +401,7 @@ const OpeningHours: React.FC = () => {
       ) {
         // If it's today, check if we haven't passed opening time yet
         if (i === 0) {
-          const currentTime = now.format("HH:mm");
+          const currentTime = now.format('HH:mm');
           if (currentTime < dayHours.openTime) {
             return { day: dayName, openTime: dayHours.openTime };
           }
@@ -425,27 +426,27 @@ const OpeningHours: React.FC = () => {
     return (
       <Box
         sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           minHeight: 400,
         }}
       >
-        <CircularProgress size={40} sx={{ color: "primary.main" }} />
+        <CircularProgress size={40} sx={{ color: 'primary.main' }} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: "100%", width: "100%" }}>
+    <Box sx={{ maxWidth: '100%', width: '100%' }}>
       {/* Header Section with Status */}
       <PageHeader
         title="Opening Hours Management"
         subtitle="Manage your pub's operating hours for each day of the week"
         statusChip={
           <StatusChip
-            status={status.isOpen ? "open" : "closed"}
-            label={status.isOpen ? "Currently Open" : "Currently Closed"}
+            status={status.isOpen ? 'open' : 'closed'}
+            label={status.isOpen ? 'Currently Open' : 'Currently Closed'}
           />
         }
       />
@@ -456,8 +457,8 @@ const OpeningHours: React.FC = () => {
           <Typography
             variant="body2"
             sx={{
-              color: "text.secondary",
-              fontSize: "0.95rem",
+              color: 'text.secondary',
+              fontSize: '0.95rem',
             }}
           >
             {status.message}
@@ -467,8 +468,8 @@ const OpeningHours: React.FC = () => {
       {/* Opening Hours Cards */}
       <Box
         sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' },
           gap: 3,
         }}
       >
@@ -479,60 +480,80 @@ const OpeningHours: React.FC = () => {
           // Show default values if no data exists for this day
           const displayData = dayHours || {
             dayOfWeek: day,
-            openTime: "",
-            closeTime: "",
+            openTime: '',
+            closeTime: '',
             isActive: true,
             isOpen: false,
             isClosedNextDay: false,
-            specialNote: "",
+            specialNote: '',
           };
 
           return (
             <Card
               key={day}
               sx={{
-                border: isToday ? "2px solid" : "1px solid",
-                borderColor: isToday ? "primary.main" : "divider",
-                borderRadius: 3,
-                backgroundColor: isToday ? "primary.50" : "background.paper",
-                transition: "all 0.3s ease-in-out",
+                border: isToday ? '3px solid' : '2px solid',
+                borderColor: isToday ? '#C87941' : 'rgba(200, 121, 65, 0.2)',
+                borderRadius: 4,
+                background: isToday
+                  ? 'linear-gradient(135deg, rgba(200, 121, 65, 0.08) 0%, rgba(232, 155, 92, 0.06) 100%)'
+                  : 'linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 247, 0.98) 100%)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
                 boxShadow: isToday
-                  ? "0 8px 32px rgba(139, 69, 19, 0.15)"
-                  : "0 2px 8px rgba(0,0,0,0.08)",
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                  boxShadow: "0 8px 32px rgba(139, 69, 19, 0.12)",
+                  ? '0 12px 40px rgba(200, 121, 65, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.8)'
+                  : '0 8px 32px rgba(200, 121, 65, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.8)',
+                '&::before': isToday
+                  ? {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '4px',
+                      background:
+                        'linear-gradient(90deg, #C87941 0%, #E89B5C 50%, #F5A94C 100%)',
+                    }
+                  : {},
+                '&:hover': {
+                  transform: 'translateY(-4px) scale(1.01)',
+                  boxShadow:
+                    '0 16px 48px rgba(200, 121, 65, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.9)',
+                  borderColor: '#C87941',
                 },
               }}
             >
               <CardContent sx={{ p: 3 }}>
                 <Box
                   sx={{
-                    display: "flex",
-                    flexDirection: { xs: "column", sm: "row" },
-                    justifyContent: "space-between",
-                    alignItems: { xs: "flex-start", sm: "center" },
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    justifyContent: 'space-between',
+                    alignItems: { xs: 'flex-start', sm: 'center' },
                     gap: 2,
                   }}
                 >
-                  <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                     <Box
                       sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "flex-start",
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
                         flex: 1,
                       }}
                     >
                       <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                       >
                         <Typography
                           variant="h6"
                           sx={{
                             fontWeight: 700,
-                            color: isToday ? "primary.main" : "text.primary",
-                            fontSize: "1.25rem",
+                            color: isToday ? 'primary.main' : 'text.primary',
+                            fontSize: '1.25rem',
                           }}
                         >
                           {getDayDisplayName(day)}
@@ -545,7 +566,7 @@ const OpeningHours: React.FC = () => {
                             variant="filled"
                             sx={{
                               fontWeight: 600,
-                              fontSize: "0.75rem",
+                              fontSize: '0.75rem',
                               height: 24,
                             }}
                           />
@@ -554,16 +575,16 @@ const OpeningHours: React.FC = () => {
 
                       {editingDay === day ? (
                         // Edit Mode
-                        <Box sx={{ width: "100%", mt: 2 }}>
+                        <Box sx={{ width: '100%', mt: 2 }}>
                           <Box
                             sx={{
-                              display: "flex",
-                              flexDirection: "column",
+                              display: 'flex',
+                              flexDirection: 'column',
                               gap: 2,
                             }}
                           >
                             <Box
-                              sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}
+                              sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}
                             >
                               <FormControlLabel
                                 control={
@@ -576,15 +597,15 @@ const OpeningHours: React.FC = () => {
                                       })
                                     }
                                     sx={{
-                                      "& .MuiSwitch-switchBase.Mui-checked": {
-                                        color: "primary.main",
+                                      '& .MuiSwitch-switchBase.Mui-checked': {
+                                        color: 'primary.main',
                                       },
                                     }}
                                   />
                                 }
                                 label="Active"
                                 sx={{
-                                  "& .MuiFormControlLabel-label": {
+                                  '& .MuiFormControlLabel-label': {
                                     fontWeight: 500,
                                   },
                                 }}
@@ -601,15 +622,15 @@ const OpeningHours: React.FC = () => {
                                       })
                                     }
                                     sx={{
-                                      "& .MuiSwitch-switchBase.Mui-checked": {
-                                        color: "error.main",
+                                      '& .MuiSwitch-switchBase.Mui-checked': {
+                                        color: 'error.main',
                                       },
                                     }}
                                   />
                                 }
                                 label="Closed"
                                 sx={{
-                                  "& .MuiFormControlLabel-label": {
+                                  '& .MuiFormControlLabel-label': {
                                     fontWeight: 500,
                                   },
                                 }}
@@ -619,9 +640,9 @@ const OpeningHours: React.FC = () => {
                             {editForm.isOpen && (
                               <Box
                                 sx={{
-                                  display: "flex",
+                                  display: 'flex',
                                   gap: 2,
-                                  flexWrap: "wrap",
+                                  flexWrap: 'wrap',
                                 }}
                               >
                                 <TextField
@@ -638,10 +659,10 @@ const OpeningHours: React.FC = () => {
                                   size="small"
                                   helperText="Opening time"
                                   sx={{
-                                    flex: "1 1 200px",
-                                    "& .MuiOutlinedInput-root": {
-                                      "&.Mui-focused fieldset": {
-                                        borderColor: "primary.main",
+                                    flex: '1 1 200px',
+                                    '& .MuiOutlinedInput-root': {
+                                      '&.Mui-focused fieldset': {
+                                        borderColor: 'primary.main',
                                       },
                                     },
                                   }}
@@ -660,10 +681,10 @@ const OpeningHours: React.FC = () => {
                                   size="small"
                                   helperText="Can be next day"
                                   sx={{
-                                    flex: "1 1 200px",
-                                    "& .MuiOutlinedInput-root": {
-                                      "&.Mui-focused fieldset": {
-                                        borderColor: "primary.main",
+                                    flex: '1 1 200px',
+                                    '& .MuiOutlinedInput-root': {
+                                      '&.Mui-focused fieldset': {
+                                        borderColor: 'primary.main',
                                       },
                                     },
                                   }}
@@ -680,8 +701,8 @@ const OpeningHours: React.FC = () => {
                                         })
                                       }
                                       sx={{
-                                        "& .MuiSwitch-switchBase.Mui-checked": {
-                                          color: "warning.main",
+                                        '& .MuiSwitch-switchBase.Mui-checked': {
+                                          color: 'warning.main',
                                         },
                                       }}
                                     />
@@ -689,9 +710,9 @@ const OpeningHours: React.FC = () => {
                                   label="Closes Next Day"
                                   sx={{
                                     mt: 1,
-                                    "& .MuiFormControlLabel-label": {
-                                      fontSize: "0.875rem",
-                                      color: "text.secondary",
+                                    '& .MuiFormControlLabel-label': {
+                                      fontSize: '0.875rem',
+                                      color: 'text.secondary',
                                     },
                                   }}
                                 />
@@ -711,9 +732,9 @@ const OpeningHours: React.FC = () => {
                               fullWidth
                               placeholder="e.g., Live Music Night, Happy Hour 5-7 PM"
                               sx={{
-                                "& .MuiOutlinedInput-root": {
-                                  "&.Mui-focused fieldset": {
-                                    borderColor: "primary.main",
+                                '& .MuiOutlinedInput-root': {
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: 'primary.main',
                                   },
                                 },
                               }}
@@ -725,18 +746,18 @@ const OpeningHours: React.FC = () => {
                         <Box sx={{ mt: 1 }}>
                           <Box
                             sx={{
-                              display: "flex",
-                              alignItems: "center",
+                              display: 'flex',
+                              alignItems: 'center',
                               gap: 2,
                               mb: 1,
                             }}
                           >
                             <Chip
                               label={
-                                displayData.isActive ? "Active" : "Inactive"
+                                displayData.isActive ? 'Active' : 'Inactive'
                               }
                               color={
-                                displayData.isActive ? "success" : "default"
+                                displayData.isActive ? 'success' : 'default'
                               }
                               size="small"
                               sx={{ fontWeight: 600 }}
@@ -745,20 +766,20 @@ const OpeningHours: React.FC = () => {
                             <Typography
                               variant="body1"
                               sx={{
-                                color: "text.primary",
+                                color: 'text.primary',
                                 fontWeight: 600,
-                                fontSize: "1rem",
+                                fontSize: '1rem',
                               }}
                             >
                               {!displayData.isOpen
-                                ? "Closed"
+                                ? 'Closed'
                                 : displayData.openTime && displayData.closeTime
                                 ? formatTimeRange(
                                     displayData.openTime,
                                     displayData.closeTime,
-                                    displayData.isClosedNextDay
+                                    displayData.isClosedNextDay,
                                   )
-                                : "Hours not set"}
+                                : 'Hours not set'}
                             </Typography>
                           </Box>
 
@@ -766,8 +787,8 @@ const OpeningHours: React.FC = () => {
                             <Typography
                               variant="body2"
                               sx={{
-                                color: "text.secondary",
-                                fontStyle: "italic",
+                                color: 'text.secondary',
+                                fontStyle: 'italic',
                                 mt: 0.5,
                               }}
                             >
@@ -780,7 +801,7 @@ const OpeningHours: React.FC = () => {
                   </Box>
 
                   {/* Action Buttons */}
-                  <Box sx={{ display: "flex", gap: 1, flexShrink: 0 }}>
+                  <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
                     {editingDay === day ? (
                       <>
                         <Button
@@ -790,14 +811,14 @@ const OpeningHours: React.FC = () => {
                           onClick={handleSave}
                           disabled={saving}
                           sx={{
-                            backgroundColor: "primary.main",
-                            "&:hover": { backgroundColor: "primary.dark" },
+                            backgroundColor: 'primary.main',
+                            '&:hover': { backgroundColor: 'primary.dark' },
                             borderRadius: 2,
-                            textTransform: "none",
+                            textTransform: 'none',
                             fontWeight: 600,
                           }}
                         >
-                          {saving ? "Saving..." : "Save"}
+                          {saving ? 'Saving...' : 'Save'}
                         </Button>
                         <Button
                           variant="outlined"
@@ -806,14 +827,14 @@ const OpeningHours: React.FC = () => {
                           onClick={handleCancel}
                           disabled={saving}
                           sx={{
-                            borderColor: "text.secondary",
-                            color: "text.secondary",
+                            borderColor: 'text.secondary',
+                            color: 'text.secondary',
                             borderRadius: 2,
-                            textTransform: "none",
+                            textTransform: 'none',
                             fontWeight: 600,
-                            "&:hover": {
-                              borderColor: "text.primary",
-                              color: "text.primary",
+                            '&:hover': {
+                              borderColor: 'text.primary',
+                              color: 'text.primary',
                             },
                           }}
                         >
@@ -828,14 +849,14 @@ const OpeningHours: React.FC = () => {
                         onClick={() => handleEdit(day)}
                         disabled={!!editingDay}
                         sx={{
-                          borderColor: "primary.main",
-                          color: "primary.main",
+                          borderColor: 'primary.main',
+                          color: 'primary.main',
                           borderRadius: 2,
-                          textTransform: "none",
+                          textTransform: 'none',
                           fontWeight: 600,
-                          "&:hover": {
-                            backgroundColor: "primary.50",
-                            borderColor: "primary.dark",
+                          '&:hover': {
+                            backgroundColor: 'primary.50',
+                            borderColor: 'primary.dark',
                           },
                         }}
                       >
@@ -855,12 +876,12 @@ const OpeningHours: React.FC = () => {
         open={notification.open}
         autoHideDuration={4000}
         onClose={() => setNotification({ ...notification, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert
           onClose={() => setNotification({ ...notification, open: false })}
           severity={notification.type}
-          sx={{ width: "100%" }}
+          sx={{ width: '100%' }}
         >
           {notification.message}
         </Alert>
@@ -870,3 +891,4 @@ const OpeningHours: React.FC = () => {
 };
 
 export default OpeningHours;
+

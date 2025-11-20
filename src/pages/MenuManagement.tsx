@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { API_BASE_URL } from "../config/env.config";
 import {
   Box,
   Typography,
@@ -27,6 +28,9 @@ import {
   CardMedia,
   LinearProgress,
   Tooltip,
+  Zoom,
+  Divider,
+  Badge,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -51,7 +55,6 @@ import {
   parseBackendError,
   getErrorMessage,
 } from "../utils/uploadHelpers";
-
 interface PrimaryCategory {
   id: string;
   name: string;
@@ -192,6 +195,7 @@ const MenuManagement: React.FC = () => {
   // Image upload states
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
 
   const filteredCategories = useMemo(() => {
     if (!debouncedSearchTerm) return categories;
@@ -207,11 +211,18 @@ const MenuManagement: React.FC = () => {
     []
   );
 
+  const closeItemDialog = useCallback(() => {
+    setItemDialog(false);
+    setSelectedFiles([]);
+    setImagePreviews([]);
+    setImagesToDelete([]);
+  }, []);
+
   const loadPrimaryCategories = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(
-        "http://localhost:5000/menu/primary-categories",
+        `${API_BASE_URL}/menu/primary-categories`,
         {
           credentials: "include",
         }
@@ -244,7 +255,7 @@ const MenuManagement: React.FC = () => {
   const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:5000/menu/categories", {
+      const response = await fetch(`${API_BASE_URL}/menu/categories`, {
         credentials: "include",
       });
 
@@ -273,7 +284,7 @@ const MenuManagement: React.FC = () => {
   const loadMenuItems = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:5000/menu/items", {
+      const response = await fetch(`${API_BASE_URL}/menu/items`, {
         credentials: "include",
       });
 
@@ -424,7 +435,7 @@ const MenuManagement: React.FC = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `http://localhost:5000/menu/primary-categories/${primaryCategoryId}/move`,
+        `${API_BASE_URL}/menu/primary-categories/${primaryCategoryId}/move`,
         {
           method: "PATCH",
           headers: {
@@ -470,8 +481,8 @@ const MenuManagement: React.FC = () => {
       }
 
       const url = selectedPrimaryCategory
-        ? `http://localhost:5000/menu/primary-categories/${selectedPrimaryCategory.id}`
-        : "http://localhost:5000/menu/primary-categories";
+        ? `${API_BASE_URL}/menu/primary-categories/${selectedPrimaryCategory.id}`
+        : `${API_BASE_URL}/menu/primary-categories`;
 
       const method = selectedPrimaryCategory ? "PATCH" : "POST";
 
@@ -513,7 +524,7 @@ const MenuManagement: React.FC = () => {
       try {
         setLoading(true);
         const response = await fetch(
-          `http://localhost:5000/menu/primary-categories/${id}`,
+          `${API_BASE_URL}/menu/primary-categories/${id}`,
           {
             method: "DELETE",
             credentials: "include",
@@ -576,7 +587,7 @@ const MenuManagement: React.FC = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `http://localhost:5000/menu/categories/${categoryId}/move`,
+        `${API_BASE_URL}/menu/categories/${categoryId}/move`,
         {
           method: "PATCH",
           headers: {
@@ -608,7 +619,7 @@ const MenuManagement: React.FC = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `http://localhost:5000/menu/items/${itemId}/move`,
+        `${API_BASE_URL}/menu/items/${itemId}/move`,
         {
           method: "PATCH",
           headers: {
@@ -653,8 +664,8 @@ const MenuManagement: React.FC = () => {
       }
 
       const url = selectedCategory
-        ? `http://localhost:5000/menu/categories/${selectedCategory.id}`
-        : "http://localhost:5000/menu/categories";
+        ? `${API_BASE_URL}/menu/categories/${selectedCategory.id}`
+        : `${API_BASE_URL}/menu/categories`;
 
       const method = selectedCategory ? "PATCH" : "POST";
 
@@ -705,7 +716,7 @@ const MenuManagement: React.FC = () => {
         try {
           setLoading(true);
           const response = await fetch(
-            `http://localhost:5000/menu/categories/${id}`,
+            `${API_BASE_URL}/menu/categories/${id}`,
             {
               method: "DELETE",
               credentials: "include",
@@ -744,7 +755,11 @@ const MenuManagement: React.FC = () => {
     // Validate file size (max 1MB each)
     const oversizedFiles = files.filter((file) => file.size > 1024 * 1024);
     if (oversizedFiles.length > 0) {
-      showSnackbar("Each image must be less than 1MB", "warning");
+      const fileSizes = oversizedFiles.map(f => `${f.name} (${(f.size / (1024 * 1024)).toFixed(2)} MB)`).join(", ");
+      showSnackbar(
+        `File size must be less than 1MB. Please compress the following image${oversizedFiles.length > 1 ? 's' : ''}: ${fileSizes}`,
+        "error"
+      );
       return;
     }
 
@@ -769,35 +784,23 @@ const MenuManagement: React.FC = () => {
     });
   };
 
-  const removeImage = async (index: number) => {
+  const removeImage = (index: number) => {
     const totalExistingImages = itemForm.imageUrls.length;
 
     if (index < totalExistingImages) {
-      // Removing an existing S3 URL
+      // Mark existing S3 image for deletion (will be deleted on save)
       const imageToRemove = itemForm.imageUrls[index];
-      try {
-        await fetch("http://localhost:5000/upload/images", {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ urls: [imageToRemove] }),
-        });
-        showSnackbar("Image deleted from server");
-      } catch (error) {
-        console.error("Error deleting image from S3:", error);
-        showSnackbar("Failed to delete image from server", "warning");
-        // Continue with local removal even if server deletion fails
-      }
+      setImagesToDelete((prev) => [...prev, imageToRemove]);
 
       // Remove from form imageUrls
       setItemForm((prev) => ({
         ...prev,
         imageUrls: prev.imageUrls.filter((_, i) => i !== index),
       }));
+      
+      showSnackbar("Image will be deleted when you save changes", "info");
     } else {
-      // Removing a new file preview
+      // Removing a new file preview (not yet uploaded)
       const previewIndex = index - totalExistingImages;
       setImagePreviews((prev) => prev.filter((_, i) => i !== previewIndex));
       setSelectedFiles((prev) => prev.filter((_, i) => i !== previewIndex));
@@ -811,7 +814,7 @@ const MenuManagement: React.FC = () => {
         formData.append("images", file);
       });
 
-      const response = await fetch("http://localhost:5000/upload/images", {
+      const response = await fetch(`${API_BASE_URL}/upload/images`, {
         method: "POST",
         credentials: "include",
         body: formData,
@@ -860,8 +863,14 @@ const MenuManagement: React.FC = () => {
 
       // Upload new images to S3 if any
       if (selectedFiles.length > 0) {
-        const uploadedUrls = await uploadImagesToS3(selectedFiles);
-        finalImageUrls = [...finalImageUrls, ...uploadedUrls];
+        try {
+          const uploadedUrls = await uploadImagesToS3(selectedFiles);
+          finalImageUrls = [...finalImageUrls, ...uploadedUrls];
+          showSnackbar(`${selectedFiles.length} image(s) uploaded successfully`, "success");
+        } catch {
+          showSnackbar("Failed to upload images. Please try again.", "error");
+          return;
+        }
       }
 
       const itemData = {
@@ -878,8 +887,8 @@ const MenuManagement: React.FC = () => {
       };
 
       const url = selectedItem
-        ? `http://localhost:5000/menu/items/${selectedItem.id}`
-        : "http://localhost:5000/menu/items";
+        ? `${API_BASE_URL}/menu/items/${selectedItem.id}`
+        : `${API_BASE_URL}/menu/items`;
 
       const method = selectedItem ? "PATCH" : "POST";
 
@@ -893,15 +902,31 @@ const MenuManagement: React.FC = () => {
       });
 
       if (response.ok) {
-        setItemDialog(false);
+        // Delete marked images from S3 after successful save
+        if (imagesToDelete.length > 0) {
+          try {
+            await fetch(`${API_BASE_URL}/upload/images`, {
+              method: "DELETE",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "include",
+              body: JSON.stringify({ urls: imagesToDelete }),
+            });
+            console.log(`Deleted ${imagesToDelete.length} image(s) from S3`);
+          } catch (error) {
+            console.error("Error deleting images from S3:", error);
+            // Don't show error to user as the item was saved successfully
+          }
+        }
+
+        closeItemDialog();
         await loadMenuItems();
         showSnackbar(
           selectedItem
             ? "Menu item updated successfully"
             : "Menu item created successfully"
         );
-        setSelectedFiles([]);
-        setImagePreviews([]);
       } else {
         const errorData = await response
           .json()
@@ -924,7 +949,7 @@ const MenuManagement: React.FC = () => {
     if (window.confirm("Are you sure you want to delete this menu item?")) {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:5000/menu/items/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/menu/items/${id}`, {
           method: "DELETE",
           credentials: "include",
         });
@@ -949,7 +974,9 @@ const MenuManagement: React.FC = () => {
     {
       field: "imageUrl",
       headerName: "Image",
-      width: 120,
+      width: 100,
+      headerAlign: "center",
+      align: "center",
       sortable: false,
       renderCell: (params) =>
         params.value ? (
@@ -985,21 +1012,53 @@ const MenuManagement: React.FC = () => {
     {
       field: "name",
       headerName: "Name",
-      width: 300,
+      width: 180,
+      headerAlign: "center",
+      align: "center",
       sortable: true,
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
+        </Typography>
+      ),
+      renderCell: (params) => (
+        <Typography
+          sx={{
+            fontSize: "0.95rem",
+            color: "#2C1810",
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+            textAlign: "center",
+            maxWidth: "100%",
+          }}
+        >
+          {params.value}
         </Typography>
       ),
     },
     {
       field: "description",
       headerName: "Description",
-      width: 400,
+      width: 320,
+      headerAlign: "center",
+      align: "center",
       sortable: false,
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
         </Typography>
       ),
@@ -1007,10 +1066,19 @@ const MenuManagement: React.FC = () => {
     {
       field: "isActive",
       headerName: "Status",
-      width: 120,
+      width: 160,
+      headerAlign: "center",
+      align: "center",
       sortable: true,
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
         </Typography>
       ),
@@ -1022,9 +1090,18 @@ const MenuManagement: React.FC = () => {
       field: "actions",
       headerName: "Actions",
       width: 180,
+      headerAlign: "center",
+      align: "center",
       sortable: false,
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
         </Typography>
       ),
@@ -1071,7 +1148,9 @@ const MenuManagement: React.FC = () => {
     {
       field: "imageUrl",
       headerName: "Image",
-      width: 120,
+      width: 100,
+      headerAlign: "center",
+      align: "center",
       sortable: false,
       renderCell: (params) =>
         params.value ? (
@@ -1107,21 +1186,53 @@ const MenuManagement: React.FC = () => {
     {
       field: "name",
       headerName: "Name",
-      width: 250,
+      width: 140,
+      headerAlign: "center",
+      align: "center",
       sortable: true,
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
+        </Typography>
+      ),
+      renderCell: (params) => (
+        <Typography
+          sx={{
+            fontSize: "0.95rem",
+            color: "#2C1810",
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+            textAlign: "center",
+            maxWidth: "100%",
+          }}
+        >
+          {params.value}
         </Typography>
       ),
     },
     {
       field: "description",
       headerName: "Description",
-      width: 350,
+      width: 300,
+      headerAlign: "center",
+      align: "center",
       sortable: false,
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
         </Typography>
       ),
@@ -1130,8 +1241,17 @@ const MenuManagement: React.FC = () => {
       field: "isActive",
       headerName: "Status",
       width: 120,
+      headerAlign: "center",
+      align: "center",
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
         </Typography>
       ),
@@ -1148,6 +1268,8 @@ const MenuManagement: React.FC = () => {
       type: "actions",
       headerName: "Actions",
       width: 200,
+      headerAlign: "center",
+      align: "center",
       getActions: (params) => [
         <Tooltip title="Move Up" key="up">
           <GridActionsCellItem
@@ -1187,10 +1309,19 @@ const MenuManagement: React.FC = () => {
     {
       field: "imageUrls",
       headerName: "Image",
-      width: 120,
+      width: 100,
+      headerAlign: "center",
+      align: "center",
       sortable: false,
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
         </Typography>
       ),
@@ -1230,21 +1361,65 @@ const MenuManagement: React.FC = () => {
     {
       field: "name",
       headerName: "Name",
-      width: 220,
+      width: 160,
+      headerAlign: "center",
+      align: "center",
       sortable: true,
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
+        </Typography>
+      ),
+      renderCell: (params) => (
+        <Typography
+          sx={{
+            fontSize: "0.95rem",
+            color: "#2C1810",
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+            textAlign: "center",
+            maxWidth: "100%",
+          }}
+        >
+          {params.value}
         </Typography>
       ),
     },
     {
       field: "categoryName",
       headerName: "Category",
-      width: 150,
+      width: 140,
+      headerAlign: "center",
+      align: "center",
       sortable: true,
+      renderCell: (params) => (
+        <Typography
+          sx={{
+            textAlign: "center",
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+            width: "100%",
+          }}
+        >
+          {params.value}
+        </Typography>
+      ),
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
         </Typography>
       ),
@@ -1252,9 +1427,18 @@ const MenuManagement: React.FC = () => {
     {
       field: "price",
       headerName: "Price",
-      width: 100,
+      width: 90,
+      headerAlign: "center",
+      align: "center",
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
         </Typography>
       ),
@@ -1267,9 +1451,18 @@ const MenuManagement: React.FC = () => {
     {
       field: "dietary",
       headerName: "Dietary",
-      width: 200,
+      width: 140,
+      headerAlign: "center",
+      align: "center",
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
         </Typography>
       ),
@@ -1292,9 +1485,18 @@ const MenuManagement: React.FC = () => {
     {
       field: "isAvailable",
       headerName: "Available",
-      width: 120,
+      width: 100,
+      headerAlign: "center",
+      align: "center",
       renderHeader: (params) => (
-        <Typography sx={{ fontWeight: 600, color: "#000000" }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            color: "#000000",
+            textAlign: "center",
+            width: "100%",
+          }}
+        >
           {params.colDef.headerName}
         </Typography>
       ),
@@ -1310,7 +1512,9 @@ const MenuManagement: React.FC = () => {
       field: "actions",
       type: "actions",
       headerName: "Actions",
-      width: 200,
+      width: 180,
+      headerAlign: "center",
+      align: "center",
       getActions: (params) => [
         <Tooltip title="Move Up" key="up">
           <GridActionsCellItem
@@ -1399,67 +1603,224 @@ const MenuManagement: React.FC = () => {
         }
       />
 
-      <Paper
+      {/* Tabs moved outside table for better UX */}
+      <Box
         sx={{
-          width: "100%",
-          mb: 2,
+          mb: 3,
+          background:
+            "linear-gradient(135deg, rgba(255, 248, 240, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
           borderRadius: 3,
-          border: "1px solid #E8DDD0",
-          boxShadow: "0 2px 8px rgba(200, 121, 65, 0.12)",
+          p: 1,
+          border: "2px solid rgba(200, 121, 65, 0.2)",
+          boxShadow:
+            "0 8px 24px rgba(200, 121, 65, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.8)",
         }}
       >
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
+          variant="fullWidth"
           sx={{
-            borderBottom: 1,
-            borderColor: "#E8DDD0",
             "& .MuiTab-root": {
-              color: "#6B4E3D",
-              fontWeight: 600,
-              fontSize: "0.938rem",
+              color: "#3B2A20",
+              fontWeight: 700,
+              fontSize: "1rem",
+              textTransform: "none",
+              minHeight: 60,
+              px: 4,
+              borderRadius: 2.5,
+              margin: "4px",
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              position: "relative",
               "&.Mui-selected": {
+                color: "#FFFFFF",
+                background: "linear-gradient(135deg, #C87941 0%, #E89B5C 100%)",
+                boxShadow:
+                  "0 6px 20px rgba(200, 121, 65, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.3)",
+                "&::after": {
+                  content: '""',
+                  position: "absolute",
+                  bottom: 0,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  width: "60%",
+                  height: "3px",
+                  background:
+                    "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.6) 50%, transparent 100%)",
+                  borderRadius: "3px 3px 0 0",
+                },
+              },
+              "&:hover:not(.Mui-selected)": {
                 color: "#C87941",
+                background: "rgba(200, 121, 65, 0.12)",
+                transform: "translateY(-2px)",
               },
             },
             "& .MuiTabs-indicator": {
-              backgroundColor: "#C87941",
-              height: 3,
+              display: "none",
             },
           }}
         >
-          <Tab label="Primary Categories" />
-          <Tab label="Categories" />
-          <Tab label="Menu Items" />
+          <Tab
+            label={
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                  pr: 1,
+                }}
+              >
+                <Box component="span">Primary Categories</Box>
+                <Badge
+                  badgeContent={primaryCategories.length}
+                  color="primary"
+                  anchorOrigin={{ vertical: "top", horizontal: "right" }}
+                  sx={{
+                    ml: 2,
+                    "& .MuiBadge-badge": {
+                      backgroundColor: "#F5A94C",
+                      color: "#2C1810",
+                      fontWeight: 800,
+                      fontSize: "0.75rem",
+                      boxShadow: "0 2px 8px rgba(245, 169, 76, 0.45)",
+                      minWidth: "24px",
+                      height: "24px",
+                    },
+                  }}
+                />
+              </Box>
+            }
+          />
+          <Tab
+            label={
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                  pr: 1,
+                }}
+              >
+                <Box component="span">Categories</Box>
+                <Badge
+                  badgeContent={categories.length}
+                  color="primary"
+                  anchorOrigin={{ vertical: "top", horizontal: "right" }}
+                  sx={{
+                    ml: 2,
+                    "& .MuiBadge-badge": {
+                      backgroundColor: "#F5A94C",
+                      color: "#2C1810",
+                      fontWeight: 800,
+                      fontSize: "0.75rem",
+                      boxShadow: "0 2px 8px rgba(245, 169, 76, 0.45)",
+                      minWidth: "24px",
+                      height: "24px",
+                    },
+                  }}
+                />
+              </Box>
+            }
+          />
+          <Tab
+            label={
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                  pr: 1,
+                }}
+              >
+                <Box component="span">Menu Items</Box>
+                <Badge
+                  badgeContent={menuItems.length}
+                  color="primary"
+                  anchorOrigin={{ vertical: "top", horizontal: "right" }}
+                  sx={{
+                    ml: 2,
+                    "& .MuiBadge-badge": {
+                      backgroundColor: "#F5A94C",
+                      color: "#2C1810",
+                      fontWeight: 800,
+                      fontSize: "0.75rem",
+                      boxShadow: "0 2px 8px rgba(245, 169, 76, 0.45)",
+                      minWidth: "24px",
+                      height: "24px",
+                    },
+                  }}
+                />
+              </Box>
+            }
+          />
         </Tabs>
+      </Box>
 
+      <Paper
+        elevation={0}
+        sx={{
+          width: "100%",
+          mb: 3,
+          borderRadius: 4,
+          border: "2px solid rgba(200, 121, 65, 0.2)",
+          boxShadow: "0 12px 40px rgba(200, 121, 65, 0.12)",
+          overflow: "hidden",
+          background: "linear-gradient(to bottom, #FFFFFF 0%, #FFFBF7 100%)",
+        }}
+      >
         {activeTab === 2 && (
-          <Box sx={{ p: 2 }}>
+          <Box
+            sx={{
+              p: 3,
+              pb: 2,
+              background: "linear-gradient(180deg, #FFFBF7 0%, #FFFFFF 100%)",
+            }}
+          >
             <TextField
               fullWidth
-              placeholder="Search menu items..."
+              placeholder="Search menu items by name or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: "#C87941" }} />
+                    <SearchIcon sx={{ color: "#C87941", fontSize: "1.4rem" }} />
                   </InputAdornment>
                 ),
               }}
               sx={{
-                mb: 2,
                 "& .MuiOutlinedInput-root": {
                   backgroundColor: "white",
-                  "&:hover fieldset": {
-                    borderColor: "#C87941",
+                  borderRadius: 2.5,
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "& fieldset": {
+                    borderColor: "rgba(200, 121, 65, 0.2)",
+                    borderWidth: "2px",
                   },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "#C87941",
+                  "&:hover": {
+                    backgroundColor: "#FFFBF7",
+                    "& fieldset": {
+                      borderColor: "#C87941",
+                    },
+                  },
+                  "&.Mui-focused": {
+                    backgroundColor: "white",
+                    boxShadow: "0 4px 12px rgba(200, 121, 65, 0.15)",
+                    "& fieldset": {
+                      borderColor: "#C87941",
+                      borderWidth: "2px",
+                    },
                   },
                 },
-                "& .MuiInputLabel-root.Mui-focused": {
-                  color: "#C87941",
+                "& .MuiInputBase-input": {
+                  fontSize: "0.95rem",
+                  padding: "14px 14px 14px 0",
                 },
               }}
             />
@@ -1479,6 +1840,7 @@ const MenuManagement: React.FC = () => {
             <DataGrid
               rows={primaryCategories}
               columns={primaryCategoryColumns}
+              rowHeight={64}
               initialState={{
                 pagination: {
                   paginationModel: { page: 0, pageSize: 10 },
@@ -1487,46 +1849,105 @@ const MenuManagement: React.FC = () => {
               pageSizeOptions={[10, 25, 50]}
               disableRowSelectionOnClick
               sx={{
-                border: 0,
+                border: "1px solid rgba(200, 121, 65, 0.12)",
+                borderRadius: 2,
                 "& .MuiDataGrid-root": {
                   backgroundColor: "white",
                 },
                 "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "#C87941",
-                  color: "white",
+                  background:
+                    "linear-gradient(135deg, rgba(200,121,65,0.06) 0%, rgba(255,255,255,0.98) 100%)",
+                  color: "#2C1810",
                   fontWeight: 700,
-                  fontSize: "0.938rem",
+                  fontSize: "0.95rem",
+                  borderRadius: 0,
+                  borderBottom: "1px solid rgba(200,121,65,0.12)",
+                  minHeight: 56,
                   "& .MuiDataGrid-columnHeader": {
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    px: 1,
                     "&:focus": {
                       outline: "none",
                     },
+                    "& .MuiIconButton-root, & .MuiSvgIcon-root, & .MuiDataGrid-iconButtonContainer":
+                      {
+                        color: "#2C1810",
+                        opacity: 1,
+                        position: "absolute",
+                        right: 8,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        zIndex: 2,
+                      },
+                  },
+                  "& .MuiDataGrid-columnSeparator": {
+                    display: "none",
+                  },
+                  "& .MuiDataGrid-columnHeaderTitle": {
+                    color: "#2C1810",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flex: "1 1 0",
+                    textAlign: "center",
+                    pr: "36px",
+                    whiteSpace: "normal",
                   },
                 },
                 "& .MuiDataGrid-row": {
+                  transition: "all 0.2s ease",
                   "&:hover": {
-                    backgroundColor: "#FFF3E6",
+                    backgroundColor: "rgba(200, 121, 65, 0.08)",
                   },
                   "&.Mui-selected": {
-                    backgroundColor: "#FFEBD4",
+                    backgroundColor: "rgba(200, 121, 65, 0.12)",
                     "&:hover": {
-                      backgroundColor: "#FFE4C8",
+                      backgroundColor: "rgba(200, 121, 65, 0.16)",
                     },
                   },
                 },
                 "& .MuiDataGrid-cell": {
-                  borderBottom: "1px solid #E8DDD0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderBottom: "1px solid rgba(200, 121, 65, 0.08)",
+                  borderRight: "1px solid rgba(200, 121, 65, 0.06)",
                   color: "#2C1810",
                   fontSize: "0.875rem",
+                  padding: "12px",
+                  textAlign: "center",
+                  "&:focus": {
+                    outline: "none",
+                  },
+                  "&:last-child": {
+                    borderRight: "none",
+                  },
                 },
                 "& .MuiDataGrid-footerContainer": {
-                  backgroundColor: "#FFF8F0",
-                  borderTop: "1px solid #E8DDD0",
+                  background:
+                    "linear-gradient(180deg, #FFFFFF 0%, #FFF8F0 100%)",
+                  borderTop: "2px solid rgba(200, 121, 65, 0.15)",
                 },
                 "& .MuiTablePagination-root": {
                   color: "#6B4E3D",
                 },
+                "& .MuiTablePagination-select": {
+                  borderRadius: 1.5,
+                },
                 "& .MuiTablePagination-selectIcon": {
                   color: "#C87941",
+                },
+                "& .MuiIconButton-root": {
+                  color: "#C87941",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    backgroundColor: "rgba(200, 121, 65, 0.1)",
+                    transform: "scale(1.1)",
+                  },
                 },
               }}
             />
@@ -1534,6 +1955,7 @@ const MenuManagement: React.FC = () => {
             <DataGrid
               rows={filteredCategories}
               columns={categoryColumns}
+              rowHeight={64}
               initialState={{
                 pagination: {
                   paginationModel: { page: 0, pageSize: 10 },
@@ -1542,46 +1964,105 @@ const MenuManagement: React.FC = () => {
               pageSizeOptions={[10, 25, 50]}
               disableRowSelectionOnClick
               sx={{
-                border: 0,
+                border: "1px solid rgba(200, 121, 65, 0.12)",
+                borderRadius: 2,
                 "& .MuiDataGrid-root": {
                   backgroundColor: "white",
                 },
                 "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "#C87941",
-                  color: "white",
+                  background:
+                    "linear-gradient(135deg, rgba(200,121,65,0.06) 0%, rgba(255,255,255,0.98) 100%)",
+                  color: "#2C1810",
                   fontWeight: 700,
-                  fontSize: "0.938rem",
+                  fontSize: "0.95rem",
+                  borderRadius: 0,
+                  borderBottom: "1px solid rgba(200,121,65,0.12)",
+                  minHeight: 56,
                   "& .MuiDataGrid-columnHeader": {
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    px: 1,
                     "&:focus": {
                       outline: "none",
                     },
+                    "& .MuiIconButton-root, & .MuiSvgIcon-root, & .MuiDataGrid-iconButtonContainer":
+                      {
+                        color: "#2C1810",
+                        opacity: 1,
+                        position: "absolute",
+                        right: 8,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        zIndex: 2,
+                      },
                   },
+                  "& .MuiDataGrid-columnSeparator": {
+                    display: "none",
+                  },
+                  "& .MuiDataGrid-columnHeaderTitle": {
+                    color: "#2C1810",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flex: "1 1 0",
+                    textAlign: "center",
+                    pr: "36px",
+                    whiteSpace: "normal",
+                  },
+                  "& .MuiDataGrid-columnHeader .MuiIconButton-root, & .MuiDataGrid-columnHeader .MuiSvgIcon-root":
+                    {
+                      color: "#2C1810",
+                    },
                 },
                 "& .MuiDataGrid-row": {
+                  transition: "all 0.2s ease",
                   "&:hover": {
-                    backgroundColor: "#FFF3E6",
+                    backgroundColor: "rgba(200, 121, 65, 0.08)",
                   },
                   "&.Mui-selected": {
-                    backgroundColor: "#FFEBD4",
+                    backgroundColor: "rgba(200, 121, 65, 0.12)",
                     "&:hover": {
-                      backgroundColor: "#FFE4C8",
+                      backgroundColor: "rgba(200, 121, 65, 0.16)",
                     },
                   },
                 },
                 "& .MuiDataGrid-cell": {
-                  borderBottom: "1px solid #E8DDD0",
+                  borderBottom: "1px solid rgba(200, 121, 65, 0.08)",
+                  borderRight: "1px solid rgba(200, 121, 65, 0.06)",
                   color: "#2C1810",
                   fontSize: "0.875rem",
+                  padding: "12px",
+                  "&:focus": {
+                    outline: "none",
+                  },
+                  "&:last-child": {
+                    borderRight: "none",
+                  },
                 },
                 "& .MuiDataGrid-footerContainer": {
-                  backgroundColor: "#FFF8F0",
-                  borderTop: "1px solid #E8DDD0",
+                  background:
+                    "linear-gradient(180deg, #FFFFFF 0%, #FFF8F0 100%)",
+                  borderTop: "2px solid rgba(200, 121, 65, 0.15)",
                 },
                 "& .MuiTablePagination-root": {
                   color: "#6B4E3D",
                 },
+                "& .MuiTablePagination-select": {
+                  borderRadius: 1.5,
+                },
                 "& .MuiTablePagination-selectIcon": {
                   color: "#C87941",
+                },
+                "& .MuiIconButton-root": {
+                  color: "#C87941",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    backgroundColor: "rgba(200, 121, 65, 0.1)",
+                    transform: "scale(1.1)",
+                  },
                 },
               }}
             />
@@ -1589,6 +2070,7 @@ const MenuManagement: React.FC = () => {
             <DataGrid
               rows={filteredItems}
               columns={itemColumns}
+              rowHeight={64}
               initialState={{
                 pagination: {
                   paginationModel: { page: 0, pageSize: 10 },
@@ -1597,46 +2079,93 @@ const MenuManagement: React.FC = () => {
               pageSizeOptions={[10, 25, 50]}
               disableRowSelectionOnClick
               sx={{
-                border: 0,
+                border: "1px solid rgba(200, 121, 65, 0.12)",
+                borderRadius: 2,
                 "& .MuiDataGrid-root": {
                   backgroundColor: "white",
                 },
                 "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "#C87941",
-                  color: "white",
+                  background:
+                    "linear-gradient(135deg, rgba(200,121,65,0.06) 0%, rgba(255,255,255,0.98) 100%)",
+                  color: "#2C1810",
                   fontWeight: 700,
-                  fontSize: "0.938rem",
+                  fontSize: "0.95rem",
+                  borderRadius: 0,
+                  borderBottom: "1px solid rgba(200,121,65,0.12)",
+                  minHeight: 56,
                   "& .MuiDataGrid-columnHeader": {
                     "&:focus": {
                       outline: "none",
                     },
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   },
+                  "& .MuiDataGrid-columnSeparator": {
+                    display: "none",
+                  },
+                  "& .MuiDataGrid-columnHeaderTitle": {
+                    color: "#2C1810",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flex: "1 1 0",
+                    textAlign: "center",
+                    pr: "36px",
+                    whiteSpace: "normal",
+                  },
+                  "& .MuiDataGrid-columnHeader .MuiIconButton-root, & .MuiDataGrid-columnHeader .MuiSvgIcon-root":
+                    {
+                      color: "#2C1810",
+                    },
                 },
                 "& .MuiDataGrid-row": {
+                  transition: "all 0.2s ease",
                   "&:hover": {
-                    backgroundColor: "#FFF3E6",
+                    backgroundColor: "rgba(200, 121, 65, 0.08)",
                   },
                   "&.Mui-selected": {
-                    backgroundColor: "#FFEBD4",
+                    backgroundColor: "rgba(200, 121, 65, 0.12)",
                     "&:hover": {
-                      backgroundColor: "#FFE4C8",
+                      backgroundColor: "rgba(200, 121, 65, 0.16)",
                     },
                   },
                 },
                 "& .MuiDataGrid-cell": {
-                  borderBottom: "1px solid #E8DDD0",
+                  borderBottom: "1px solid rgba(200, 121, 65, 0.08)",
+                  borderRight: "1px solid rgba(200, 121, 65, 0.06)",
                   color: "#2C1810",
                   fontSize: "0.875rem",
+                  padding: "12px",
+                  "&:focus": {
+                    outline: "none",
+                  },
+                  "&:last-child": {
+                    borderRight: "none",
+                  },
                 },
                 "& .MuiDataGrid-footerContainer": {
-                  backgroundColor: "#FFF8F0",
-                  borderTop: "1px solid #E8DDD0",
+                  background:
+                    "linear-gradient(180deg, #FFFFFF 0%, #FFF8F0 100%)",
+                  borderTop: "2px solid rgba(200, 121, 65, 0.15)",
                 },
                 "& .MuiTablePagination-root": {
                   color: "#6B4E3D",
                 },
+                "& .MuiTablePagination-select": {
+                  borderRadius: 1.5,
+                },
                 "& .MuiTablePagination-selectIcon": {
                   color: "#C87941",
+                },
+                "& .MuiIconButton-root": {
+                  color: "#C87941",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    backgroundColor: "rgba(200, 121, 65, 0.1)",
+                    transform: "scale(1.1)",
+                  },
                 },
               }}
             />
@@ -1654,13 +2183,28 @@ const MenuManagement: React.FC = () => {
         }}
         maxWidth="sm"
         fullWidth
+        TransitionComponent={Zoom}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: "0 20px 60px rgba(200, 121, 65, 0.25)",
+          },
+        }}
       >
-        <DialogTitle>
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(135deg, #C87941 0%, #E89B5C 100%)",
+            color: "white",
+            fontWeight: 700,
+            fontSize: "1.25rem",
+            py: 2.5,
+          }}
+        >
           {selectedPrimaryCategory
             ? "Edit Primary Category"
             : "Create Primary Category"}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ pt: 3, pb: 2 }}>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid size={{ xs: 12 }}>
               <TextField
@@ -1726,10 +2270,11 @@ const MenuManagement: React.FC = () => {
                               borderRadius: 1,
                             }}
                           >
-                            <img
+                            <Box
+                              component="img"
                               src={preview}
                               alt={`Preview ${index + 1}`}
-                              style={{
+                              sx={{
                                 width: "100%",
                                 height: "100%",
                                 objectFit: "cover",
@@ -1748,10 +2293,11 @@ const MenuManagement: React.FC = () => {
                               borderRadius: 1,
                             }}
                           >
-                            <img
+                            <Box
+                              component="img"
                               src={primaryCategoryForm.imageUrl}
                               alt="Current"
-                              style={{
+                              sx={{
                                 width: "100%",
                                 height: "100%",
                                 objectFit: "cover",
@@ -1801,14 +2347,32 @@ const MenuManagement: React.FC = () => {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
+        <Divider />
+        <DialogActions
+          sx={{
+            p: 3,
+            gap: 1.5,
+            background: "linear-gradient(180deg, #FFFFFF 0%, #FFF8F0 100%)",
+          }}
+        >
           <Button
             onClick={() => {
               setPrimaryCategoryDialog(false);
               setSelectedFiles([]);
               setImagePreviews([]);
             }}
-            color="inherit"
+            variant="outlined"
+            sx={{
+              borderColor: "rgba(200, 121, 65, 0.3)",
+              color: "#C87941",
+              fontWeight: 600,
+              px: 3,
+              borderRadius: 2,
+              "&:hover": {
+                borderColor: "#C87941",
+                backgroundColor: "rgba(200, 121, 65, 0.05)",
+              },
+            }}
           >
             Cancel
           </Button>
@@ -1816,6 +2380,22 @@ const MenuManagement: React.FC = () => {
             onClick={handleSavePrimaryCategory}
             variant="contained"
             disabled={loading || uploadingImage || !primaryCategoryForm.name}
+            sx={{
+              background: "linear-gradient(135deg, #C87941 0%, #E89B5C 100%)",
+              color: "white",
+              fontWeight: 600,
+              px: 3,
+              borderRadius: 2,
+              boxShadow: "0 4px 12px rgba(200, 121, 65, 0.3)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #A45F2D 0%, #C87941 100%)",
+                boxShadow: "0 6px 16px rgba(200, 121, 65, 0.4)",
+              },
+              "&:disabled": {
+                background: "#E0E0E0",
+                color: "#999",
+              },
+            }}
           >
             {selectedPrimaryCategory ? "Update" : "Create"}
           </Button>
@@ -1832,11 +2412,26 @@ const MenuManagement: React.FC = () => {
         }}
         maxWidth="sm"
         fullWidth
+        TransitionComponent={Zoom}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: "0 20px 60px rgba(200, 121, 65, 0.25)",
+          },
+        }}
       >
-        <DialogTitle>
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(135deg, #C87941 0%, #E89B5C 100%)",
+            color: "white",
+            fontWeight: 700,
+            fontSize: "1.25rem",
+            py: 2.5,
+          }}
+        >
           {selectedCategory ? "Edit Category" : "Create Category"}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ pt: 3, pb: 2 }}>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid size={{ xs: 12 }}>
               <TextField
@@ -1924,10 +2519,11 @@ const MenuManagement: React.FC = () => {
                               borderRadius: 1,
                             }}
                           >
-                            <img
+                            <Box
+                              component="img"
                               src={preview}
                               alt={`Preview ${index + 1}`}
-                              style={{
+                              sx={{
                                 width: "100%",
                                 height: "100%",
                                 objectFit: "cover",
@@ -1946,10 +2542,11 @@ const MenuManagement: React.FC = () => {
                               borderRadius: 1,
                             }}
                           >
-                            <img
+                            <Box
+                              component="img"
                               src={categoryForm.imageUrl}
                               alt="Current"
-                              style={{
+                              sx={{
                                 width: "100%",
                                 height: "100%",
                                 objectFit: "cover",
@@ -2035,14 +2632,29 @@ const MenuManagement: React.FC = () => {
       {/* Item Dialog */}
       <Dialog
         open={itemDialog}
-        onClose={() => setItemDialog(false)}
+        onClose={closeItemDialog}
         maxWidth="lg"
         fullWidth
+        TransitionComponent={Zoom}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: "0 20px 60px rgba(200, 121, 65, 0.25)",
+          },
+        }}
       >
-        <DialogTitle>
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(135deg, #C87941 0%, #E89B5C 100%)",
+            color: "white",
+            fontWeight: 700,
+            fontSize: "1.25rem",
+            py: 2.5,
+          }}
+        >
           {selectedItem ? "Edit Menu Item" : "Create Menu Item"}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ pt: 3, pb: 2 }}>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
@@ -2126,9 +2738,10 @@ const MenuManagement: React.FC = () => {
                 Images (Max 5, 1MB each)
               </Typography>
               <Box sx={{ mb: 2 }}>
-                <input
+                <Box
+                  component="input"
                   accept="image/*"
-                  style={{ display: "none" }}
+                  sx={{ display: "none" }}
                   id="image-upload"
                   multiple
                   type="file"
@@ -2168,7 +2781,9 @@ const MenuManagement: React.FC = () => {
                           height="140"
                           image={url}
                           alt={`Existing image ${index + 1}`}
-                          onError={(e: any) => {
+                          onError={(
+                            e: React.SyntheticEvent<HTMLImageElement>
+                          ) => {
                             // replace with a tiny placeholder SVG if image fails to load
                             e.currentTarget.src =
                               'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="100%" height="100%" fill="%23ddd"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23666" font-family="Arial" font-size="14">Image unavailable</text></svg>';
@@ -2207,7 +2822,9 @@ const MenuManagement: React.FC = () => {
                           height="140"
                           image={preview}
                           alt={`New image ${index + 1}`}
-                          onError={(e: any) => {
+                          onError={(
+                            e: React.SyntheticEvent<HTMLImageElement>
+                          ) => {
                             e.currentTarget.src =
                               'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="100%" height="100%" fill="%23ddd"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23666" font-family="Arial" font-size="14">Preview unavailable</text></svg>';
                           }}
@@ -2309,12 +2926,51 @@ const MenuManagement: React.FC = () => {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setItemDialog(false)}>Cancel</Button>
+        <Divider />
+        <DialogActions
+          sx={{
+            p: 3,
+            gap: 1.5,
+            background: "linear-gradient(180deg, #FFFFFF 0%, #FFF8F0 100%)",
+          }}
+        >
+          <Button
+            onClick={closeItemDialog}
+            variant="outlined"
+            sx={{
+              borderColor: "rgba(200, 121, 65, 0.3)",
+              color: "#C87941",
+              fontWeight: 600,
+              px: 3,
+              borderRadius: 2,
+              "&:hover": {
+                borderColor: "#C87941",
+                backgroundColor: "rgba(200, 121, 65, 0.05)",
+              },
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             variant="contained"
             onClick={handleSaveItem}
             disabled={loading}
+            sx={{
+              background: "linear-gradient(135deg, #C87941 0%, #E89B5C 100%)",
+              color: "white",
+              fontWeight: 600,
+              px: 3,
+              borderRadius: 2,
+              boxShadow: "0 4px 12px rgba(200, 121, 65, 0.3)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #A45F2D 0%, #C87941 100%)",
+                boxShadow: "0 6px 16px rgba(200, 121, 65, 0.4)",
+              },
+              "&:disabled": {
+                background: "#E0E0E0",
+                color: "#999",
+              },
+            }}
           >
             {selectedItem ? "Update" : "Create"}
           </Button>
@@ -2326,6 +2982,7 @@ const MenuManagement: React.FC = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
@@ -2340,3 +2997,4 @@ const MenuManagement: React.FC = () => {
 };
 
 export default React.memo(MenuManagement);
+

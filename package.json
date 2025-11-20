@@ -1,13 +1,21 @@
 {
   "name": "brooklin_pub_admin_dashboard",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:prod": "tsc -b && vite build --mode production",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "lint:fix": "eslint . --fix",
+    "preview": "vite preview",
+    "serve": "serve -s dist -l 3002",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop brooklin-pub-admin",
+    "pm2:restart": "pm2 restart brooklin-pub-admin",
+    "pm2:logs": "pm2 logs brooklin-pub-admin",
+    "pm2:delete": "pm2 delete brooklin-pub-admin"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

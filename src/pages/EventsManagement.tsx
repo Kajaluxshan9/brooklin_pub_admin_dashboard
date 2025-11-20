@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { API_BASE_URL } from "../config/env.config";
 import {
   Box,
   Typography,
@@ -29,6 +30,7 @@ import {
   Alert,
   Snackbar,
 } from "@mui/material";
+import { PageHeader } from "../components/common/PageHeader";
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -120,7 +122,7 @@ const EventsManagement: React.FC = () => {
 
   const loadEvents = async () => {
     try {
-      const response = await fetch("http://localhost:5000/events", {
+      const response = await fetch(`${API_BASE_URL}/events`, {
         credentials: "include",
       });
 
@@ -197,7 +199,7 @@ const EventsManagement: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:5000/upload/images", {
+      const response = await fetch(`${API_BASE_URL}/upload/images`, {
         method: "POST",
         credentials: "include",
         body: formData,
@@ -228,7 +230,7 @@ const EventsManagement: React.FC = () => {
 
     if (imageUrl && imageUrl.startsWith("https://")) {
       try {
-        await fetch("http://localhost:5000/upload/images", {
+        await fetch(`${API_BASE_URL}/upload/images`, {
           method: "DELETE",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -261,8 +263,8 @@ const EventsManagement: React.FC = () => {
       };
 
       const url = selectedEvent
-        ? `http://localhost:5000/events/${selectedEvent.id}`
-        : "http://localhost:5000/events";
+        ? `${API_BASE_URL}/events/${selectedEvent.id}`
+        : `${API_BASE_URL}/events`;
 
       const method = selectedEvent ? "PUT" : "POST";
 
@@ -298,7 +300,7 @@ const EventsManagement: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this event?")) {
       try {
-        const response = await fetch(`http://localhost:5000/events/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/events/${id}`, {
           method: "DELETE",
           credentials: "include",
         });
@@ -370,40 +372,33 @@ const EventsManagement: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterMoment}>
-      <Box sx={{ p: 3, backgroundColor: "#FFF8F0", minHeight: "100vh" }}>
-        {/* Header */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 4,
-            p: 3,
-            backgroundColor: "white",
-            borderRadius: 3,
-            border: "1px solid #E8DDD0",
-            boxShadow: "0 2px 8px rgba(200, 121, 65, 0.12)",
-          }}
-        >
-          <Typography variant="h4" sx={{ fontWeight: 700, color: "#2C1810" }}>
-            Events Management
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleCreate}
-            sx={{
-              backgroundColor: "#C87941",
-              color: "white",
-              "&:hover": { backgroundColor: "#A45F2D" },
-              fontWeight: 600,
-              px: 3,
-              py: 1.5,
-            }}
-          >
-            Add Event
-          </Button>
-        </Box>
+      <Box
+        sx={{
+          p: 3,
+          background: "linear-gradient(135deg, #FFF8F0 0%, #FFFBF7 100%)",
+          minHeight: "100vh",
+        }}
+      >
+        {/* Page header moved to top-level for consistency */}
+        <PageHeader
+          title="Events Management"
+          subtitle="Manage your pub events and special occasions"
+          action={
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleCreate}
+              sx={{
+                backgroundColor: "#C87941",
+                color: "white",
+                fontWeight: 600,
+                "&:hover": { backgroundColor: "#A45F2D" },
+              }}
+            >
+              Add Event
+            </Button>
+          }
+        />
 
         {/* Events Grid */}
         <Grid container spacing={3}>
@@ -415,17 +410,25 @@ const EventsManagement: React.FC = () => {
                   display: "flex",
                   flexDirection: "column",
                   position: "relative",
-                  borderRadius: 3,
-                  boxShadow: "0 6px 20px rgba(139, 69, 19, 0.15)",
-                  border: `2px solid ${
+                  borderRadius: 4,
+                  background:
+                    "linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 247, 0.98) 100%)",
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                  boxShadow:
+                    "0 8px 32px rgba(200, 121, 65, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.8)",
+                  border: `3px solid ${
                     getEventStatus(event) === "upcoming"
                       ? getEventTypeColor(event.type)
-                      : "#e0e0e0"
+                      : "rgba(200, 121, 65, 0.25)"
                   }`,
-                  transition: "all 0.3s ease",
+                  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                  overflow: "hidden",
                   "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: "0 8px 25px rgba(139, 69, 19, 0.25)",
+                    transform: "translateY(-8px) scale(1.02)",
+                    boxShadow:
+                      "0 16px 48px rgba(200, 121, 65, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.9)",
+                    borderColor: getEventTypeColor(event.type),
                   },
                 }}
               >
@@ -907,10 +910,11 @@ const EventsManagement: React.FC = () => {
                             border: "2px solid #d7ccc8",
                           }}
                         >
-                          <img
+                          <Box
+                            component="img"
                             src={url}
                             alt={`Event ${index + 1}`}
-                            style={{
+                            sx={{
                               width: "100%",
                               height: 120,
                               objectFit: "cover",
@@ -1009,3 +1013,4 @@ const EventsManagement: React.FC = () => {
 };
 
 export default EventsManagement;
+

@@ -13,10 +13,11 @@ const LoadingScreen: React.FC = () => {
         backgroundColor: "#f5f5f5",
       }}
     >
-      <img
+      <Box
+        component="img"
         src="/brooklinpub-logo.png"
         alt="Brooklin Pub"
-        style={{ height: 60, marginBottom: 24 }}
+        sx={{ height: 60, marginBottom: 3 }}
       />
       <CircularProgress size={40} sx={{ mb: 2 }} />
       <Typography variant="body1" color="text.secondary">
