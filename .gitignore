@@ -22,7 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-brooklin_pub_admin_dashboard\.env
 
 # Environment variables
 .env
