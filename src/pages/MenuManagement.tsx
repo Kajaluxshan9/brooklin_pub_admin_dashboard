@@ -107,6 +107,7 @@ interface MenuItem {
   price: number;
   categoryId: string;
   categoryName?: string;
+  preparationTime?: number;
   isAvailable: boolean;
   isVegetarian: boolean;
   isVegan: boolean;
@@ -179,10 +180,11 @@ const MenuManagement: React.FC = () => {
   });
 
   const [itemForm, setItemForm] = useState({
-    name: "",
-    description: "",
+    name: '',
+    description: '',
     price: 0,
-    categoryId: "",
+    categoryId: '',
+    preparationTime: undefined as number | undefined,
     isAvailable: true,
     isVegetarian: false,
     isVegan: false,
@@ -358,10 +360,11 @@ const MenuManagement: React.FC = () => {
   const handleCreateItem = () => {
     setSelectedItem(null);
     setItemForm({
-      name: "",
-      description: "",
+      name: '',
+      description: '',
       price: 0,
-      categoryId: "",
+      categoryId: '',
+      preparationTime: undefined,
       isAvailable: true,
       isVegetarian: false,
       isVegan: false,
@@ -382,10 +385,11 @@ const MenuManagement: React.FC = () => {
       name: item.name,
       description: item.description,
       price:
-        typeof item.price === "string"
+        typeof item.price === 'string'
           ? parseFloat(item.price) || 0
           : item.price,
       categoryId: item.categoryId,
+      preparationTime: item.preparationTime,
       isAvailable: item.isAvailable,
       isVegetarian: item.isVegetarian,
       isVegan: item.isVegan,
@@ -841,19 +845,19 @@ const MenuManagement: React.FC = () => {
 
       // Validate required fields
       if (!itemForm.name.trim()) {
-        showSnackbar("Name is required", "error");
+        showSnackbar('Name is required', 'error');
         return;
       }
       if (!itemForm.description.trim()) {
-        showSnackbar("Description is required", "error");
+        showSnackbar('Description is required', 'error');
         return;
       }
       if (!itemForm.categoryId) {
-        showSnackbar("Category is required", "error");
+        showSnackbar('Category is required', 'error');
         return;
       }
       if (itemForm.price < 0) {
-        showSnackbar("Price must be 0 or greater", "error");
+        showSnackbar('Price must be 0 or greater', 'error');
         return;
       }
 
@@ -867,38 +871,47 @@ const MenuManagement: React.FC = () => {
         try {
           const uploadedUrls = await uploadImagesToS3(selectedFiles);
           finalImageUrls = [...finalImageUrls, ...uploadedUrls];
-          showSnackbar(`${selectedFiles.length} image(s) uploaded successfully`, "success");
+          showSnackbar(
+            `${selectedFiles.length} image(s) uploaded successfully`,
+            'success',
+          );
         } catch {
-          showSnackbar("Failed to upload images. Please try again.", "error");
+          showSnackbar('Failed to upload images. Please try again.', 'error');
           return;
         }
       }
 
+      // Prepare data according to CreateMenuItemDto schema
       const itemData = {
-        ...itemForm,
+        name: itemForm.name,
+        description: itemForm.description,
         price: formattedPrice,
+        categoryId: itemForm.categoryId,
+        preparationTime: itemForm.preparationTime || undefined,
         allergens: itemForm.allergens,
         dietaryInfo: [
-          ...(itemForm.isVegetarian ? ["vegetarian"] : []),
-          ...(itemForm.isVegan ? ["vegan"] : []),
-          ...(itemForm.isGlutenFree ? ["gluten-free"] : []),
-          ...(itemForm.isDairyFree ? ["dairy-free"] : []),
+          ...(itemForm.isVegetarian ? ['vegetarian'] : []),
+          ...(itemForm.isVegan ? ['vegan'] : []),
+          ...(itemForm.isGlutenFree ? ['gluten-free'] : []),
+          ...(itemForm.isDairyFree ? ['dairy-free'] : []),
         ],
+        isAvailable: itemForm.isAvailable,
         imageUrls: finalImageUrls,
+        sortOrder: itemForm.sortOrder,
       };
 
       const url = selectedItem
         ? `${API_BASE_URL}/menu/items/${selectedItem.id}`
         : `${API_BASE_URL}/menu/items`;
 
-      const method = selectedItem ? "PATCH" : "POST";
+      const method = selectedItem ? 'PATCH' : 'POST';
 
       const response = await fetch(url, {
         method,
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        credentials: "include",
+        credentials: 'include',
         body: JSON.stringify(itemData),
       });
 
@@ -907,16 +920,16 @@ const MenuManagement: React.FC = () => {
         if (imagesToDelete.length > 0) {
           try {
             await fetch(`${API_BASE_URL}/upload/images`, {
-              method: "DELETE",
+              method: 'DELETE',
               headers: {
-                "Content-Type": "application/json",
+                'Content-Type': 'application/json',
               },
-              credentials: "include",
+              credentials: 'include',
               body: JSON.stringify({ urls: imagesToDelete }),
             });
             logger.debug(`Deleted ${imagesToDelete.length} image(s) from S3`);
           } catch (error) {
-            logger.error("Error deleting images from S3:", error);
+            logger.error('Error deleting images from S3:', error);
             // Don't show error to user as the item was saved successfully
           }
         }
@@ -925,17 +938,17 @@ const MenuManagement: React.FC = () => {
         await loadMenuItems();
         showSnackbar(
           selectedItem
-            ? "Menu item updated successfully"
-            : "Menu item created successfully"
+            ? 'Menu item updated successfully'
+            : 'Menu item created successfully',
         );
       } else {
         const errorData = await response
           .json()
-          .catch(() => ({ message: "Unknown error" }));
+          .catch(() => ({ message: 'Unknown error' }));
         throw new Error(
           `Failed to save menu item: ${
             errorData.message || response.statusText
-          }`
+          }`,
         );
       }
     } catch (error) {
