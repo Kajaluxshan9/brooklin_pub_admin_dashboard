@@ -8,6 +8,7 @@ import EmailVerificationPage from "../pages/EmailVerificationPage";
 import DashboardLayout from "../components/DashboardLayout";
 import Dashboard from "../pages/Dashboard";
 import MenuManagement from "../pages/MenuManagement";
+import MeasurementsManagement from '../pages/MeasurementsManagement';
 import SpecialsManagement from "../pages/SpecialsManagement";
 import EventsManagement from "../pages/EventsManagement";
 import StoriesManagement from "../pages/StoriesManagement";
@@ -40,6 +41,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/" element={<DashboardLayout />}>
         <Route index element={<Dashboard />} />
         <Route path="menu" element={<MenuManagement />} />
+        <Route path="measurements" element={<MeasurementsManagement />} />
         <Route path="specials" element={<SpecialsManagement />} />
         <Route path="events" element={<EventsManagement />} />
         <Route path="stories" element={<StoriesManagement />} />

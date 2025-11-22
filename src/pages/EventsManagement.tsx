@@ -32,6 +32,7 @@ import {
 } from "@mui/material";
 import { PageHeader } from "../components/common/PageHeader";
 import logger from "../utils/logger";
+import { uploadImages, getErrorMessage } from '../utils/uploadHelpers';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -113,7 +114,10 @@ const EventsManagement: React.FC = () => {
     imageUrls: [],
     isActive: true,
   });
-  const showSnackbar = (message: string, severity: "success" | "error") => {
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
+  const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
   };
 
@@ -124,18 +128,18 @@ const EventsManagement: React.FC = () => {
   const loadEvents = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/events`, {
-        credentials: "include",
+        credentials: 'include',
       });
 
       if (response.ok) {
         const data = await response.json();
         setEvents(data);
       } else {
-        logger.error("Failed to load events");
+        logger.error('Failed to load events');
         setEvents([]);
       }
     } catch (error) {
-      logger.error("Error loading events:", error);
+      logger.error('Error loading events:', error);
       setEvents([]);
     }
   };
@@ -143,8 +147,8 @@ const EventsManagement: React.FC = () => {
   const handleCreate = () => {
     setSelectedEvent(null);
     setEventForm({
-      title: "",
-      description: "",
+      title: '',
+      description: '',
       type: EventType.SPECIAL_EVENT,
       displayStartDate: null,
       displayEndDate: null,
@@ -154,6 +158,9 @@ const EventsManagement: React.FC = () => {
       isActive: true,
     });
     setDialogOpen(true);
+    setSelectedFiles([]);
+    setImagePreviews([]);
+    setImagesToDelete([]);
   };
   const handleEdit = (event: Event) => {
     setSelectedEvent(event);
@@ -168,88 +175,88 @@ const EventsManagement: React.FC = () => {
       imageUrls: event.imageUrls || [],
       isActive: event.isActive,
     });
+    setSelectedFiles([]);
+    setImagePreviews([]);
+    setImagesToDelete([]);
     setDialogOpen(true);
   };
 
-  const handleImageUpload = async (files: FileList) => {
+  const handleImageUpload = (files: FileList) => {
     const maxImages = 5;
     const maxSize = 1024 * 1024; // 1MB
 
-    if (eventForm.imageUrls.length + files.length > maxImages) {
-      showSnackbar(`Maximum ${maxImages} images allowed`, "error");
+    const totalImages =
+      eventForm.imageUrls.length + imagePreviews.length + files.length;
+
+    if (totalImages > maxImages) {
+      showSnackbar(`Maximum ${maxImages} images allowed`, 'error');
       return;
     }
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file.size > maxSize) {
-        showSnackbar("Image size must be less than 1MB", "error");
+        showSnackbar('Image size must be less than 1MB', 'error');
         return;
       }
-      if (!file.type.startsWith("image/")) {
-        showSnackbar("Only image files are allowed", "error");
+      if (!file.type.startsWith('image/')) {
+        showSnackbar('Only image files are allowed', 'error');
         return;
       }
     }
 
-    const formData = new FormData();
-    for (let i = 0; i < files.length; i++) {
-      formData.append("images", files[i]);
-    }
-
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/upload/images`, {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.urls) {
-          setEventForm((prev) => ({
-            ...prev,
-            imageUrls: [...prev.imageUrls, ...data.urls],
-          }));
-          showSnackbar("Images uploaded successfully", "success");
-        }
-      } else {
-        showSnackbar("Error uploading images", "error");
-      }
-    } catch (error) {
-      logger.error("Upload error:", error);
-      showSnackbar("Error uploading images", "error");
-    } finally {
-      setLoading(false);
-    }
+    // Add to local selectedFiles and create previews
+    const fileArray = Array.from(files);
+    setSelectedFiles((prev) => [...prev, ...fileArray]);
+    fileArray.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreviews((prev) => [...prev, e.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  const handleRemoveImage = async (index: number) => {
-    const imageUrl = eventForm.imageUrls[index];
+  const handleRemoveImage = (index: number) => {
+    const totalExistingImages = eventForm.imageUrls.length;
 
-    if (imageUrl && imageUrl.startsWith("https://")) {
-      try {
-        await fetch(`${API_BASE_URL}/upload/images`, {
-          method: "DELETE",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ urls: [imageUrl] }),
-        });
-      } catch (error) {
-        logger.error("Error deleting image from server:", error);
-      }
+    if (index < totalExistingImages) {
+      const imageToRemove = eventForm.imageUrls[index];
+      setImagesToDelete((prev) => [...prev, imageToRemove]);
+
+      setEventForm((prev) => ({
+        ...prev,
+        imageUrls: prev.imageUrls.filter((_, i) => i !== index),
+      }));
+
+      showSnackbar('Image will be deleted when you save changes', 'success');
+    } else {
+      const previewIndex = index - totalExistingImages;
+      setImagePreviews((prev) => prev.filter((_, i) => i !== previewIndex));
+      setSelectedFiles((prev) => prev.filter((_, i) => i !== previewIndex));
     }
-
-    setEventForm((prev) => ({
-      ...prev,
-      imageUrls: prev.imageUrls.filter((_, i) => i !== index),
-    }));
   };
 
   const handleSave = async () => {
     try {
       setLoading(true);
+      // Upload new images to S3 if any
+      let finalImageUrls = [...eventForm.imageUrls];
+
+      if (selectedFiles.length > 0) {
+        try {
+          const uploadedUrls = await uploadImages(selectedFiles, 'events');
+          finalImageUrls = [...finalImageUrls, ...uploadedUrls];
+          showSnackbar(
+            `${selectedFiles.length} image(s) uploaded successfully`,
+            'success',
+          );
+        } catch (uploadError) {
+          showSnackbar(getErrorMessage(uploadError), 'error');
+          return;
+        }
+      }
+
       const eventData = {
         title: eventForm.title,
         description: eventForm.description,
@@ -258,7 +265,7 @@ const EventsManagement: React.FC = () => {
         displayEndDate: eventForm.displayEndDate?.utc().toISOString(),
         eventStartDate: eventForm.eventStartDate?.utc().toISOString(),
         eventEndDate: eventForm.eventEndDate?.utc().toISOString(),
-        imageUrls: eventForm.imageUrls,
+        imageUrls: finalImageUrls,
         isActive: eventForm.isActive,
       };
 
@@ -266,32 +273,48 @@ const EventsManagement: React.FC = () => {
         ? `${API_BASE_URL}/events/${selectedEvent.id}`
         : `${API_BASE_URL}/events`;
 
-      const method = selectedEvent ? "PUT" : "POST";
+      const method = selectedEvent ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        credentials: "include",
+        credentials: 'include',
         body: JSON.stringify(eventData),
       });
 
       if (response.ok) {
+        // Delete marked images from S3 after successful save
+        if (imagesToDelete.length > 0) {
+          try {
+            await fetch(`${API_BASE_URL}/upload/images`, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ urls: imagesToDelete }),
+            });
+            setImagesToDelete([]);
+          } catch (err) {
+            logger.error('Error deleting event images from S3:', err);
+          }
+        }
         loadEvents();
+        setSelectedFiles([]);
+        setImagePreviews([]);
         setDialogOpen(false);
         showSnackbar(
           selectedEvent
-            ? "Event updated successfully"
-            : "Event created successfully",
-          "success"
+            ? 'Event updated successfully'
+            : 'Event created successfully',
+          'success',
         );
       } else {
-        showSnackbar("Failed to save event", "error");
+        showSnackbar('Failed to save event', 'error');
       }
     } catch (error) {
-      logger.error("Error saving event:", error);
-      showSnackbar("Error saving event", "error");
+      logger.error('Error saving event:', error);
+      showSnackbar('Error saving event', 'error');
     } finally {
       setLoading(false);
     }
@@ -375,8 +398,8 @@ const EventsManagement: React.FC = () => {
       <Box
         sx={{
           p: 3,
-          background: "linear-gradient(135deg, #FFF8F0 0%, #FFFBF7 100%)",
-          minHeight: "100vh",
+          background: 'linear-gradient(135deg, #FFF8F0 0%, #FFFBF7 100%)',
+          minHeight: '100vh',
         }}
       >
         {/* Page header moved to top-level for consistency */}
@@ -389,10 +412,10 @@ const EventsManagement: React.FC = () => {
               startIcon={<AddIcon />}
               onClick={handleCreate}
               sx={{
-                backgroundColor: "#C87941",
-                color: "white",
+                backgroundColor: '#C87941',
+                color: 'white',
                 fontWeight: 600,
-                "&:hover": { backgroundColor: "#A45F2D" },
+                '&:hover': { backgroundColor: '#A45F2D' },
               }}
             >
               Add Event
@@ -406,60 +429,60 @@ const EventsManagement: React.FC = () => {
             <Grid size={{ xs: 12, md: 6, lg: 4 }} key={event.id}>
               <Card
                 sx={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  position: "relative",
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  position: 'relative',
                   borderRadius: 4,
                   background:
-                    "linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 247, 0.98) 100%)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
+                    'linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 247, 0.98) 100%)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
                   boxShadow:
-                    "0 8px 32px rgba(200, 121, 65, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.8)",
+                    '0 8px 32px rgba(200, 121, 65, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.8)',
                   border: `3px solid ${
-                    getEventStatus(event) === "upcoming"
+                    getEventStatus(event) === 'upcoming'
                       ? getEventTypeColor(event.type)
-                      : "rgba(200, 121, 65, 0.25)"
+                      : 'rgba(200, 121, 65, 0.25)'
                   }`,
-                  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-                  overflow: "hidden",
-                  "&:hover": {
-                    transform: "translateY(-8px) scale(1.02)",
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  overflow: 'hidden',
+                  '&:hover': {
+                    transform: 'translateY(-8px) scale(1.02)',
                     boxShadow:
-                      "0 16px 48px rgba(200, 121, 65, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.9)",
+                      '0 16px 48px rgba(200, 121, 65, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.9)',
                     borderColor: getEventTypeColor(event.type),
                   },
                 }}
               >
                 <Box
-                  sx={{ position: "absolute", top: 12, right: 12, zIndex: 1 }}
+                  sx={{ position: 'absolute', top: 12, right: 12, zIndex: 1 }}
                 >
                   <Chip
                     label={
-                      getEventStatus(event) === "upcoming"
-                        ? "Upcoming"
-                        : getEventStatus(event) === "ongoing"
-                        ? "Ongoing"
-                        : "Past"
+                      getEventStatus(event) === 'upcoming'
+                        ? 'Upcoming'
+                        : getEventStatus(event) === 'ongoing'
+                        ? 'Ongoing'
+                        : 'Past'
                     }
                     color={
-                      getEventStatus(event) === "upcoming"
-                        ? "success"
-                        : getEventStatus(event) === "ongoing"
-                        ? "primary"
-                        : "default"
+                      getEventStatus(event) === 'upcoming'
+                        ? 'success'
+                        : getEventStatus(event) === 'ongoing'
+                        ? 'primary'
+                        : 'default'
                     }
                     size="small"
                     sx={{
                       fontWeight: 600,
                       backgroundColor:
-                        getEventStatus(event) === "upcoming"
-                          ? "#4caf50"
-                          : getEventStatus(event) === "ongoing"
-                          ? "#2196f3"
-                          : "#757575",
-                      color: "white",
+                        getEventStatus(event) === 'upcoming'
+                          ? '#4caf50'
+                          : getEventStatus(event) === 'ongoing'
+                          ? '#2196f3'
+                          : '#757575',
+                      color: 'white',
                     }}
                   />
                 </Box>
@@ -470,15 +493,15 @@ const EventsManagement: React.FC = () => {
                     sx={{
                       height: 200,
                       backgroundImage: `url(${event.imageUrls[0]})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      borderRadius: "12px 12px 0 0",
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      borderRadius: '12px 12px 0 0',
                     }}
                   />
                 )}
 
                 <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <Avatar
                       sx={{
                         bgcolor: getEventTypeColor(event.type),
@@ -493,17 +516,17 @@ const EventsManagement: React.FC = () => {
                       <Typography
                         variant="h6"
                         component="div"
-                        sx={{ fontWeight: 700, color: "#2C1810" }}
+                        sx={{ fontWeight: 700, color: '#2C1810' }}
                       >
                         {event.title}
                       </Typography>
                       <Chip
-                        label={event.type.replace("_", " ").toUpperCase()}
+                        label={event.type.replace('_', ' ').toUpperCase()}
                         size="small"
                         sx={{
                           backgroundColor: getEventTypeColor(event.type),
-                          color: "white",
-                          fontSize: "0.75rem",
+                          color: 'white',
+                          fontSize: '0.75rem',
                           fontWeight: 600,
                           mt: 0.5,
                         }}
@@ -514,26 +537,26 @@ const EventsManagement: React.FC = () => {
                   <Typography
                     variant="body2"
                     color="text.secondary"
-                    sx={{ mb: 2, color: "#6B4E3D", lineHeight: 1.6 }}
+                    sx={{ mb: 2, color: '#6B4E3D', lineHeight: 1.6 }}
                   >
                     {event.description}
                   </Typography>
 
-                  <Divider sx={{ my: 2, backgroundColor: "#E8DDD0" }} />
+                  <Divider sx={{ my: 2, backgroundColor: '#E8DDD0' }} />
 
                   <List dense sx={{ p: 0 }}>
                     <ListItem sx={{ px: 0 }}>
                       <ListItemIcon sx={{ minWidth: 32 }}>
                         <ScheduleIcon
                           fontSize="small"
-                          sx={{ color: "#C87941" }}
+                          sx={{ color: '#C87941' }}
                         />
                       </ListItemIcon>
                       <ListItemText
                         primary={
                           <Typography
                             variant="body2"
-                            sx={{ fontWeight: 600, color: "#2C1810" }}
+                            sx={{ fontWeight: 600, color: '#2C1810' }}
                           >
                             Display Period
                           </Typography>
@@ -541,15 +564,15 @@ const EventsManagement: React.FC = () => {
                         secondary={
                           <Typography
                             variant="caption"
-                            sx={{ color: "#6B4E3D" }}
+                            sx={{ color: '#6B4E3D' }}
                           >
                             {moment
                               .tz(event.displayStartDate, TIMEZONE)
-                              .format("MMM D, YYYY")}{" "}
-                            -{" "}
+                              .format('MMM D, YYYY')}{' '}
+                            -{' '}
                             {moment
                               .tz(event.displayEndDate, TIMEZONE)
-                              .format("MMM D, YYYY")}
+                              .format('MMM D, YYYY')}
                           </Typography>
                         }
                       />
@@ -557,13 +580,13 @@ const EventsManagement: React.FC = () => {
 
                     <ListItem sx={{ px: 0 }}>
                       <ListItemIcon sx={{ minWidth: 32 }}>
-                        <EventIcon fontSize="small" sx={{ color: "#C87941" }} />
+                        <EventIcon fontSize="small" sx={{ color: '#C87941' }} />
                       </ListItemIcon>
                       <ListItemText
                         primary={
                           <Typography
                             variant="body2"
-                            sx={{ fontWeight: 600, color: "#2C1810" }}
+                            sx={{ fontWeight: 600, color: '#2C1810' }}
                           >
                             Event Time
                           </Typography>
@@ -571,15 +594,15 @@ const EventsManagement: React.FC = () => {
                         secondary={
                           <Typography
                             variant="caption"
-                            sx={{ color: "#6B4E3D" }}
+                            sx={{ color: '#6B4E3D' }}
                           >
                             {moment
                               .tz(event.eventStartDate, TIMEZONE)
-                              .format("MMM D, h:mm A")}{" "}
-                            -{" "}
+                              .format('MMM D, h:mm A')}{' '}
+                            -{' '}
                             {moment
                               .tz(event.eventEndDate, TIMEZONE)
-                              .format("MMM D, h:mm A")}
+                              .format('MMM D, h:mm A')}
                           </Typography>
                         }
                       />
@@ -590,14 +613,14 @@ const EventsManagement: React.FC = () => {
                         <ListItemIcon sx={{ minWidth: 32 }}>
                           <ImageIcon
                             fontSize="small"
-                            sx={{ color: "#C87941" }}
+                            sx={{ color: '#C87941' }}
                           />
                         </ListItemIcon>
                         <ListItemText
                           primary={
                             <Typography
                               variant="caption"
-                              sx={{ color: "#6B4E3D" }}
+                              sx={{ color: '#6B4E3D' }}
                             >
                               {event.imageUrls.length} images
                             </Typography>
@@ -613,9 +636,9 @@ const EventsManagement: React.FC = () => {
                     size="small"
                     onClick={() => handleEdit(event)}
                     sx={{
-                      color: "#C87941",
+                      color: '#C87941',
                       fontWeight: 600,
-                      "&:hover": { backgroundColor: "#FFF3E6" },
+                      '&:hover': { backgroundColor: '#FFF3E6' },
                     }}
                   >
                     <EditIcon sx={{ fontSize: 16, mr: 0.5 }} />
@@ -626,7 +649,7 @@ const EventsManagement: React.FC = () => {
                     color="error"
                     onClick={() => handleDelete(event.id)}
                     sx={{
-                      "&:hover": { backgroundColor: "rgba(244, 67, 54, 0.1)" },
+                      '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' },
                     }}
                   >
                     <DeleteIcon sx={{ fontSize: 16, mr: 0.5 }} />
@@ -641,27 +664,32 @@ const EventsManagement: React.FC = () => {
         {/* Create/Edit Dialog */}
         <Dialog
           open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
+          onClose={() => {
+            setDialogOpen(false);
+            setSelectedFiles([]);
+            setImagePreviews([]);
+            setImagesToDelete([]);
+          }}
           maxWidth="md"
           fullWidth
           PaperProps={{
             sx: {
               borderRadius: 3,
-              backgroundColor: "#faf6f2",
+              backgroundColor: '#faf6f2',
             },
           }}
         >
           <DialogTitle
             sx={{
-              backgroundColor: "#C87941",
-              color: "white",
+              backgroundColor: '#C87941',
+              color: 'white',
               fontWeight: 700,
-              fontSize: "1.25rem",
+              fontSize: '1.25rem',
             }}
           >
-            {selectedEvent ? "Edit Event" : "Create Event"}
+            {selectedEvent ? 'Edit Event' : 'Create Event'}
           </DialogTitle>
-          <DialogContent sx={{ p: 3, backgroundColor: "#faf6f2" }}>
+          <DialogContent sx={{ p: 3, backgroundColor: '#faf6f2' }}>
             <Grid container spacing={3} sx={{ mt: 1 }}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
@@ -672,18 +700,18 @@ const EventsManagement: React.FC = () => {
                     setEventForm({ ...eventForm, title: e.target.value })
                   }
                   sx={{
-                    "& .MuiOutlinedInput-root": {
-                      backgroundColor: "white",
-                      "&:hover fieldset": { borderColor: "#C87941" },
-                      "&.Mui-focused fieldset": { borderColor: "#C87941" },
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'white',
+                      '&:hover fieldset': { borderColor: '#C87941' },
+                      '&.Mui-focused fieldset': { borderColor: '#C87941' },
                     },
-                    "& .MuiInputLabel-root.Mui-focused": { color: "#C87941" },
+                    '& .MuiInputLabel-root.Mui-focused': { color: '#C87941' },
                   }}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth>
-                  <InputLabel sx={{ "&.Mui-focused": { color: "#C87941" } }}>
+                  <InputLabel sx={{ '&.Mui-focused': { color: '#C87941' } }}>
                     Event Type
                   </InputLabel>
                   <Select
@@ -696,12 +724,12 @@ const EventsManagement: React.FC = () => {
                       })
                     }
                     sx={{
-                      backgroundColor: "white",
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#C87941",
+                      backgroundColor: 'white',
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#C87941',
                       },
-                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#C87941",
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#C87941',
                       },
                     }}
                   >
@@ -734,12 +762,12 @@ const EventsManagement: React.FC = () => {
                     setEventForm({ ...eventForm, description: e.target.value })
                   }
                   sx={{
-                    "& .MuiOutlinedInput-root": {
-                      backgroundColor: "white",
-                      "&:hover fieldset": { borderColor: "#C87941" },
-                      "&.Mui-focused fieldset": { borderColor: "#C87941" },
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'white',
+                      '&:hover fieldset': { borderColor: '#C87941' },
+                      '&.Mui-focused fieldset': { borderColor: '#C87941' },
                     },
-                    "& .MuiInputLabel-root.Mui-focused": { color: "#C87941" },
+                    '& .MuiInputLabel-root.Mui-focused': { color: '#C87941' },
                   }}
                 />
               </Grid>
@@ -748,7 +776,7 @@ const EventsManagement: React.FC = () => {
               <Grid size={{ xs: 12 }}>
                 <Typography
                   variant="h6"
-                  sx={{ color: "#C87941", fontWeight: 600, mb: 2 }}
+                  sx={{ color: '#C87941', fontWeight: 600, mb: 2 }}
                 >
                   Display Period
                 </Typography>
@@ -764,13 +792,13 @@ const EventsManagement: React.FC = () => {
                     textField: {
                       fullWidth: true,
                       sx: {
-                        "& .MuiOutlinedInput-root": {
-                          backgroundColor: "white",
-                          "&:hover fieldset": { borderColor: "#C87941" },
-                          "&.Mui-focused fieldset": { borderColor: "#C87941" },
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'white',
+                          '&:hover fieldset': { borderColor: '#C87941' },
+                          '&.Mui-focused fieldset': { borderColor: '#C87941' },
                         },
-                        "& .MuiInputLabel-root.Mui-focused": {
-                          color: "#C87941",
+                        '& .MuiInputLabel-root.Mui-focused': {
+                          color: '#C87941',
                         },
                       },
                     },
@@ -788,13 +816,13 @@ const EventsManagement: React.FC = () => {
                     textField: {
                       fullWidth: true,
                       sx: {
-                        "& .MuiOutlinedInput-root": {
-                          backgroundColor: "white",
-                          "&:hover fieldset": { borderColor: "#C87941" },
-                          "&.Mui-focused fieldset": { borderColor: "#C87941" },
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'white',
+                          '&:hover fieldset': { borderColor: '#C87941' },
+                          '&.Mui-focused fieldset': { borderColor: '#C87941' },
                         },
-                        "& .MuiInputLabel-root.Mui-focused": {
-                          color: "#C87941",
+                        '& .MuiInputLabel-root.Mui-focused': {
+                          color: '#C87941',
                         },
                       },
                     },
@@ -806,7 +834,7 @@ const EventsManagement: React.FC = () => {
               <Grid size={{ xs: 12 }}>
                 <Typography
                   variant="h6"
-                  sx={{ color: "#C87941", fontWeight: 600, mb: 2 }}
+                  sx={{ color: '#C87941', fontWeight: 600, mb: 2 }}
                 >
                   Event Period
                 </Typography>
@@ -822,13 +850,13 @@ const EventsManagement: React.FC = () => {
                     textField: {
                       fullWidth: true,
                       sx: {
-                        "& .MuiOutlinedInput-root": {
-                          backgroundColor: "white",
-                          "&:hover fieldset": { borderColor: "#C87941" },
-                          "&.Mui-focused fieldset": { borderColor: "#C87941" },
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'white',
+                          '&:hover fieldset': { borderColor: '#C87941' },
+                          '&.Mui-focused fieldset': { borderColor: '#C87941' },
                         },
-                        "& .MuiInputLabel-root.Mui-focused": {
-                          color: "#C87941",
+                        '& .MuiInputLabel-root.Mui-focused': {
+                          color: '#C87941',
                         },
                       },
                     },
@@ -846,13 +874,13 @@ const EventsManagement: React.FC = () => {
                     textField: {
                       fullWidth: true,
                       sx: {
-                        "& .MuiOutlinedInput-root": {
-                          backgroundColor: "white",
-                          "&:hover fieldset": { borderColor: "#C87941" },
-                          "&.Mui-focused fieldset": { borderColor: "#C87941" },
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'white',
+                          '&:hover fieldset': { borderColor: '#C87941' },
+                          '&.Mui-focused fieldset': { borderColor: '#C87941' },
                         },
-                        "& .MuiInputLabel-root.Mui-focused": {
-                          color: "#C87941",
+                        '& .MuiInputLabel-root.Mui-focused': {
+                          color: '#C87941',
                         },
                       },
                     },
@@ -864,7 +892,7 @@ const EventsManagement: React.FC = () => {
               <Grid size={{ xs: 12 }}>
                 <Typography
                   variant="h6"
-                  sx={{ color: "#C87941", fontWeight: 600, mb: 2 }}
+                  sx={{ color: '#C87941', fontWeight: 600, mb: 2 }}
                 >
                   Event Images (Max 5, 1MB each)
                 </Typography>
@@ -875,11 +903,11 @@ const EventsManagement: React.FC = () => {
                     startIcon={<UploadIcon />}
                     disabled={loading || eventForm.imageUrls.length >= 5}
                     sx={{
-                      borderColor: "#C87941",
-                      color: "#C87941",
-                      "&:hover": {
-                        borderColor: "#A45F2D",
-                        backgroundColor: "rgba(139, 69, 19, 0.1)",
+                      borderColor: '#C87941',
+                      color: '#C87941',
+                      '&:hover': {
+                        borderColor: '#A45F2D',
+                        backgroundColor: 'rgba(139, 69, 19, 0.1)',
                       },
                     }}
                   >
@@ -903,11 +931,11 @@ const EventsManagement: React.FC = () => {
                       <Grid size={{ xs: 6, md: 4 }} key={index}>
                         <Box
                           sx={{
-                            position: "relative",
+                            position: 'relative',
                             borderRadius: 2,
-                            overflow: "hidden",
-                            backgroundColor: "white",
-                            border: "2px solid #d7ccc8",
+                            overflow: 'hidden',
+                            backgroundColor: 'white',
+                            border: '2px solid #d7ccc8',
                           }}
                         >
                           <Box
@@ -915,21 +943,68 @@ const EventsManagement: React.FC = () => {
                             src={url}
                             alt={`Event ${index + 1}`}
                             sx={{
-                              width: "100%",
+                              width: '100%',
                               height: 120,
-                              objectFit: "cover",
+                              objectFit: 'cover',
                             }}
                           />
                           <IconButton
                             size="small"
                             onClick={() => handleRemoveImage(index)}
                             sx={{
-                              position: "absolute",
+                              position: 'absolute',
                               top: 4,
                               right: 4,
-                              backgroundColor: "rgba(0,0,0,0.6)",
-                              color: "white",
-                              "&:hover": { backgroundColor: "rgba(0,0,0,0.8)" },
+                              backgroundColor: 'rgba(0,0,0,0.6)',
+                              color: 'white',
+                              '&:hover': { backgroundColor: 'rgba(0,0,0,0.8)' },
+                            }}
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
+                {/* Display new previews */}
+                {imagePreviews.length > 0 && (
+                  <Grid container spacing={2} sx={{ mt: 1 }}>
+                    {imagePreviews.map((preview, index) => (
+                      <Grid size={{ xs: 6, md: 4 }} key={`preview-${index}`}>
+                        <Box
+                          sx={{
+                            position: 'relative',
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            backgroundColor: 'white',
+                            border: '2px dashed rgba(200,121,65,0.3)',
+                          }}
+                        >
+                          <Box
+                            component="img"
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            sx={{
+                              width: '100%',
+                              height: 120,
+                              objectFit: 'cover',
+                            }}
+                          />
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              handleRemoveImage(
+                                eventForm.imageUrls.length + index,
+                              )
+                            }
+                            sx={{
+                              position: 'absolute',
+                              top: 4,
+                              right: 4,
+                              backgroundColor: 'rgba(0,0,0,0.6)',
+                              color: 'white',
+                              '&:hover': { backgroundColor: 'rgba(0,0,0,0.8)' },
                             }}
                           >
                             <CloseIcon fontSize="small" />
@@ -953,16 +1028,16 @@ const EventsManagement: React.FC = () => {
                         })
                       }
                       sx={{
-                        "& .MuiSwitch-switchBase.Mui-checked": {
-                          color: "#C87941",
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: '#C87941',
                         },
-                        "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
-                          { backgroundColor: "#C87941" },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+                          { backgroundColor: '#C87941' },
                       }}
                     />
                   }
                   label={
-                    <Typography sx={{ color: "#5d4037", fontWeight: 600 }}>
+                    <Typography sx={{ color: '#5d4037', fontWeight: 600 }}>
                       Active Event
                     </Typography>
                   }
@@ -970,10 +1045,10 @@ const EventsManagement: React.FC = () => {
               </Grid>
             </Grid>
           </DialogContent>
-          <DialogActions sx={{ p: 3, backgroundColor: "#faf6f2" }}>
+          <DialogActions sx={{ p: 3, backgroundColor: '#faf6f2' }}>
             <Button
               onClick={() => setDialogOpen(false)}
-              sx={{ color: "#8d6e63" }}
+              sx={{ color: '#8d6e63' }}
             >
               Cancel
             </Button>
@@ -982,12 +1057,12 @@ const EventsManagement: React.FC = () => {
               onClick={handleSave}
               disabled={loading}
               sx={{
-                backgroundColor: "#C87941",
-                "&:hover": { backgroundColor: "#A45F2D" },
+                backgroundColor: '#C87941',
+                '&:hover': { backgroundColor: '#A45F2D' },
                 fontWeight: 600,
               }}
             >
-              {loading ? "Saving..." : selectedEvent ? "Update" : "Create"}
+              {loading ? 'Saving...' : selectedEvent ? 'Update' : 'Create'}
             </Button>
           </DialogActions>
         </Dialog>
@@ -997,12 +1072,12 @@ const EventsManagement: React.FC = () => {
           open={snackbar.open}
           autoHideDuration={6000}
           onClose={() => setSnackbar({ ...snackbar, open: false })}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         >
           <Alert
             onClose={() => setSnackbar({ ...snackbar, open: false })}
             severity={snackbar.severity}
-            sx={{ width: "100%" }}
+            sx={{ width: '100%' }}
           >
             {snackbar.message}
           </Alert>

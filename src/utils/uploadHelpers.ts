@@ -1,11 +1,15 @@
 import { API_BASE_URL } from '../config/env.config';
 
-// Helper function for uploading images to the backend
-export const uploadImages = async (files: File[]): Promise<string[]> => {
+// Helper function for uploading images to the backend with folder organization
+export const uploadImages = async (
+  files: File[],
+  folder: string = 'general'
+): Promise<string[]> => {
   const formData = new FormData();
   files.forEach((file) => {
     formData.append('images', file);
   });
+  formData.append('folder', folder);
 
   const response = await fetch(`${API_BASE_URL}/upload/images`, {
     method: 'POST',

@@ -63,6 +63,8 @@ const StoriesManagement: React.FC = () => {
   const [categories, setCategories] = useState<StoryCategory[]>([]);
   const [selectedCategory, setSelectedCategory] =
     useState<StoryCategory | null>(null);
+  const [editingStory, setEditingStory] = useState<Story | null>(null);
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
   const [categoryDialog, setCategoryDialog] = useState(false);
   const [storyDialog, setStoryDialog] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -81,6 +83,7 @@ const StoriesManagement: React.FC = () => {
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
     null,
   );
@@ -272,19 +275,51 @@ const StoriesManagement: React.FC = () => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const removeExistingImage = (url: string) => {
+    setExistingImageUrls((prev) => prev.filter((u) => u !== url));
+    setImagesToDelete((prev) => [...prev, url]);
+  };
+
   const handleOpenStoryDialog = (category: StoryCategory) => {
     setSelectedCategory(category);
     setSelectedFiles([]);
     setImagePreviews([]);
+    setImagesToDelete([]);
+    setEditingStory(null);
     setStoryDialog(true);
+  };
+
+  const handleEditStory = (story: Story) => {
+    setEditingStory(story);
+    setSelectedCategory(story.category || null);
+    setExistingImageUrls(story.imageUrls || []);
+    setSelectedFiles([]);
+    setImagePreviews([]);
+    setImagesToDelete([]);
+    setStoryDialog(true);
+  };
+
+  const handleCloseStoryDialog = () => {
+    setStoryDialog(false);
+    setSelectedFiles([]);
+    setImagePreviews([]);
+    setImagesToDelete([]);
+    setEditingStory(null);
+    setExistingImageUrls([]);
   };
 
   const handleSaveStory = async () => {
     try {
       if (!selectedCategory) return;
 
-      if (selectedFiles.length === 0) {
+      // For creation require at least one selected file
+      if (!editingStory && selectedFiles.length === 0) {
         showSnackbar('Please select at least one image', 'error');
+        return;
+      }
+      // For edit require at least one file or existing image
+      if (editingStory && selectedFiles.length === 0 && existingImageUrls.length === 0) {
+        showSnackbar('Please select at least one image or keep existing images', 'error');
         return;
       }
 
@@ -295,6 +330,7 @@ const StoriesManagement: React.FC = () => {
       selectedFiles.forEach((file) => {
         formData.append('images', file);
       });
+      formData.append('folder', 'stories');
 
       const uploadResponse = await fetch(`${API_BASE_URL}/upload/images`, {
         method: 'POST',
@@ -309,25 +345,53 @@ const StoriesManagement: React.FC = () => {
       const uploadResult = await uploadResponse.json();
       const imageUrls = uploadResult.urls || [];
 
-      // Create story
-      const storyResponse = await fetch(`${API_BASE_URL}/stories`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          categoryId: selectedCategory.id,
-          imageUrls,
-          isActive: true,
-          sortOrder: 0,
-        }),
-      });
+      let storyResponse: Response;
+      if (editingStory) {
+        // Update existing story
+        const finalImageUrls = [...existingImageUrls, ...imageUrls];
+        storyResponse = await fetch(`${API_BASE_URL}/stories/${editingStory.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ imageUrls: finalImageUrls }),
+        });
+      } else {
+        // Create story
+        storyResponse = await fetch(`${API_BASE_URL}/stories`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            categoryId: selectedCategory.id,
+            imageUrls,
+            isActive: true,
+            sortOrder: 0,
+          }),
+        });
+      }
 
       if (storyResponse.ok) {
         showSnackbar(`${imageUrls.length} image(s) uploaded successfully`);
-        setStoryDialog(false);
+        // Delete marked images from S3 after successful save/update
+        if (imagesToDelete.length > 0) {
+          try {
+            await fetch(`${API_BASE_URL}/upload/images`, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ urls: imagesToDelete }),
+            });
+            setImagesToDelete([]);
+          } catch (err) {
+            logger.error('Error deleting story images from S3:', err);
+          }
+        }
+        handleCloseStoryDialog();
         loadCategories();
         setSelectedFiles([]);
         setImagePreviews([]);
+        setExistingImageUrls([]);
+        setEditingStory(null);
       } else {
         throw new Error('Failed to create story');
       }
@@ -504,19 +568,25 @@ const StoriesManagement: React.FC = () => {
                             </Card>
                           ))}
                         </Box>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteStory(story.id)}
+                        <Box sx={{ display: 'flex', gap: 1, position: 'absolute', top: 4, right: 4 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEditStory(story)}
+                            sx={{ bgcolor: 'rgba(255,255,255,0.9)', '&:hover': { bgcolor: 'rgba(255,255,255,1)' } }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteStory(story.id)}
                           sx={{
-                            position: 'absolute',
-                            top: 4,
-                            right: 4,
-                            bgcolor: 'rgba(255,255,255,0.9)',
-                            '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
+                              bgcolor: 'rgba(255,255,255,0.9)',
+                              '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
                           }}
                         >
                           <DeleteIcon fontSize="small" color="error" />
                         </IconButton>
+                        </Box>
                       </Box>
                     ))}
                   </Box>
@@ -614,7 +684,9 @@ const StoriesManagement: React.FC = () => {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Upload Images for {selectedCategory?.name}</DialogTitle>
+        <DialogTitle>
+          {editingStory ? `Edit Story Images for ${selectedCategory?.name}` : `Upload Images for ${selectedCategory?.name}`}
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <Box
@@ -641,10 +713,34 @@ const StoriesManagement: React.FC = () => {
               </Button>
             </label>
 
-            {imagePreviews.length > 0 && (
+            {(existingImageUrls.length > 0 || imagePreviews.length > 0) && (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                {existingImageUrls.map((url, index) => (
+                  <Box key={`existing-${index}`} sx={{ position: 'relative' }}>
+                    <Card sx={{ width: 150, height: 150 }}>
+                      <CardMedia
+                        component="img"
+                        height="150"
+                        image={url}
+                        alt={`Existing ${index + 1}`}
+                      />
+                    </Card>
+                    <IconButton
+                      size="small"
+                      onClick={() => removeExistingImage(url)}
+                      sx={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        bgcolor: 'rgba(255,255,255,0.9)',
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ))}
                 {imagePreviews.map((preview, index) => (
-                  <Box key={index} sx={{ position: 'relative' }}>
+                  <Box key={`preview-${index}`} sx={{ position: 'relative' }}>
                     <Card sx={{ width: 150, height: 150 }}>
                       <CardMedia
                         component="img"
@@ -672,14 +768,20 @@ const StoriesManagement: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStoryDialog(false)}>Cancel</Button>
+          <Button onClick={handleCloseStoryDialog}>Cancel</Button>
           <Button
             onClick={handleSaveStory}
             variant="contained"
             sx={{ backgroundColor: '#C87941' }}
-            disabled={selectedFiles.length === 0}
+            disabled={
+              !editingStory && selectedFiles.length === 0
+                ? true
+                : editingStory && selectedFiles.length === 0 && existingImageUrls.length === 0
+                ? true
+                : false
+            }
           >
-            Upload
+            {editingStory ? 'Save' : 'Upload'}
           </Button>
         </DialogActions>
       </Dialog>

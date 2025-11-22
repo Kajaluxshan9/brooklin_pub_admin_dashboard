@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { API_BASE_URL } from "../config/env.config";
+import React, { useState, useEffect, useCallback } from 'react';
+import { API_BASE_URL } from '../config/env.config';
 import {
   Box,
   Typography,
@@ -26,7 +26,7 @@ import {
   MenuList,
   MenuItem as MenuListItem,
   Divider,
-} from "@mui/material";
+} from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -37,18 +37,18 @@ import {
   SupervisorAccount as SuperAdminIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
-} from "@mui/icons-material";
-import moment from "moment-timezone";
-import { useAuth } from "../contexts/AuthContext";
-import logger from "../utils/logger";
-import { useGlobalToast } from "../contexts/ToastContext";
-import { PageHeader } from "../components/common/PageHeader";
-import { StatusChip } from "../components/common/StatusChip";
-import { ActionButtons } from "../components/common/ActionButtons";
+} from '@mui/icons-material';
+import moment from 'moment-timezone';
+import { useAuth } from '../contexts/AuthContext';
+import logger from '../utils/logger';
+import { useGlobalToast } from '../contexts/ToastContext';
+import { PageHeader } from '../components/common/PageHeader';
+import { StatusChip } from '../components/common/StatusChip';
+import { ActionButtons } from '../components/common/ActionButtons';
 
 const UserRole = {
-  SUPER_ADMIN: "super_admin",
-  ADMIN: "admin",
+  SUPER_ADMIN: 'super_admin',
+  ADMIN: 'admin',
 } as const;
 
 type UserRoleValue = (typeof UserRole)[keyof typeof UserRole];
@@ -84,20 +84,20 @@ const UserManagement: React.FC = () => {
     password: string;
     confirmPassword: string;
   }>({
-    email: "",
-    firstName: "",
-    lastName: "",
-    phone: "",
+    email: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
     role: UserRole.ADMIN,
     isActive: true,
-    password: "",
-    confirmPassword: "",
+    password: '',
+    confirmPassword: '',
   });
 
   const loadUsers = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/users`, {
-        credentials: "include",
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -109,7 +109,7 @@ const UserManagement: React.FC = () => {
           if (currentUser.role === UserRole.ADMIN) {
             // Admin can only see other admins, not super admins
             filteredUsers = data.filter(
-              (user: User) => user.role === UserRole.ADMIN
+              (user: User) => user.role === UserRole.ADMIN,
             );
           }
           // Super admin can see all users (no filtering needed)
@@ -117,11 +117,11 @@ const UserManagement: React.FC = () => {
 
         setUsers(filteredUsers);
       } else {
-        logger.error("Failed to load users");
+        logger.error('Failed to load users');
         setUsers([]);
       }
     } catch (error) {
-      logger.error("Error loading users:", error);
+      logger.error('Error loading users:', error);
       setUsers([]);
     }
   }, [currentUser]);
@@ -133,40 +133,94 @@ const UserManagement: React.FC = () => {
   const handleCreate = () => {
     setSelectedUser(null);
     setUserForm({
-      email: "",
-      firstName: "",
-      lastName: "",
-      phone: "",
+      email: '',
+      firstName: '',
+      lastName: '',
+      phone: '',
       role: UserRole.ADMIN,
       isActive: true,
-      password: "",
-      confirmPassword: "",
+      password: '',
+      confirmPassword: '',
     });
     setDialogOpen(true);
   };
 
   const handleEdit = (user: User) => {
+    // Prevent regular admins from editing super admin users
+    if (
+      currentUser?.role === UserRole.ADMIN &&
+      user.role === UserRole.SUPER_ADMIN
+    ) {
+      showToast(
+        'You do not have permission to edit Super Admin users',
+        'error',
+      );
+      return;
+    }
+
     setSelectedUser(user);
     setUserForm({
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      phone: user.phone || "",
+      phone: user.phone || '',
       role: user.role,
       isActive: user.isActive,
-      password: "",
-      confirmPassword: "",
+      password: '',
+      confirmPassword: '',
     });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     try {
+      // Validation
+      if (!userForm.email.trim()) {
+        showToast('Email is required', 'error');
+        return;
+      }
+      if (!userForm.firstName.trim()) {
+        showToast('First name is required', 'error');
+        return;
+      }
+      if (!userForm.lastName.trim()) {
+        showToast('Last name is required', 'error');
+        return;
+      }
+
+      // Ensure regular admins cannot create super admin users
+      if (
+        currentUser?.role === UserRole.ADMIN &&
+        userForm.role === UserRole.SUPER_ADMIN
+      ) {
+        showToast(
+          'You do not have permission to create Super Admin users',
+          'error',
+        );
+        return;
+      }
+
+      // For new users, validate password
+      if (!selectedUser) {
+        if (!userForm.password) {
+          showToast('Password is required', 'error');
+          return;
+        }
+        if (userForm.password.length < 8) {
+          showToast('Password must be at least 8 characters', 'error');
+          return;
+        }
+        if (userForm.password !== userForm.confirmPassword) {
+          showToast('Passwords do not match', 'error');
+          return;
+        }
+      }
+
       const url = selectedUser
         ? `${API_BASE_URL}/users/${selectedUser.id}`
         : `${API_BASE_URL}/auth/register`;
 
-      const method = selectedUser ? "PUT" : "POST";
+      const method = selectedUser ? 'PUT' : 'POST';
 
       // Remove confirmPassword from the data sent to backend
       const { confirmPassword, ...userData } = userForm;
@@ -174,9 +228,9 @@ const UserManagement: React.FC = () => {
       const response = await fetch(url, {
         method,
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        credentials: "include",
+        credentials: 'include',
         body: JSON.stringify(userData),
       });
 
@@ -186,18 +240,21 @@ const UserManagement: React.FC = () => {
         // Show success message with verification info
         showToast(
           selectedUser
-            ? "User updated successfully"
-            : "User created successfully. A verification email has been sent.",
-          "success",
+            ? 'User updated successfully'
+            : 'Admin created successfully. A verification email has been sent.',
+          'success',
         );
       } else {
         const errorData = await response.json();
-        logger.error("Failed to save user:", errorData);
-        showToast(`Failed to save user: ${errorData.message || 'Unknown error'}`, "error");
+        logger.error('Failed to save user:', errorData);
+        showToast(
+          `Failed to save user: ${errorData.message || 'Unknown error'}`,
+          'error',
+        );
       }
     } catch (error) {
-      logger.error("Error saving user:", error);
-      alert("Error saving user. Please try again.");
+      logger.error('Error saving user:', error);
+      showToast('Error saving user. Please try again.', 'error');
     }
   };
 
@@ -205,16 +262,29 @@ const UserManagement: React.FC = () => {
     // Check if trying to delete self
     if (currentUser?.id === id) {
       alert(
-        "Error: You cannot delete your own account. Please ask another administrator to perform this action."
+        'Error: You cannot delete your own account. Please ask another administrator to perform this action.',
       );
       return;
     }
 
-    if (window.confirm("Are you sure you want to delete this user?")) {
+    // Find the user being deleted to check their role
+    const userToDelete = users.find((user) => user.id === id);
+    if (
+      currentUser?.role === UserRole.ADMIN &&
+      userToDelete?.role === UserRole.SUPER_ADMIN
+    ) {
+      showToast(
+        'You do not have permission to delete Super Admin users',
+        'error',
+      );
+      return;
+    }
+
+    if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         const response = await fetch(`${API_BASE_URL}/users/${id}`, {
-          method: "DELETE",
-          credentials: "include",
+          method: 'DELETE',
+          credentials: 'include',
         });
 
         if (response.ok) {
@@ -222,20 +292,20 @@ const UserManagement: React.FC = () => {
         } else {
           const errorData = await response.json();
           alert(
-            `Failed to delete user: ${errorData.message || "Unknown error"}`
+            `Failed to delete user: ${errorData.message || 'Unknown error'}`,
           );
-          logger.error("Failed to delete user");
+          logger.error('Failed to delete user');
         }
       } catch (error) {
-        logger.error("Error deleting user:", error);
-        alert("Error: Failed to delete user. Please try again.");
+        logger.error('Error deleting user:', error);
+        alert('Error: Failed to delete user. Please try again.');
       }
     }
   };
 
   const handleMenuOpen = (
     event: React.MouseEvent<HTMLElement>,
-    userId: string
+    userId: string,
   ) => {
     setAnchorEl(event.currentTarget);
     setMenuUserId(userId);
@@ -247,29 +317,43 @@ const UserManagement: React.FC = () => {
   };
 
   const handleResendVerification = async (userId: string) => {
+    // Find the user to check their role
+    const userToVerify = users.find((user) => user.id === userId);
+    if (
+      currentUser?.role === UserRole.ADMIN &&
+      userToVerify?.role === UserRole.SUPER_ADMIN
+    ) {
+      showToast(
+        'You do not have permission to manage Super Admin users',
+        'error',
+      );
+      handleMenuClose();
+      return;
+    }
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/auth/resend-verification/${userId}`,
         {
-          method: "POST",
-          credentials: "include",
-        }
+          method: 'POST',
+          credentials: 'include',
+        },
       );
 
       if (response.ok) {
         const data = await response.json();
-        alert(data.message || "Verification email sent successfully");
+        alert(data.message || 'Verification email sent successfully');
       } else {
         const errorData = await response.json();
         alert(
           `Failed to resend verification: ${
-            errorData.message || "Unknown error"
-          }`
+            errorData.message || 'Unknown error'
+          }`,
         );
       }
     } catch (error) {
-      logger.error("Error resending verification:", error);
-      alert("Error: Failed to resend verification email. Please try again.");
+      logger.error('Error resending verification:', error);
+      alert('Error: Failed to resend verification email. Please try again.');
     }
     handleMenuClose();
   };
@@ -278,7 +362,21 @@ const UserManagement: React.FC = () => {
     // Check if trying to inactivate self
     if (currentUser?.id === userId) {
       alert(
-        "Error: You cannot change your own account status. Please ask another administrator to perform this action."
+        'Error: You cannot change your own account status. Please ask another administrator to perform this action.',
+      );
+      handleMenuClose();
+      return;
+    }
+
+    // Find the user being modified to check their role
+    const userToModify = users.find((user) => user.id === userId);
+    if (
+      currentUser?.role === UserRole.ADMIN &&
+      userToModify?.role === UserRole.SUPER_ADMIN
+    ) {
+      showToast(
+        'You do not have permission to modify Super Admin users',
+        'error',
       );
       handleMenuClose();
       return;
@@ -288,9 +386,9 @@ const UserManagement: React.FC = () => {
       const response = await fetch(
         `${API_BASE_URL}/users/${userId}/toggle-status`,
         {
-          method: "PATCH",
-          credentials: "include",
-        }
+          method: 'PATCH',
+          credentials: 'include',
+        },
       );
 
       if (response.ok) {
@@ -299,14 +397,14 @@ const UserManagement: React.FC = () => {
         const errorData = await response.json();
         alert(
           `Failed to toggle user status: ${
-            errorData.message || "Unknown error"
-          }`
+            errorData.message || 'Unknown error'
+          }`,
         );
-        logger.error("Failed to toggle user status");
+        logger.error('Failed to toggle user status');
       }
     } catch (error) {
-      logger.error("Error toggling user status:", error);
-      alert("Error: Failed to toggle user status. Please try again.");
+      logger.error('Error toggling user status:', error);
+      alert('Error: Failed to toggle user status. Please try again.');
     }
     handleMenuClose();
   };
@@ -325,11 +423,11 @@ const UserManagement: React.FC = () => {
   const getRoleColor = (role: UserRoleValue) => {
     switch (role) {
       case UserRole.SUPER_ADMIN:
-        return "#C87941";
+        return '#C87941';
       case UserRole.ADMIN:
-        return "#D4842D";
+        return '#D4842D';
       default:
-        return "#E49B5F";
+        return '#E49B5F';
     }
   };
 
@@ -338,7 +436,7 @@ const UserManagement: React.FC = () => {
   };
 
   return (
-    <Box sx={{ backgroundColor: "#FFF8F0", minHeight: "100vh", p: 3 }}>
+    <Box sx={{ backgroundColor: '#FFF8F0', minHeight: '100vh', p: 3 }}>
       <PageHeader
         title="User Management"
         subtitle="Manage admin users and their access permissions"
@@ -348,10 +446,10 @@ const UserManagement: React.FC = () => {
             startIcon={<AddIcon />}
             onClick={handleCreate}
             sx={{
-              backgroundColor: "#C87941",
-              color: "white",
+              backgroundColor: '#C87941',
+              color: 'white',
               fontWeight: 600,
-              "&:hover": { backgroundColor: "#A45F2D" },
+              '&:hover': { backgroundColor: '#A45F2D' },
             }}
           >
             Add User
@@ -364,14 +462,14 @@ const UserManagement: React.FC = () => {
           <Grid size={{ xs: 12, md: 6, lg: 4 }} key={user.id}>
             <Card
               sx={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                position: "relative",
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative',
                 opacity: user.isActive ? 1 : 0.7,
               }}
             >
-              <Box sx={{ position: "absolute", top: 8, right: 8, zIndex: 1 }}>
+              <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
                 <IconButton
                   size="small"
                   onClick={(e) => handleMenuOpen(e, user.id)}
@@ -381,7 +479,7 @@ const UserManagement: React.FC = () => {
               </Box>
 
               <CardContent sx={{ flexGrow: 1, pt: 3 }}>
-                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Avatar
                     sx={{
                       bgcolor: getRoleColor(user.role),
@@ -398,12 +496,12 @@ const UserManagement: React.FC = () => {
                     </Typography>
                     <Chip
                       icon={getRoleIcon(user.role)}
-                      label={user.role.replace("_", " ").toUpperCase()}
+                      label={user.role.replace('_', ' ').toUpperCase()}
                       size="small"
                       sx={{
                         backgroundColor: getRoleColor(user.role),
-                        color: "white",
-                        fontSize: "0.7rem",
+                        color: 'white',
+                        fontSize: '0.7rem',
                       }}
                     />
                   </Box>
@@ -412,9 +510,9 @@ const UserManagement: React.FC = () => {
                 <Divider sx={{ my: 2 }} />
 
                 <Box sx={{ mb: 2 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <EmailIcon
-                      sx={{ fontSize: 16, mr: 1, color: "text.secondary" }}
+                      sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }}
                     />
                     <Typography variant="body2" color="text.secondary">
                       {user.email}
@@ -422,9 +520,9 @@ const UserManagement: React.FC = () => {
                   </Box>
 
                   {user.phone && (
-                    <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <PhoneIcon
-                        sx={{ fontSize: 16, mr: 1, color: "text.secondary" }}
+                        sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }}
                       />
                       <Typography variant="body2" color="text.secondary">
                         {user.phone}
@@ -436,8 +534,8 @@ const UserManagement: React.FC = () => {
                 <Box sx={{ mb: 2 }}>
                   <Box
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
+                      display: 'flex',
+                      alignItems: 'center',
                       gap: 1,
                       mb: 1,
                     }}
@@ -446,16 +544,16 @@ const UserManagement: React.FC = () => {
                       Status:
                     </Typography>
                     <StatusChip
-                      status={user.isActive ? "active" : "inactive"}
-                      label={user.isActive ? "Active" : "Inactive"}
+                      status={user.isActive ? 'active' : 'inactive'}
+                      label={user.isActive ? 'Active' : 'Inactive'}
                       size="small"
                     />
                   </Box>
 
                   <Box
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
+                      display: 'flex',
+                      alignItems: 'center',
                       gap: 1,
                       mb: 1,
                     }}
@@ -464,30 +562,30 @@ const UserManagement: React.FC = () => {
                       Email:
                     </Typography>
                     <Chip
-                      label={user.isEmailVerified ? "Verified" : "Unverified"}
+                      label={user.isEmailVerified ? 'Verified' : 'Unverified'}
                       size="small"
-                      color={user.isEmailVerified ? "success" : "warning"}
-                      sx={{ fontSize: "0.7rem" }}
+                      color={user.isEmailVerified ? 'success' : 'warning'}
+                      sx={{ fontSize: '0.7rem' }}
                     />
                   </Box>
 
                   {user.lastLogin && (
                     <Typography variant="body2" color="text.secondary">
-                      Last login:{" "}
-                      {moment(user.lastLogin).tz("America/Toronto").fromNow()}
+                      Last login:{' '}
+                      {moment(user.lastLogin).tz('America/Toronto').fromNow()}
                     </Typography>
                   )}
 
                   <Typography variant="body2" color="text.secondary">
-                    Created:{" "}
+                    Created:{' '}
                     {moment(user.createdAt)
-                      .tz("America/Toronto")
-                      .format("MMM D, YYYY")}
+                      .tz('America/Toronto')
+                      .format('MMM D, YYYY')}
                   </Typography>
                 </Box>
               </CardContent>
 
-              <CardActions sx={{ justifyContent: "flex-end", px: 2, pb: 2 }}>
+              <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
                 <ActionButtons
                   size="small"
                   onEdit={() => handleEdit(user)}
@@ -527,8 +625,8 @@ const UserManagement: React.FC = () => {
           >
             <Switch size="small" sx={{ mr: 1 }} />
             {users.find((u) => u.id === menuUserId)?.isActive
-              ? "Deactivate"
-              : "Activate"}
+              ? 'Deactivate'
+              : 'Activate'}
           </MenuListItem>
           {!users.find((u) => u.id === menuUserId)?.isEmailVerified && (
             <MenuListItem
@@ -546,7 +644,7 @@ const UserManagement: React.FC = () => {
               if (menuUserId) handleDelete(menuUserId);
               handleMenuClose();
             }}
-            sx={{ color: "error.main" }}
+            sx={{ color: 'error.main' }}
             disabled={
               users.find((u) => u.id === menuUserId)?.role ===
               UserRole.SUPER_ADMIN
@@ -565,7 +663,7 @@ const UserManagement: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>{selectedUser ? "Edit User" : "Create User"}</DialogTitle>
+        <DialogTitle>{selectedUser ? 'Edit User' : 'Create User'}</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid size={{ xs: 6 }}>
@@ -625,9 +723,23 @@ const UserManagement: React.FC = () => {
                   }
                 >
                   <MenuItem value={UserRole.ADMIN}>Admin</MenuItem>
-                  <MenuItem value={UserRole.SUPER_ADMIN}>Super Admin</MenuItem>
+                  {/* Only show Super Admin option if current user is a Super Admin */}
+                  {currentUser?.role === UserRole.SUPER_ADMIN && (
+                    <MenuItem value={UserRole.SUPER_ADMIN}>
+                      Super Admin
+                    </MenuItem>
+                  )}
                 </Select>
               </FormControl>
+              {currentUser?.role === UserRole.ADMIN && (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mt: 1, display: 'block' }}
+                >
+                  As an admin, you can create other admin users
+                </Typography>
+              )}
             </Grid>
 
             {!selectedUser && (
@@ -641,6 +753,7 @@ const UserManagement: React.FC = () => {
                     onChange={(e) =>
                       setUserForm({ ...userForm, password: e.target.value })
                     }
+                    helperText="Minimum 8 characters"
                   />
                 </Grid>
                 <Grid size={{ xs: 6 }}>
@@ -654,6 +767,16 @@ const UserManagement: React.FC = () => {
                         ...userForm,
                         confirmPassword: e.target.value,
                       })
+                    }
+                    error={
+                      userForm.confirmPassword !== '' &&
+                      userForm.password !== userForm.confirmPassword
+                    }
+                    helperText={
+                      userForm.confirmPassword !== '' &&
+                      userForm.password !== userForm.confirmPassword
+                        ? 'Passwords do not match'
+                        : ''
                     }
                   />
                 </Grid>
@@ -678,7 +801,7 @@ const UserManagement: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleSave}>
-            {selectedUser ? "Update" : "Create"}
+            {selectedUser ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -687,4 +810,3 @@ const UserManagement: React.FC = () => {
 };
 
 export default UserManagement;
-

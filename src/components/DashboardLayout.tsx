@@ -32,7 +32,8 @@ import {
   Schedule as ScheduleIcon,
   AccessTime as AccessTimeIcon,
   PhotoLibrary as StoriesIcon,
-} from "@mui/icons-material";
+  Category as MeasurementsIcon,
+} from '@mui/icons-material';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import moment from "moment-timezone";
@@ -40,14 +41,15 @@ import moment from "moment-timezone";
 const drawerWidth = 260;
 
 const navigation = [
-  { name: "Dashboard", path: "/", icon: DashboardIcon },
-  { name: "Menu", path: "/menu", icon: RestaurantIcon },
-  { name: "Specials", path: "/specials", icon: SpecialsIcon },
-  { name: "Events", path: "/events", icon: EventIcon },
-  { name: "Stories", path: "/stories", icon: StoriesIcon },
-  { name: "Opening Hours", path: "/hours", icon: ScheduleIcon },
-  { name: "User", path: "/users", icon: PeopleIcon },
-  { name: "Settings", path: "/settings", icon: SettingsIcon },
+  { name: 'Dashboard', path: '/', icon: DashboardIcon },
+  { name: 'Menu', path: '/menu', icon: RestaurantIcon },
+  { name: 'Measurements', path: '/measurements', icon: MeasurementsIcon },
+  { name: 'Specials', path: '/specials', icon: SpecialsIcon },
+  { name: 'Events', path: '/events', icon: EventIcon },
+  { name: 'Stories', path: '/stories', icon: StoriesIcon },
+  { name: 'Opening Hours', path: '/hours', icon: ScheduleIcon },
+  { name: 'User', path: '/users', icon: PeopleIcon },
+  { name: 'Settings', path: '/settings', icon: SettingsIcon },
 ];
 
 const DashboardLayout: React.FC = () => {
