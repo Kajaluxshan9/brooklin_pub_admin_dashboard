@@ -215,9 +215,20 @@ const Dashboard: React.FC = () => {
   const loadDashboardDataFallback = async () => {
     try {
       // Fetch menu items
-      const menuItemsResponse = await api.get('/menu/items');
-      const menuItems: MenuItem[] =
-        menuItemsResponse.status === 200 ? menuItemsResponse.data : [];
+      let menuItems: MenuItem[] = [];
+      try {
+        const menuItemsResponse = await api.get('/menu/items');
+        menuItems =
+          menuItemsResponse.status === 200 ? menuItemsResponse.data : [];
+      } catch (err: any) {
+        // Log detailed error with id (if provided by backend)
+        logger.error(
+          'Failed to load menu items',
+          err?.message ?? err,
+          err?.errorId ? `ErrorID=${err.errorId}` : '',
+        );
+        menuItems = [];
+      }
 
       // Fetch specials
       const specialsResponse = await api.get('/specials');

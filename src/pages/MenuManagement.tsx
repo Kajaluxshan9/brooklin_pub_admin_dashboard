@@ -386,11 +386,21 @@ const MenuManagement: React.FC = () => {
           })),
         );
       } else {
-        throw new Error('Failed to fetch menu items');
+        // Try to parse backend error message and errorId
+        const errData = await response.json().catch(() => null);
+        const msg =
+          errData?.message ||
+          errData?.error ||
+          `Failed to fetch menu items (${response.status})`;
+        const errorId = errData?.errorId;
+        const displayMsg = errorId ? `${msg} (Error ID: ${errorId})` : msg;
+        throw new Error(displayMsg);
       }
     } catch (error) {
       logger.error('Error fetching menu items:', error);
-      showSnackbar('Failed to load menu items', 'error');
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to load menu items';
+      showSnackbar(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

@@ -84,6 +84,9 @@ api.interceptors.response.use(
       message = error.message;
     }
 
-    return Promise.reject(new Error(message));
+    const err: any = new Error(message);
+    err.errorId = error.response?.data?.errorId || undefined;
+    err.status = error.response?.status || undefined;
+    return Promise.reject(err);
   },
 );

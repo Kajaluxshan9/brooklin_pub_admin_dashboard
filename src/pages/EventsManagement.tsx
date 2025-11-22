@@ -1073,6 +1073,9 @@ const EventsManagement: React.FC = () => {
           autoHideDuration={6000}
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          sx={{ zIndex: 99999, position: 'fixed' }}
+          // @ts-ignore PortalProps typed as any
+          PortalProps={{ style: { zIndex: 99999 } }}
         >
           <Alert
             onClose={() => setSnackbar({ ...snackbar, open: false })}

@@ -568,24 +568,35 @@ const StoriesManagement: React.FC = () => {
                             </Card>
                           ))}
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 1, position: 'absolute', top: 4, right: 4 }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            gap: 1,
+                            position: 'absolute',
+                            top: 4,
+                            right: 4,
+                          }}
+                        >
                           <IconButton
                             size="small"
                             onClick={() => handleEditStory(story)}
-                            sx={{ bgcolor: 'rgba(255,255,255,0.9)', '&:hover': { bgcolor: 'rgba(255,255,255,1)' } }}
+                            sx={{
+                              bgcolor: 'rgba(255,255,255,0.9)',
+                              '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
+                            }}
                           >
                             <EditIcon fontSize="small" />
                           </IconButton>
                           <IconButton
                             size="small"
                             onClick={() => handleDeleteStory(story.id)}
-                          sx={{
+                            sx={{
                               bgcolor: 'rgba(255,255,255,0.9)',
                               '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" color="error" />
-                        </IconButton>
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" color="error" />
+                          </IconButton>
                         </Box>
                       </Box>
                     ))}
@@ -685,7 +696,9 @@ const StoriesManagement: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          {editingStory ? `Edit Story Images for ${selectedCategory?.name}` : `Upload Images for ${selectedCategory?.name}`}
+          {editingStory
+            ? `Edit Story Images for ${selectedCategory?.name}`
+            : `Upload Images for ${selectedCategory?.name}`}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
@@ -776,7 +789,9 @@ const StoriesManagement: React.FC = () => {
             disabled={
               !editingStory && selectedFiles.length === 0
                 ? true
-                : editingStory && selectedFiles.length === 0 && existingImageUrls.length === 0
+                : editingStory &&
+                  selectedFiles.length === 0 &&
+                  existingImageUrls.length === 0
                 ? true
                 : false
             }
@@ -791,6 +806,9 @@ const StoriesManagement: React.FC = () => {
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        sx={{ zIndex: 99999, position: 'fixed' }}
+        // @ts-ignore PortalProps typed as any
+        PortalProps={{ style: { zIndex: 99999 } }}
       >
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}

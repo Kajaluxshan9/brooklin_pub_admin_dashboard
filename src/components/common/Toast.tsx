@@ -47,13 +47,21 @@ export const Toast: React.FC<ToastProps> = ({
       open={open}
       autoHideDuration={autoHideDuration}
       onClose={onClose}
-      anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       TransitionComponent={SlideTransition}
       sx={{
-        "& .MuiSnackbar-root": {
+        // Make snackbar top of all overlays (dialogs, modals)
+        zIndex: 99999,
+        position: 'fixed',
+        '& .MuiSnackbar-root': {
           top: { xs: 8, sm: 24 },
         },
       }}
+      // Ensure popup is rendered in a portal at the end of the DOM tree
+      // and container gets high z-index; Material-UI uses a Portal by default,
+      // but we can ensure the portal style is consistent for cross-browser support.
+      // @ts-ignore PortalProps typed as any
+      PortalProps={{ style: { zIndex: 99999 } }}
     >
       <Alert
         onClose={onClose}
@@ -66,14 +74,14 @@ export const Toast: React.FC<ToastProps> = ({
           maxWidth: 500,
           borderRadius: 2,
           fontWeight: 500,
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.15)",
-          backdropFilter: "blur(10px)",
-          "& .MuiAlert-message": {
-            fontSize: "0.95rem",
-            padding: "4px 0",
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+          backdropFilter: 'blur(10px)',
+          '& .MuiAlert-message': {
+            fontSize: '0.95rem',
+            padding: '4px 0',
           },
-          "& .MuiAlert-icon": {
-            alignItems: "center",
+          '& .MuiAlert-icon': {
+            alignItems: 'center',
           },
         }}
       >
