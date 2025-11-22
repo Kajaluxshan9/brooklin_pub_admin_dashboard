@@ -377,7 +377,8 @@ const MenuManagement: React.FC = () => {
             ...item,
             categoryName: item.category?.name || 'Unknown',
             createdAt: new Date(item.createdAt),
-            price: parseFloat(item.price.toString()) || 0,
+            // item.price may be nullable (backend uses nullable decimal). Guard against null/undefined.
+            price: Number(item.price ?? 0),
             isVegetarian: item.dietaryInfo?.includes('vegetarian') || false,
             isVegan: item.dietaryInfo?.includes('vegan') || false,
             isGlutenFree: item.dietaryInfo?.includes('gluten-free') || false,
@@ -478,10 +479,7 @@ const MenuManagement: React.FC = () => {
     setItemForm({
       name: item.name,
       description: item.description,
-      price:
-        typeof item.price === 'string'
-          ? parseFloat(item.price) || 0
-          : item.price,
+      price: Number(item.price ?? 0),
       categoryId: item.categoryId,
       preparationTime: item.preparationTime,
       isAvailable: item.isAvailable,
@@ -496,7 +494,8 @@ const MenuManagement: React.FC = () => {
       measurements: (item.measurements || []).map((m: RawMeasurement) => ({
         id: m.id,
         measurementTypeId: m.measurementTypeId || m.measurementType?.id || '',
-        price: typeof m.price === 'string' ? parseFloat(m.price) : m.price || 0,
+        // m.price (measurement price) may be string, number, or null. Normalize to number with fallback of 0.
+        price: m.price !== undefined && m.price !== null ? Number(m.price) : 0,
         isAvailable: m.isAvailable ?? true,
         sortOrder: m.sortOrder ?? 0,
       })),
