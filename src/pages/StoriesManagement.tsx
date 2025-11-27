@@ -29,6 +29,7 @@ import {
 } from '@mui/icons-material';
 import { PageHeader } from '../components/common/PageHeader';
 import { StatusChip } from '../components/common/StatusChip';
+import { getImageUrl } from '../utils/uploadHelpers';
 import logger from '../utils/logger';
 
 interface StoryCategory {
@@ -372,7 +373,7 @@ const StoriesManagement: React.FC = () => {
 
       if (storyResponse.ok) {
         showSnackbar(`${imageUrls.length} image(s) uploaded successfully`);
-        // Delete marked images from S3 after successful save/update
+        // Delete marked images from storage after successful save/update
         if (imagesToDelete.length > 0) {
           try {
             await fetch(`${API_BASE_URL}/upload/images`, {
@@ -383,7 +384,7 @@ const StoriesManagement: React.FC = () => {
             });
             setImagesToDelete([]);
           } catch (err) {
-            logger.error('Error deleting story images from S3:', err);
+            logger.error('Error deleting story images from storage:', err);
           }
         }
         handleCloseStoryDialog();
@@ -562,7 +563,7 @@ const StoriesManagement: React.FC = () => {
                               <CardMedia
                                 component="img"
                                 height="150"
-                                image={url}
+                                image={getImageUrl(url)}
                                 alt={`Story image ${idx + 1}`}
                               />
                             </Card>
@@ -734,7 +735,7 @@ const StoriesManagement: React.FC = () => {
                       <CardMedia
                         component="img"
                         height="150"
-                        image={url}
+                        image={getImageUrl(url)}
                         alt={`Existing ${index + 1}`}
                       />
                     </Card>

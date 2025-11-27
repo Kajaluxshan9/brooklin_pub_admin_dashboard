@@ -56,6 +56,7 @@ import {
   uploadImages,
   parseBackendError,
   getErrorMessage,
+  getImageUrl,
 } from '../utils/uploadHelpers';
 
 interface PrimaryCategory {
@@ -556,7 +557,7 @@ const MenuManagement: React.FC = () => {
       );
 
       if (response.ok) {
-        // Delete any images marked for deletion from S3 only after successful update
+        // Delete any images marked for deletion after successful update
         if (primaryImagesToDelete.length > 0) {
           try {
             await fetch(`${API_BASE_URL}/upload/images`, {
@@ -568,7 +569,7 @@ const MenuManagement: React.FC = () => {
             setPrimaryImagesToDelete([]);
           } catch (err) {
             logger.error(
-              'Error deleting primary category images from S3:',
+              'Error deleting primary category images:',
               err,
             );
           }
@@ -812,7 +813,7 @@ const MenuManagement: React.FC = () => {
       });
 
       if (response.ok) {
-        // Delete any images marked for deletion from S3 only after successful update
+        // Delete any images marked for deletion from storage only after successful update
         if (categoryImagesToDelete.length > 0) {
           try {
             await fetch(`${API_BASE_URL}/upload/images`, {
@@ -823,7 +824,7 @@ const MenuManagement: React.FC = () => {
             });
             setCategoryImagesToDelete([]);
           } catch (err) {
-            logger.error('Error deleting category images from S3:', err);
+            logger.error('Error deleting category images from storage:', err);
           }
         }
         setCategoryDialog(false);
@@ -940,7 +941,7 @@ const MenuManagement: React.FC = () => {
     const totalExistingImages = itemForm.imageUrls.length;
 
     if (index < totalExistingImages) {
-      // Mark existing S3 image for deletion (will be deleted on save)
+      // Mark existing image for deletion (will be deleted on save)
       const imageToRemove = itemForm.imageUrls[index];
       setImagesToDelete((prev) => [...prev, imageToRemove]);
 
@@ -1101,7 +1102,7 @@ const MenuManagement: React.FC = () => {
       });
 
       if (response.ok) {
-        // Delete marked images from S3 after successful save
+        // Delete marked images from storage after successful save
         if (imagesToDelete.length > 0) {
           try {
             await fetch(`${API_BASE_URL}/upload/images`, {
@@ -1112,9 +1113,9 @@ const MenuManagement: React.FC = () => {
               credentials: 'include',
               body: JSON.stringify({ urls: imagesToDelete }),
             });
-            logger.debug(`Deleted ${imagesToDelete.length} image(s) from S3`);
+            logger.debug(`Deleted ${imagesToDelete.length} image(s) from storage`);
           } catch (error) {
-            logger.error('Error deleting images from S3:', error);
+            logger.error('Error deleting images from storage:', error);
             // Don't show error to user as the item was saved successfully
           }
         }
@@ -1181,7 +1182,7 @@ const MenuManagement: React.FC = () => {
         params.value ? (
           <Box
             component="img"
-            src={params.value}
+            src={getImageUrl(params.value)}
             alt="Primary Category"
             sx={{
               width: 60,
@@ -1355,7 +1356,7 @@ const MenuManagement: React.FC = () => {
         params.value ? (
           <Box
             component="img"
-            src={params.value}
+            src={getImageUrl(params.value)}
             alt="Category"
             sx={{
               width: 60,
@@ -1562,7 +1563,7 @@ const MenuManagement: React.FC = () => {
         return imageUrl ? (
           <Box
             component="img"
-            src={imageUrl}
+            src={getImageUrl(imageUrl)}
             alt={params.row.name}
             sx={{
               width: 60,
@@ -2577,7 +2578,7 @@ const MenuManagement: React.FC = () => {
                           >
                             <Box
                               component="img"
-                              src={primaryCategoryForm.imageUrl}
+                              src={getImageUrl(primaryCategoryForm.imageUrl)}
                               alt="Current"
                               sx={{
                                 width: '100%',
@@ -2851,7 +2852,7 @@ const MenuManagement: React.FC = () => {
                           >
                             <Box
                               component="img"
-                              src={categoryForm.imageUrl}
+                              src={getImageUrl(categoryForm.imageUrl)}
                               alt="Current"
                               sx={{
                                 width: '100%',
@@ -3302,7 +3303,7 @@ const MenuManagement: React.FC = () => {
                         <CardMedia
                           component="img"
                           height="140"
-                          image={url}
+                          image={getImageUrl(url)}
                           alt={`Existing image ${index + 1}`}
                           onError={(
                             e: React.SyntheticEvent<HTMLImageElement>,

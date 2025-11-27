@@ -39,6 +39,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import moment from "moment-timezone";
 import { api } from "../utils/api";
+import { getImageUrl } from "../utils/uploadHelpers";
 import { StatusChip } from "../components/common/StatusChip";
 import { ActionButtons } from "../components/common/ActionButtons";
 import { PageHeader } from "../components/common/PageHeader";
@@ -245,7 +246,7 @@ const SpecialsManagement: React.FC = () => {
     setLoading(true);
 
     try {
-      // Upload new images to S3 if any
+      // Upload new images to storage if any
       let finalImageUrls = [...specialForm.imageUrls];
 
       if (selectedFiles.length > 0) {
@@ -274,21 +275,21 @@ const SpecialsManagement: React.FC = () => {
       };
 
       if (editingSpecial) {
-        await api.put(`/specials/${editingSpecial.id}`, specialData);
+        await api.patch(`/specials/${editingSpecial.id}`, specialData);
         showSnackbar('Special updated successfully', 'success');
       } else {
         await api.post('/specials', specialData);
         showSnackbar('Special created successfully', 'success');
       }
 
-      // Delete marked images from S3 after successful save
+      // Delete marked images after successful save
       if (imagesToDelete.length > 0) {
         try {
           await api.delete('/upload/images', {
             data: { urls: imagesToDelete },
           });
         } catch (error) {
-          logger.error('Error deleting images from S3:', error);
+          logger.error('Error deleting images:', error);
           // Don't show error to user as the special was saved successfully
         }
       }
@@ -317,7 +318,7 @@ const SpecialsManagement: React.FC = () => {
 
   const handleToggleActive = async (special: Special) => {
     try {
-      await api.put(`/specials/${special.id}`, { isActive: !special.isActive });
+      await api.patch(`/specials/${special.id}`, { isActive: !special.isActive });
       showSnackbar('Special status updated', 'success');
       fetchSpecials();
     } catch {
@@ -1470,7 +1471,7 @@ const SpecialsManagement: React.FC = () => {
                       >
                         <Box
                           component="img"
-                          src={url}
+                          src={getImageUrl(url)}
                           alt={specialForm.title}
                           sx={{
                             width: 100,

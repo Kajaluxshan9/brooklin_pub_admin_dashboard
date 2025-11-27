@@ -32,7 +32,7 @@ import {
 } from "@mui/material";
 import { PageHeader } from "../components/common/PageHeader";
 import logger from "../utils/logger";
-import { uploadImages, getErrorMessage } from '../utils/uploadHelpers';
+import { uploadImages, getErrorMessage, getImageUrl } from '../utils/uploadHelpers';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -240,7 +240,7 @@ const EventsManagement: React.FC = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      // Upload new images to S3 if any
+      // Upload new images to storage if any
       let finalImageUrls = [...eventForm.imageUrls];
 
       if (selectedFiles.length > 0) {
@@ -273,7 +273,7 @@ const EventsManagement: React.FC = () => {
         ? `${API_BASE_URL}/events/${selectedEvent.id}`
         : `${API_BASE_URL}/events`;
 
-      const method = selectedEvent ? 'PUT' : 'POST';
+      const method = selectedEvent ? 'PATCH' : 'POST';
 
       const response = await fetch(url, {
         method,
@@ -285,7 +285,7 @@ const EventsManagement: React.FC = () => {
       });
 
       if (response.ok) {
-        // Delete marked images from S3 after successful save
+        // Delete marked images from storage after successful save
         if (imagesToDelete.length > 0) {
           try {
             await fetch(`${API_BASE_URL}/upload/images`, {
@@ -296,7 +296,7 @@ const EventsManagement: React.FC = () => {
             });
             setImagesToDelete([]);
           } catch (err) {
-            logger.error('Error deleting event images from S3:', err);
+            logger.error('Error deleting event images from storage:', err);
           }
         }
         loadEvents();
@@ -940,7 +940,7 @@ const EventsManagement: React.FC = () => {
                         >
                           <Box
                             component="img"
-                            src={url}
+                            src={getImageUrl(url)}
                             alt={`Event ${index + 1}`}
                             sx={{
                               width: '100%',

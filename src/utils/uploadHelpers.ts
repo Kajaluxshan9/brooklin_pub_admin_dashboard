@@ -1,5 +1,33 @@
 import { API_BASE_URL } from '../config/env.config';
 
+/**
+ * Helper function to get the full URL for an image.
+ * Handles both relative paths (from local storage) and absolute URLs (legacy S3).
+ * @param url - The image URL (can be relative like /uploads/... or absolute https://...)
+ * @returns The full URL to access the image
+ */
+export const getImageUrl = (url: string | undefined | null): string => {
+  if (!url) return '';
+
+  // If it's already an absolute URL (http:// or https://), return as-is
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+
+  // If it's a data URL (base64 preview), return as-is
+  if (url.startsWith('data:')) {
+    return url;
+  }
+
+  // If it's a relative path starting with /, prepend the API base URL
+  if (url.startsWith('/')) {
+    return `${API_BASE_URL}${url}`;
+  }
+
+  // Otherwise, assume it's a relative path and prepend API base URL with /
+  return `${API_BASE_URL}/${url}`;
+};
+
 // Helper function for uploading images to the backend with folder organization
 export const uploadImages = async (
   files: File[],
