@@ -497,20 +497,20 @@ const OpeningHours: React.FC = () => {
             <Card
               key={day}
               sx={{
-                border: isToday ? '3px solid' : '2px solid',
-                borderColor: isToday ? '#C87941' : 'rgba(200, 121, 65, 0.2)',
-                borderRadius: 4,
+                border: isToday ? '2px solid' : '1px solid',
+                borderColor: isToday ? '#C87941' : 'rgba(200, 121, 65, 0.1)',
+                borderRadius: 2.5,
                 background: isToday
-                  ? 'linear-gradient(135deg, rgba(200, 121, 65, 0.08) 0%, rgba(232, 155, 92, 0.06) 100%)'
-                  : 'linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 247, 0.98) 100%)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  ? 'rgba(200, 121, 65, 0.04)'
+                  : 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                transition: 'all 0.2s ease',
                 position: 'relative',
                 overflow: 'hidden',
                 boxShadow: isToday
-                  ? '0 12px 40px rgba(200, 121, 65, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.8)'
-                  : '0 8px 32px rgba(200, 121, 65, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.8)',
+                  ? '0 4px 16px rgba(200, 121, 65, 0.12)'
+                  : '0 4px 16px rgba(0, 0, 0, 0.04)',
                 '&::before': isToday
                   ? {
                       content: '""',
@@ -518,16 +518,13 @@ const OpeningHours: React.FC = () => {
                       top: 0,
                       left: 0,
                       right: 0,
-                      height: '4px',
-                      background:
-                        'linear-gradient(90deg, #C87941 0%, #E89B5C 50%, #F5A94C 100%)',
+                      height: '2px',
+                      background: '#C87941',
                     }
                   : {},
                 '&:hover': {
-                  transform: 'translateY(-4px) scale(1.01)',
-                  boxShadow:
-                    '0 16px 48px rgba(200, 121, 65, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.9)',
-                  borderColor: '#C87941',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.06)',
                 },
               }}
             >
@@ -882,6 +879,7 @@ const OpeningHours: React.FC = () => {
         autoHideDuration={4000}
         onClose={() => setNotification({ ...notification, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        sx={{ zIndex: 99999, position: 'fixed' }}
       >
         <Alert
           onClose={() => setNotification({ ...notification, open: false })}

@@ -91,49 +91,36 @@ const DashboardLayout: React.FC = () => {
   };
 
   const drawer = (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Toolbar
         sx={{
-          background:
-            "linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 240, 0.95) 100%)",
-          borderBottom: "2px solid rgba(200, 121, 65, 0.15)",
-          backdropFilter: "blur(20px)",
-          color: "#2D2416",
+          background: 'rgba(255, 255, 255, 0.9)',
+          borderBottom: '1px solid rgba(200, 121, 65, 0.1)',
+          backdropFilter: 'blur(16px)',
+          color: '#2D2416',
           minHeight: { xs: 56, sm: 72 },
           px: 3,
-          boxShadow: "0 4px 16px rgba(200, 121, 65, 0.12)",
-          position: "relative",
-          "&::after": {
-            content: '""',
-            position: "absolute",
-            bottom: -2,
-            left: 0,
-            right: 0,
-            height: "2px",
-            background:
-              "linear-gradient(90deg, transparent 0%, #C87941 50%, transparent 100%)",
-            opacity: 0.5,
-          },
+          boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
         }}
       >
         <Box
-          sx={{ display: "flex", alignItems: "center", width: "100%", gap: 2 }}
+          sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}
         >
           <Box
             sx={{
               width: 48,
               height: 48,
               borderRadius: 2.5,
-              background: "linear-gradient(135deg, #ffffff 0%, #FFF8F0 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 4px 12px rgba(200, 121, 65, 0.2)",
-              border: "2px solid rgba(200, 121, 65, 0.15)",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-              "&:hover": {
-                transform: "rotate(-5deg) scale(1.05)",
-                boxShadow: "0 6px 16px rgba(200, 121, 65, 0.3)",
+              background: 'linear-gradient(135deg, #ffffff 0%, #FFF8F0 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(200, 121, 65, 0.2)',
+              border: '2px solid rgba(200, 121, 65, 0.15)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                transform: 'rotate(-5deg) scale(1.05)',
+                boxShadow: '0 6px 16px rgba(200, 121, 65, 0.3)',
               },
             }}
           >
@@ -144,8 +131,8 @@ const DashboardLayout: React.FC = () => {
               sx={{
                 height: 32,
                 width: 52,
-                objectFit: "contain",
-                display: "block",
+                objectFit: 'contain',
+                display: 'block',
               }}
             />
           </Box>
@@ -156,12 +143,12 @@ const DashboardLayout: React.FC = () => {
               component="div"
               sx={{
                 fontWeight: 800,
-                fontSize: "1.2rem",
-                background: "linear-gradient(135deg, #C87941 0%, #E89B5C 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                letterSpacing: "-0.02em",
+                fontSize: '1.2rem',
+                background: 'linear-gradient(135deg, #C87941 0%, #E89B5C 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                letterSpacing: '-0.02em',
                 lineHeight: 1.2,
               }}
             >
@@ -170,11 +157,11 @@ const DashboardLayout: React.FC = () => {
             <Typography
               variant="caption"
               sx={{
-                color: "#8B7355",
+                color: '#8B7355',
                 fontWeight: 600,
-                fontSize: "0.7rem",
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
+                fontSize: '0.7rem',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
               }}
             >
               Admin Dashboard
@@ -182,9 +169,15 @@ const DashboardLayout: React.FC = () => {
           </Box>
         </Box>
       </Toolbar>
-      <Divider sx={{ borderColor: "rgba(200, 121, 65, 0.15)" }} />
+      <Divider sx={{ borderColor: 'rgba(200, 121, 65, 0.15)' }} />
       <Box
-        sx={{ flex: 1, overflow: "auto", bgcolor: "#FFFFFF", p: 2.5, pt: 3 }}
+        sx={{
+          flex: 1,
+          overflow: 'auto',
+          bgcolor: 'rgba(255, 255, 255, 0.7)',
+          p: 2.5,
+          pt: 3,
+        }}
       >
         <List sx={{ pt: 0 }}>
           {navigation.map((item, index) => {
@@ -202,76 +195,76 @@ const DashboardLayout: React.FC = () => {
                       minHeight: 52,
                       px: 2.5,
                       py: 1.75,
-                      position: "relative",
-                      overflow: "hidden",
-                      transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                      position: 'relative',
+                      overflow: 'hidden',
+                      transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                       mb: 0.5,
-                      "&::before": {
+                      '&::before': {
                         content: '""',
-                        position: "absolute",
+                        position: 'absolute',
                         left: 0,
                         top: 0,
                         bottom: 0,
                         width: 5,
                         background:
-                          "linear-gradient(180deg, #E89B5C 0%, #C87941 100%)",
-                        borderRadius: "0 4px 4px 0",
-                        transform: isActive ? "scaleY(1)" : "scaleY(0)",
+                          'linear-gradient(180deg, #E89B5C 0%, #C87941 100%)',
+                        borderRadius: '0 4px 4px 0',
+                        transform: isActive ? 'scaleY(1)' : 'scaleY(0)',
                         transition:
-                          "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                          'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                         boxShadow: isActive
-                          ? "2px 0 8px rgba(200, 121, 65, 0.4)"
-                          : "none",
+                          ? '2px 0 8px rgba(200, 121, 65, 0.4)'
+                          : 'none',
                       },
-                      "&::after": {
+                      '&::after': {
                         content: '""',
-                        position: "absolute",
+                        position: 'absolute',
                         inset: 0,
                         borderRadius: 3,
-                        padding: "1.5px",
+                        padding: '1.5px',
                         background: isActive
-                          ? "linear-gradient(135deg, #C87941, #E89B5C)"
-                          : "transparent",
+                          ? 'linear-gradient(135deg, #C87941, #E89B5C)'
+                          : 'transparent',
                         WebkitMask:
-                          "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-                        WebkitMaskComposite: "xor",
-                        maskComposite: "exclude",
+                          'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                        WebkitMaskComposite: 'xor',
+                        maskComposite: 'exclude',
                         opacity: isActive ? 1 : 0,
                         transition:
-                          "opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+                          'opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                       },
-                      "&.Mui-selected": {
+                      '&.Mui-selected': {
                         background:
-                          "linear-gradient(135deg, rgba(200, 121, 65, 0.95) 0%, rgba(232, 155, 92, 0.95) 100%)",
-                        color: "white",
+                          'linear-gradient(135deg, rgba(200, 121, 65, 0.95) 0%, rgba(232, 155, 92, 0.95) 100%)',
+                        color: 'white',
                         boxShadow:
-                          "0 6px 16px rgba(200, 121, 65, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.2)",
-                        backdropFilter: "blur(10px)",
-                        "&:hover": {
+                          '0 6px 16px rgba(200, 121, 65, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.2)',
+                        backdropFilter: 'blur(10px)',
+                        '&:hover': {
                           background:
-                            "linear-gradient(135deg, rgba(164, 95, 45, 0.95) 0%, rgba(200, 121, 65, 0.95) 100%)",
+                            'linear-gradient(135deg, rgba(164, 95, 45, 0.95) 0%, rgba(200, 121, 65, 0.95) 100%)',
                           boxShadow:
-                            "0 8px 20px rgba(200, 121, 65, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.25)",
-                          transform: "translateX(6px) scale(1.02)",
+                            '0 8px 20px rgba(200, 121, 65, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.25)',
+                          transform: 'translateX(6px) scale(1.02)',
                         },
-                        "& .MuiListItemIcon-root": {
-                          color: "white",
-                          transform: "scale(1.15)",
-                          filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))",
+                        '& .MuiListItemIcon-root': {
+                          color: 'white',
+                          transform: 'scale(1.15)',
+                          filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
                         },
                       },
-                      "&:hover": {
+                      '&:hover': {
                         backgroundColor: isActive
-                          ? "transparent"
-                          : "rgba(200, 121, 65, 0.1)",
+                          ? 'transparent'
+                          : 'rgba(200, 121, 65, 0.1)',
                         transform: isActive
-                          ? "translateX(6px) scale(1.02)"
-                          : "translateX(3px)",
+                          ? 'translateX(6px) scale(1.02)'
+                          : 'translateX(3px)',
                         boxShadow: !isActive
-                          ? "0 2px 8px rgba(200, 121, 65, 0.15)"
+                          ? '0 2px 8px rgba(200, 121, 65, 0.15)'
                           : undefined,
-                        "& .MuiListItemIcon-root": {
-                          transform: isActive ? "scale(1.15)" : "scale(1.08)",
+                        '& .MuiListItemIcon-root': {
+                          transform: isActive ? 'scale(1.15)' : 'scale(1.08)',
                         },
                       },
                     }}
@@ -279,8 +272,8 @@ const DashboardLayout: React.FC = () => {
                     <ListItemIcon
                       sx={{
                         minWidth: 42,
-                        color: isActive ? "white" : "#C87941",
-                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                        color: isActive ? 'white' : '#C87941',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                       }}
                     >
                       <Icon fontSize="medium" />
@@ -289,9 +282,9 @@ const DashboardLayout: React.FC = () => {
                       primary={item.name}
                       primaryTypographyProps={{
                         fontWeight: isActive ? 700 : 500,
-                        fontSize: "0.925rem",
-                        color: isActive ? "white" : "#2C1810",
-                        letterSpacing: "-0.01em",
+                        fontSize: '0.925rem',
+                        color: isActive ? 'white' : '#2C1810',
+                        letterSpacing: '-0.01em',
                       }}
                     />
                   </ListItemButton>
@@ -305,7 +298,7 @@ const DashboardLayout: React.FC = () => {
   );
 
   return (
-    <Box sx={{ display: "flex" }}>
+    <Box sx={{ display: 'flex' }}>
       <AppBar
         position="fixed"
         elevation={0}
@@ -318,27 +311,15 @@ const DashboardLayout: React.FC = () => {
             xs: `calc(100% - 1px)`,
             sm: `calc(100% - ${drawerWidth + 12}px)`,
           },
-          borderRadius: 1.5,
-          background: "rgba(255, 255, 255, 0.96)",
-          color: "#2C1810",
-          border: "1px solid rgba(200, 121, 65, 0.12)",
-          backdropFilter: "blur(28px) saturate(160%)",
-          WebkitBackdropFilter: "blur(28px) saturate(160%)",
-          boxShadow:
-            "0 12px 40px rgba(22, 18, 16, 0.06), 0 6px 20px rgba(200, 121, 65, 0.12)",
-          transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+          borderRadius: 3,
+          background: 'rgba(255, 255, 255, 0.85)',
+          color: '#2C1810',
+          border: '1px solid rgba(200, 121, 65, 0.08)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.06)',
+          transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
           zIndex: theme.zIndex.drawer + 30,
-          "&::after": {
-            content: '""',
-            position: "absolute",
-            bottom: -1,
-            left: 12,
-            right: 12,
-            height: "1px",
-            background:
-              "linear-gradient(90deg, transparent 0%, rgba(200, 121, 65, 0.22) 50%, transparent 100%)",
-            borderRadius: "0 0 8px 8px",
-          },
         })}
       >
         <Toolbar sx={{ minHeight: { xs: 56, sm: 68 }, px: { xs: 2, sm: 4 } }}>
@@ -349,48 +330,42 @@ const DashboardLayout: React.FC = () => {
             onClick={handleDrawerToggle}
             sx={{
               mr: 2,
-              display: { sm: "none" },
-              color: "#C87941",
-              "&:hover": { backgroundColor: "#FFF3E6" },
+              display: { sm: 'none' },
+              color: '#C87941',
+              '&:hover': { backgroundColor: '#FFF3E6' },
             }}
           >
             <MenuIcon />
           </IconButton>
           <Box sx={{ flexGrow: 1 }} />
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
             {/* Real-time Clock */}
             <Chip
-              icon={<AccessTimeIcon sx={{ fontSize: "1.15rem" }} />}
+              icon={<AccessTimeIcon sx={{ fontSize: '1.15rem' }} />}
               label={currentTime}
               variant="outlined"
               size="medium"
               sx={{
-                display: { xs: "none", md: "flex" },
-                borderColor: "rgba(200, 121, 65, 0.3)",
-                borderWidth: "2px",
-                color: "#6B4E3D",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                background:
-                  "linear-gradient(135deg, rgba(255, 248, 240, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%)",
-                backdropFilter: "blur(10px)",
-                px: 2,
-                height: 42,
-                borderRadius: 1.5,
-                boxShadow:
-                  "0 2px 8px rgba(200, 121, 65, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.5)",
-                transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
-                "&:hover": {
-                  borderColor: "#C87941",
-                  background:
-                    "linear-gradient(135deg, rgba(255, 243, 230, 0.98) 0%, rgba(255, 248, 240, 0.98) 100%)",
-                  boxShadow:
-                    "0 6px 16px rgba(200, 121, 65, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.6)",
-                  transform: "translateY(-2px) scale(1.02)",
+                display: { xs: 'none', md: 'flex' },
+                borderColor: 'rgba(200, 121, 65, 0.2)',
+                borderWidth: '1px',
+                color: '#6B4E3D',
+                fontWeight: 500,
+                fontSize: '0.875rem',
+                background: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(10px)',
+                px: 1.5,
+                height: 38,
+                borderRadius: 2,
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  borderColor: 'rgba(200, 121, 65, 0.35)',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)',
                 },
-                "& .MuiChip-icon": {
-                  color: "#C87941",
-                  filter: "drop-shadow(0 1px 2px rgba(200, 121, 65, 0.3))",
+                '& .MuiChip-icon': {
+                  color: '#C87941',
                 },
               }}
             />
@@ -403,13 +378,13 @@ const DashboardLayout: React.FC = () => {
               onClick={handleProfileMenuOpen}
               sx={{
                 p: 0.5,
-                transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
-                "&:hover": {
-                  transform: "scale(1.1) rotate(5deg)",
-                  backgroundColor: "transparent",
-                  "& .MuiAvatar-root": {
+                transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  transform: 'scale(1.1) rotate(5deg)',
+                  backgroundColor: 'transparent',
+                  '& .MuiAvatar-root': {
                     boxShadow:
-                      "0 8px 24px rgba(200, 121, 65, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.2)",
+                      '0 8px 24px rgba(200, 121, 65, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.2)',
                   },
                 },
               }}
@@ -419,14 +394,14 @@ const DashboardLayout: React.FC = () => {
                   width: 44,
                   height: 44,
                   background:
-                    "linear-gradient(135deg, #C87941 0%, #E89B5C 50%, #F5A94C 100%)",
+                    'linear-gradient(135deg, #C87941 0%, #E89B5C 50%, #F5A94C 100%)',
                   fontWeight: 700,
-                  fontSize: "1.05rem",
+                  fontSize: '1.05rem',
                   boxShadow:
-                    "0 6px 16px rgba(200, 121, 65, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.3)",
-                  border: "3px solid rgba(255, 255, 255, 0.95)",
-                  transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
-                  letterSpacing: "0.5px",
+                    '0 6px 16px rgba(200, 121, 65, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.3)',
+                  border: '3px solid rgba(255, 255, 255, 0.95)',
+                  transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                  letterSpacing: '0.5px',
                 }}
               >
                 {user?.firstName?.charAt(0)}
@@ -447,108 +422,71 @@ const DashboardLayout: React.FC = () => {
         PaperProps={{
           elevation: 0,
           sx: {
-            overflow: "visible",
-            boxShadow:
-              "0 16px 48px rgba(200, 121, 65, 0.22), 0 8px 24px rgba(200, 121, 65, 0.12)",
+            overflow: 'visible',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',
             mt: 1.5,
-            borderRadius: 4,
+            borderRadius: 3,
             minWidth: 240,
-            background:
-              "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 240, 0.98) 100%)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid rgba(200, 121, 65, 0.2)",
-            "&::before": {
-              content: '""',
-              position: "absolute",
-              top: -8,
-              right: 20,
-              width: 0,
-              height: 0,
-              borderLeft: "8px solid transparent",
-              borderRight: "8px solid transparent",
-              borderBottom: "8px solid rgba(200, 121, 65, 0.2)",
-            },
-            "& .MuiAvatar-root": {
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            border: '1px solid rgba(200, 121, 65, 0.1)',
+            '& .MuiAvatar-root': {
               width: 32,
               height: 32,
               ml: -0.5,
               mr: 1,
             },
-            "& .MuiMenuItem-root": {
+            '& .MuiMenuItem-root': {
               px: 3,
               py: 1.75,
-              borderRadius: 2.5,
+              borderRadius: 2,
               mx: 1.5,
               my: 0.5,
-              transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
-              color: "#6B4E3D",
-              fontWeight: 600,
-              fontSize: "0.938rem",
-              position: "relative",
-              "&::before": {
-                content: '""',
-                position: "absolute",
-                left: 0,
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: 0,
-                height: "60%",
-                background: "linear-gradient(180deg, #C87941, #E89B5C)",
-                borderRadius: "0 4px 4px 0",
-                transition: "width 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
-              },
-              "&:hover": {
-                background:
-                  "linear-gradient(135deg, rgba(200, 121, 65, 0.12) 0%, rgba(232, 155, 92, 0.12) 100%)",
-                color: "#C87941",
-                transform: "translateX(6px)",
-                boxShadow: "0 2px 8px rgba(200, 121, 65, 0.15)",
-                "&::before": {
-                  width: "4px",
-                },
-                "& .MuiSvgIcon-root": {
-                  transform: "scale(1.15) rotate(5deg)",
-                },
-              },
-              "& .MuiSvgIcon-root": {
-                transition: "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              color: '#6B4E3D',
+              fontWeight: 500,
+              fontSize: '0.938rem',
+              '&:hover': {
+                background: 'rgba(200, 121, 65, 0.08)',
+                color: '#C87941',
+                transform: 'translateX(4px)',
               },
             },
           },
         }}
-        transformOrigin={{ horizontal: "right", vertical: "top" }}
-        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
         <Box
           sx={{
             px: 2.5,
             py: 2,
-            borderBottom: "1px solid rgba(200, 121, 65, 0.12)",
+            borderBottom: '1px solid rgba(200, 121, 65, 0.12)',
           }}
         >
           <Typography
             variant="body2"
-            sx={{ fontWeight: 700, color: "#2C1810", fontSize: "0.95rem" }}
+            sx={{ fontWeight: 700, color: '#2C1810', fontSize: '0.95rem' }}
           >
             {user?.firstName} {user?.lastName}
           </Typography>
           <Typography
             variant="caption"
-            sx={{ color: "#8B7355", fontSize: "0.8rem" }}
+            sx={{ color: '#8B7355', fontSize: '0.8rem' }}
           >
             {user?.email}
           </Typography>
         </Box>
-        <MenuItem onClick={() => navigate("/settings")}>
-          <AccountCircle sx={{ mr: 1.5, color: "#C87941", fontSize: 22 }} />
+        <MenuItem onClick={() => navigate('/settings')}>
+          <AccountCircle sx={{ mr: 1.5, color: '#C87941', fontSize: 22 }} />
           Profile Settings
         </MenuItem>
         <Divider
-          sx={{ borderColor: "rgba(200, 121, 65, 0.12)", my: 0.5, mx: 1.5 }}
+          sx={{ borderColor: 'rgba(200, 121, 65, 0.12)', my: 0.5, mx: 1.5 }}
         />
         <MenuItem onClick={handleLogout}>
-          <LogoutIcon sx={{ mr: 1.5, color: "#C87941", fontSize: 22 }} />
+          <LogoutIcon sx={{ mr: 1.5, color: '#C87941', fontSize: 22 }} />
           Logout
         </MenuItem>
       </Menu>
@@ -563,13 +501,13 @@ const DashboardLayout: React.FC = () => {
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
           sx={{
-            display: { xs: "block", sm: "none" },
-            "& .MuiDrawer-paper": {
-              boxSizing: "border-box",
+            display: { xs: 'block', sm: 'none' },
+            '& .MuiDrawer-paper': {
+              boxSizing: 'border-box',
               width: drawerWidth,
-              bgcolor: "#faf6f2",
-              borderRight: "none",
-              boxShadow: "0 8px 32px rgba(139, 69, 19, 0.2)",
+              bgcolor: '#faf6f2',
+              borderRight: 'none',
+              boxShadow: '0 8px 32px rgba(139, 69, 19, 0.2)',
             },
           }}
         >
@@ -578,18 +516,17 @@ const DashboardLayout: React.FC = () => {
         <Drawer
           variant="permanent"
           sx={{
-            display: { xs: "none", sm: "block" },
-            "& .MuiDrawer-paper": {
-              boxSizing: "border-box",
+            display: { xs: 'none', sm: 'block' },
+            '& .MuiDrawer-paper': {
+              boxSizing: 'border-box',
               width: drawerWidth,
-              bgcolor: "rgba(255, 255, 255, 0.98)",
-              borderRight: "1px solid rgba(200, 121, 65, 0.15)",
-              boxShadow:
-                "4px 0 24px rgba(200, 121, 65, 0.1), 2px 0 12px rgba(200, 121, 65, 0.06)",
+              bgcolor: 'rgba(255, 255, 255, 0.9)',
+              borderRight: '1px solid rgba(200, 121, 65, 0.08)',
+              boxShadow: '4px 0 24px rgba(0, 0, 0, 0.04)',
               background:
-                "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 247, 0.98) 50%, rgba(255, 248, 240, 0.98) 100%)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
+                'linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 251, 247, 0.9) 100%)',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
             },
           }}
           open
@@ -602,33 +539,22 @@ const DashboardLayout: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          minHeight: "100vh",
+          minHeight: '100vh',
           background:
-            "linear-gradient(180deg, #FFF8F0 0%, #FFFBF7 50%, #FFFFFF 100%)",
-          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            'linear-gradient(180deg, #FEFDFB 0%, #FFF8F0 50%, #FFFFFF 100%)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          position: "relative",
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "300px",
-            background:
-              "radial-gradient(ellipse at top, rgba(200, 121, 65, 0.05) 0%, transparent 70%)",
-            pointerEvents: "none",
-          },
+          position: 'relative',
         }}
       >
         <Toolbar sx={{ minHeight: { xs: 56, sm: 68 } }} />
         <Box
           sx={{
             p: { xs: 2, sm: 3, md: 4 },
-            maxWidth: "100%",
-            mx: "auto",
-            minHeight: "calc(100vh - 68px)",
-            position: "relative",
+            maxWidth: '100%',
+            mx: 'auto',
+            minHeight: 'calc(100vh - 68px)',
+            position: 'relative',
             zIndex: 1,
           }}
         >

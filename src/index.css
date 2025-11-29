@@ -5,7 +5,7 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   line-height: 1.6;
   font-weight: 400;
-  
+
   /* Modern color scheme - Enhanced Light Brown Theme */
   color-scheme: light;
   color: #2D2416;
@@ -16,7 +16,7 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  
+
   /* CSS Custom Properties - Enhanced Modern Theme */
   --primary-color: #C87941;
   --primary-light: #E49B5F;
@@ -35,15 +35,21 @@
   --border-color: rgba(200, 121, 65, 0.12);
   --border-light: rgba(200, 121, 65, 0.08);
   --divider-color: rgba(200, 121, 65, 0.15);
-  
-  /* Modern enhanced shadows with warm tones */
-  --shadow-xs: 0 1px 2px 0 rgba(200, 121, 65, 0.06);
-  --shadow-sm: 0 2px 4px 0 rgba(200, 121, 65, 0.08), 0 1px 2px 0 rgba(200, 121, 65, 0.04);
-  --shadow-md: 0 4px 8px -2px rgba(200, 121, 65, 0.12), 0 2px 4px -1px rgba(200, 121, 65, 0.06);
-  --shadow-lg: 0 12px 20px -4px rgba(200, 121, 65, 0.14), 0 4px 6px -2px rgba(200, 121, 65, 0.08);
-  --shadow-xl: 0 20px 30px -6px rgba(200, 121, 65, 0.16), 0 8px 12px -4px rgba(200, 121, 65, 0.10);
-  --shadow-2xl: 0 25px 50px -12px rgba(200, 121, 65, 0.25);
-  
+
+  /* Modern enhanced shadows with warm tones - Light theme optimized */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 4px 0 rgba(0, 0, 0, 0.06), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 20px -4px rgba(0, 0, 0, 0.10), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 30px -6px rgba(0, 0, 0, 0.12), 0 8px 12px -4px rgba(0, 0, 0, 0.06);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+
+  /* Glass effect variables */
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-bg-light: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-blur: blur(16px);
+
   /* Border radius tokens */
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -53,14 +59,14 @@
   --radius-2xl: 20px;
   --radius-3xl: 24px;
   --radius-full: 9999px;
-  
+
   /* Smooth transitions with easing */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slower: 600ms cubic-bezier(0.4, 0, 0.2, 1);
-  
+
   /* Spacing scale */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
@@ -86,7 +92,7 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   background-color: var(--background-default);
   color: var(--text-primary);
-  
+
   /* Better text rendering */
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   font-variation-settings: 'opsz' 32;
@@ -260,20 +266,20 @@ button:disabled {
     box-shadow: none !important;
     text-shadow: none !important;
   }
-  
+
   a,
   a:visited {
     text-decoration: underline;
   }
-  
+
   a[href]:after {
     content: " (" attr(href) ")";
   }
-  
+
   abbr[title]:after {
     content: " (" attr(title) ")";
   }
-  
+
   .no-print {
     display: none !important;
   }
@@ -435,12 +441,28 @@ main {
   box-shadow: var(--shadow-lg);
 }
 
-/* Glass morphism effect */
+/* Glass morphism effect - Enhanced light theme */
 .glass-effect {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+.glass-effect-subtle {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(200, 121, 65, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 }
 
 /* Gradient text */

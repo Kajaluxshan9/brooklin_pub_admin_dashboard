@@ -197,7 +197,7 @@ export default function PrimaryCategoriesTab({
 
   return (
     <Box>
-      <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
         <TextField
           placeholder="Search primary categories..."
           value={searchText}
@@ -217,8 +217,8 @@ export default function PrimaryCategoriesTab({
           startIcon={<AddIcon />}
           onClick={onAdd}
           sx={{
-            bgcolor: "#E49B5F",
-            "&:hover": { bgcolor: "#C9A87C" },
+            bgcolor: '#E49B5F',
+            '&:hover': { bgcolor: '#C9A87C' },
           }}
         >
           Add Primary Category
@@ -229,15 +229,15 @@ export default function PrimaryCategoriesTab({
         rows={filteredCategories}
         columns={columns}
         autoHeight
-        pageSizeOptions={[10, 25, 50]}
+        pageSizeOptions={[10, 25, 50, 100, 200, 300]}
         initialState={{
           pagination: { paginationModel: { pageSize: 10 } },
         }}
         disableRowSelectionOnClick
         sx={{
-          bgcolor: "white",
-          "& .MuiDataGrid-row:hover": {
-            bgcolor: "#f5f5f5",
+          bgcolor: 'white',
+          '& .MuiDataGrid-row:hover': {
+            bgcolor: '#f5f5f5',
           },
         }}
       />
@@ -246,9 +246,10 @@ export default function PrimaryCategoriesTab({
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        sx={{ zIndex: 99999, position: 'fixed' }}
       >
-        <Alert severity={snackbar.severity} sx={{ width: "100%" }}>
+        <Alert severity={snackbar.severity} sx={{ width: '100%' }}>
           {snackbar.message}
         </Alert>
       </Snackbar>

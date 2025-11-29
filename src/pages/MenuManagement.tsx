@@ -46,12 +46,18 @@ import {
   CloudUpload as CloudUploadIcon,
   Close as CloseIcon,
   Image as ImageIcon,
+  Category as CategoryIcon,
+  Restaurant as RestaurantIcon,
+  Folder as FolderIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
-import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
+import { DataGrid } from '@mui/x-data-grid';
 import type { GridColDef } from '@mui/x-data-grid';
 import { PageHeader } from '../components/common/PageHeader';
+import { SummaryStats } from '../components/common/SummaryStats';
+import type { StatItem } from '../components/common/SummaryStats';
 import logger from '../utils/logger';
-import { StatusChip } from '../components/common/StatusChip';
 import {
   uploadImages,
   parseBackendError,
@@ -161,6 +167,10 @@ const MenuManagement: React.FC = () => {
   }[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  // Filter states for enhanced filtering
+  const [filterPrimaryCategory, setFilterPrimaryCategory] = useState<string>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterAvailability, setFilterAvailability] = useState<string>('all');
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -265,30 +275,58 @@ const MenuManagement: React.FC = () => {
   }, [primaryCategories, debouncedSearchTerm]);
 
   const filteredCategories = useMemo(() => {
-    if (!debouncedSearchTerm) return categories;
-    return categories.filter(
-      (category) =>
-        category.name
-          .toLowerCase()
-          .includes(debouncedSearchTerm.toLowerCase()) ||
-        category.description
-          .toLowerCase()
-          .includes(debouncedSearchTerm.toLowerCase()) ||
-        category.primaryCategory?.name
-          .toLowerCase()
-          .includes(debouncedSearchTerm.toLowerCase()),
-    );
-  }, [categories, debouncedSearchTerm]);
+    let result = categories;
+
+    // Filter by primary category
+    if (filterPrimaryCategory !== 'all') {
+      result = result.filter(cat => cat.primaryCategoryId === filterPrimaryCategory);
+    }
+
+    // Filter by search term
+    if (debouncedSearchTerm) {
+      result = result.filter(
+        (category) =>
+          category.name
+            .toLowerCase()
+            .includes(debouncedSearchTerm.toLowerCase()) ||
+          category.description
+            .toLowerCase()
+            .includes(debouncedSearchTerm.toLowerCase()) ||
+          category.primaryCategory?.name
+            .toLowerCase()
+            .includes(debouncedSearchTerm.toLowerCase()),
+      );
+    }
+
+    return result;
+  }, [categories, debouncedSearchTerm, filterPrimaryCategory]);
 
   const filteredItems = useMemo(() => {
-    if (!searchTerm) return menuItems;
-    return menuItems.filter(
-      (item) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.categoryName?.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
-  }, [menuItems, searchTerm]);
+    let result = menuItems;
+
+    // Filter by category
+    if (filterCategory !== 'all') {
+      result = result.filter(item => item.categoryId === filterCategory);
+    }
+
+    // Filter by availability
+    if (filterAvailability !== 'all') {
+      const isAvailable = filterAvailability === 'available';
+      result = result.filter(item => item.isAvailable === isAvailable);
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+      result = result.filter(
+        (item) =>
+          item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.categoryName?.toLowerCase().includes(searchTerm.toLowerCase()),
+      );
+    }
+
+    return result;
+  }, [menuItems, searchTerm, filterCategory, filterAvailability]);
 
   const showSnackbar = useCallback(
     (message: string, severity: SnackbarState['severity'] = 'success') => {
@@ -1169,186 +1207,12 @@ const MenuManagement: React.FC = () => {
     }
   };
 
-  // Primary Category DataGrid columns
+  // Primary Category DataGrid columns - Clean table design
   const primaryCategoryColumns: GridColDef[] = [
     {
       field: 'imageUrl',
       headerName: 'Image',
-      width: 100,
-      headerAlign: 'center',
-      align: 'center',
-      sortable: false,
-      renderCell: (params) =>
-        params.value ? (
-          <Box
-            component="img"
-            src={getImageUrl(params.value)}
-            alt="Primary Category"
-            sx={{
-              width: 60,
-              height: 60,
-              objectFit: 'cover',
-              borderRadius: 1.5,
-              border: '1px solid #E8E3DC',
-            }}
-          />
-        ) : (
-          <Box
-            sx={{
-              width: 60,
-              height: 60,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: '#F5F5F5',
-              borderRadius: 1.5,
-              border: '1px solid #E8E3DC',
-            }}
-          >
-            <ImageIcon sx={{ color: '#999' }} />
-          </Box>
-        ),
-    },
-    {
-      field: 'name',
-      headerName: 'Name',
-      width: 180,
-      headerAlign: 'center',
-      align: 'center',
-      sortable: true,
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
-      ),
-      renderCell: (params) => (
-        <Typography
-          sx={{
-            fontSize: '0.95rem',
-            color: '#2C1810',
-            whiteSpace: 'normal',
-            wordBreak: 'break-word',
-            textAlign: 'center',
-            maxWidth: '100%',
-          }}
-        >
-          {params.value}
-        </Typography>
-      ),
-    },
-    {
-      field: 'description',
-      headerName: 'Description',
-      width: 320,
-      headerAlign: 'center',
-      align: 'center',
-      sortable: false,
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
-      ),
-    },
-    {
-      field: 'isActive',
-      headerName: 'Status',
-      width: 160,
-      headerAlign: 'center',
-      align: 'center',
-      sortable: true,
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
-      ),
-      renderCell: (params) => (
-        <StatusChip status={params.value ? 'active' : 'inactive'} />
-      ),
-    },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 180,
-      headerAlign: 'center',
-      align: 'center',
-      sortable: false,
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
-      ),
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <IconButton
-            size="small"
-            onClick={() => handleMovePrimaryCategoryOrder(params.row.id, 'up')}
-            sx={{ color: '#000000' }}
-            disabled={params.row.sortOrder === 0}
-          >
-            <ArrowUpwardIcon fontSize="small" />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={() =>
-              handleMovePrimaryCategoryOrder(params.row.id, 'down')
-            }
-            sx={{ color: '#000000' }}
-            disabled={params.row.sortOrder === primaryCategories.length - 1}
-          >
-            <ArrowDownwardIcon fontSize="small" />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => handleEditPrimaryCategory(params.row)}
-            sx={{ color: '#000000' }}
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => handleDeletePrimaryCategory(params.row.id)}
-            sx={{ color: '#D32F2F' }}
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      ),
-    },
-  ];
-
-  const categoryColumns: GridColDef[] = [
-    {
-      field: 'imageUrl',
-      headerName: 'Image',
-      width: 90,
+      width: 80,
       headerAlign: 'center',
       align: 'center',
       sortable: false,
@@ -1359,27 +1223,221 @@ const MenuManagement: React.FC = () => {
             src={getImageUrl(params.value)}
             alt="Category"
             sx={{
-              width: 60,
-              height: 60,
+              width: 50,
+              height: 50,
               objectFit: 'cover',
-              borderRadius: 1.5,
-              border: '1px solid #E8E3DC',
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             }}
           />
         ) : (
           <Box
             sx={{
-              width: 60,
-              height: 60,
+              width: 50,
+              height: 50,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              bgcolor: '#F5F5F5',
-              borderRadius: 1.5,
-              border: '1px solid #E8E3DC',
+              bgcolor: 'rgba(200, 121, 65, 0.08)',
+              borderRadius: 2,
+              border: '1px dashed rgba(200, 121, 65, 0.3)',
             }}
           >
-            <ImageIcon sx={{ color: '#999' }} />
+            <ImageIcon sx={{ color: '#C87941', opacity: 0.5, fontSize: 24 }} />
+          </Box>
+        ),
+    },
+    {
+      field: 'name',
+      headerName: 'Name',
+      width: 200,
+      headerAlign: 'left',
+      align: 'left',
+      sortable: true,
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            sx={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              bgcolor: params.row.isActive ? '#4CAF50' : '#BDBDBD',
+              flexShrink: 0,
+            }}
+          />
+          <Typography
+            sx={{
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              color: '#2C1810',
+            }}
+          >
+            {params.value}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      field: 'description',
+      headerName: 'Description',
+      flex: 1,
+      minWidth: 250,
+      headerAlign: 'left',
+      align: 'left',
+      sortable: false,
+      renderCell: (params) => (
+        <Tooltip title={params.value || ''} arrow placement="top">
+          <Typography
+            sx={{
+              fontSize: '0.85rem',
+              color: '#6B4E3D',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {params.value || '—'}
+          </Typography>
+        </Tooltip>
+      ),
+    },
+    {
+      field: 'categoriesCount',
+      headerName: 'Categories',
+      width: 100,
+      headerAlign: 'center',
+      align: 'center',
+      sortable: false,
+      valueGetter: (_value, row) => row.categories?.length || 0,
+      renderCell: (params) => (
+        <Box
+          sx={{
+            bgcolor: 'rgba(200, 121, 65, 0.1)',
+            color: '#C87941',
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            px: 1.5,
+            py: 0.5,
+            borderRadius: 1,
+            minWidth: 40,
+            textAlign: 'center',
+          }}
+        >
+          {params.value}
+        </Box>
+      ),
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 140,
+      headerAlign: 'center',
+      align: 'center',
+      sortable: false,
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', gap: 0.5, width: '100%', justifyContent: 'center', alignItems: 'center' }}>
+          <Tooltip title="Move Up" arrow>
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => handleMovePrimaryCategoryOrder(params.row.id, 'up')}
+                disabled={params.row.sortOrder === 0}
+                sx={{
+                  color: '#8B7355',
+                  '&:hover': { bgcolor: 'rgba(200, 121, 65, 0.1)', color: '#C87941' },
+                  '&.Mui-disabled': { opacity: 0.3 },
+                }}
+              >
+                <ArrowUpwardIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Move Down" arrow>
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => handleMovePrimaryCategoryOrder(params.row.id, 'down')}
+                disabled={params.row.sortOrder === primaryCategories.length - 1}
+                sx={{
+                  color: '#8B7355',
+                  '&:hover': { bgcolor: 'rgba(200, 121, 65, 0.1)', color: '#C87941' },
+                  '&.Mui-disabled': { opacity: 0.3 },
+                }}
+              >
+                <ArrowDownwardIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Edit" arrow>
+            <IconButton
+              size="small"
+              onClick={() => handleEditPrimaryCategory(params.row)}
+              sx={{
+                color: '#C87941',
+                width: 32,
+                height: 32,
+                '&:hover': { bgcolor: 'rgba(200, 121, 65, 0.15)' },
+              }}
+            >
+              <EditIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete" arrow>
+            <IconButton
+              size="small"
+              onClick={() => handleDeletePrimaryCategory(params.row.id)}
+              sx={{
+                color: '#EF5350',
+                width: 32,
+                height: 32,
+                '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.1)' },
+              }}
+            >
+              <DeleteIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      ),
+    },
+  ];
+
+  // Category DataGrid columns - Clean table design
+  const categoryColumns: GridColDef[] = [
+    {
+      field: 'imageUrl',
+      headerName: 'Image',
+      width: 80,
+      headerAlign: 'center',
+      align: 'center',
+      sortable: false,
+      renderCell: (params) =>
+        params.value ? (
+          <Box
+            component="img"
+            src={getImageUrl(params.value)}
+            alt="Category"
+            sx={{
+              width: 50,
+              height: 50,
+              objectFit: 'cover',
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              width: 50,
+              height: 50,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'rgba(200, 121, 65, 0.08)',
+              borderRadius: 2,
+              border: '1px dashed rgba(200, 121, 65, 0.3)',
+            }}
+          >
+            <ImageIcon sx={{ color: '#C87941', opacity: 0.5, fontSize: 24 }} />
           </Box>
         ),
     },
@@ -1387,63 +1445,49 @@ const MenuManagement: React.FC = () => {
       field: 'name',
       headerName: 'Name',
       width: 180,
-      headerAlign: 'center',
-      align: 'center',
+      headerAlign: 'left',
+      align: 'left',
       sortable: true,
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
-      ),
       renderCell: (params) => (
-        <Typography
-          sx={{
-            fontSize: '0.95rem',
-            color: '#2C1810',
-            whiteSpace: 'normal',
-            wordBreak: 'break-word',
-            textAlign: 'center',
-            maxWidth: '100%',
-          }}
-        >
-          {params.value}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            sx={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              bgcolor: params.row.isActive ? '#4CAF50' : '#BDBDBD',
+              flexShrink: 0,
+            }}
+          />
+          <Typography
+            sx={{
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              color: '#2C1810',
+            }}
+          >
+            {params.value}
+          </Typography>
+        </Box>
       ),
     },
     {
       field: 'primaryCategoryName',
       headerName: 'Primary Category',
       width: 160,
-      headerAlign: 'center',
-      align: 'center',
+      headerAlign: 'left',
+      align: 'left',
       sortable: true,
       valueGetter: (_value, row) => row.primaryCategory?.name || 'N/A',
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
-      ),
       renderCell: (params) => (
         <Typography
           sx={{
-            fontSize: '0.9rem',
-            color: '#2C1810',
-            textAlign: 'center',
-            maxWidth: '100%',
+            fontSize: '0.85rem',
+            color: '#6B4E3D',
+            bgcolor: 'rgba(200, 121, 65, 0.08)',
+            px: 1.5,
+            py: 0.5,
+            borderRadius: 1,
           }}
         >
           {params.value}
@@ -1453,140 +1497,196 @@ const MenuManagement: React.FC = () => {
     {
       field: 'description',
       headerName: 'Description',
-      width: 250,
-      headerAlign: 'center',
-      align: 'center',
+      flex: 1,
+      minWidth: 200,
+      headerAlign: 'left',
+      align: 'left',
       sortable: false,
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
+      renderCell: (params) => (
+        <Tooltip title={params.value || ''} arrow placement="top">
+          <Typography
+            sx={{
+              fontSize: '0.85rem',
+              color: '#6B4E3D',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {params.value || '—'}
+          </Typography>
+        </Tooltip>
       ),
     },
     {
-      field: 'isActive',
-      headerName: 'Status',
-      width: 120,
+      field: 'itemsCount',
+      headerName: 'Items',
+      width: 80,
       headerAlign: 'center',
       align: 'center',
-      renderHeader: (params) => (
-        <Typography
+      sortable: false,
+      valueGetter: (_value, row) => row.menuItems?.length || 0,
+      renderCell: (params) => (
+        <Box
           sx={{
+            bgcolor: 'rgba(200, 121, 65, 0.1)',
+            color: '#C87941',
             fontWeight: 600,
-            color: '#000000',
+            fontSize: '0.85rem',
+            px: 1.5,
+            py: 0.5,
+            borderRadius: 1,
+            minWidth: 40,
             textAlign: 'center',
-            width: '100%',
           }}
         >
-          {params.colDef.headerName}
-        </Typography>
-      ),
-      renderCell: (params) => (
-        <StatusChip
-          status={params.value ? 'active' : 'inactive'}
-          label={params.value ? 'Active' : 'Inactive'}
-          size="small"
-        />
+          {params.value}
+        </Box>
       ),
     },
     {
       field: 'actions',
-      type: 'actions',
       headerName: 'Actions',
-      width: 200,
+      width: 140,
       headerAlign: 'center',
       align: 'center',
-      getActions: (params) => [
-        <Tooltip title="Move Up" key="up">
-          <GridActionsCellItem
-            icon={<ArrowUpIcon />}
-            label="Move Up"
-            onClick={() => handleMoveCategoryOrder(params.row.id, 'up')}
-            disabled={params.row.sortOrder === 0}
-          />
-        </Tooltip>,
-        <Tooltip title="Move Down" key="down">
-          <GridActionsCellItem
-            icon={<ArrowDownIcon />}
-            label="Move Down"
-            onClick={() => handleMoveCategoryOrder(params.row.id, 'down')}
-            disabled={params.row.sortOrder === categories.length - 1}
-          />
-        </Tooltip>,
-        <Tooltip title="Edit" key="edit">
-          <GridActionsCellItem
-            icon={<EditIcon />}
-            label="Edit"
-            onClick={() => handleEditCategory(params.row)}
-          />
-        </Tooltip>,
-        <Tooltip title="Delete" key="delete">
-          <GridActionsCellItem
-            icon={<DeleteIcon />}
-            label="Delete"
-            onClick={() => handleDeleteCategory(params.row.id)}
-          />
-        </Tooltip>,
-      ],
+      sortable: false,
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', gap: 0.5, width: '100%', justifyContent: 'center', alignItems: 'center' }}>
+          <Tooltip title="Move Up" arrow>
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => handleMoveCategoryOrder(params.row.id, 'up')}
+                disabled={params.row.sortOrder === 0}
+                sx={{
+                  color: '#8B7355',
+                  '&:hover': { bgcolor: 'rgba(200, 121, 65, 0.1)', color: '#C87941' },
+                  '&.Mui-disabled': { opacity: 0.3 },
+                }}
+              >
+                <ArrowUpIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Move Down" arrow>
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => handleMoveCategoryOrder(params.row.id, 'down')}
+                disabled={params.row.sortOrder === categories.length - 1}
+                sx={{
+                  color: '#8B7355',
+                  '&:hover': { bgcolor: 'rgba(200, 121, 65, 0.1)', color: '#C87941' },
+                  '&.Mui-disabled': { opacity: 0.3 },
+                }}
+              >
+                <ArrowDownIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Edit" arrow>
+            <IconButton
+              size="small"
+              onClick={() => handleEditCategory(params.row)}
+              sx={{
+                color: '#C87941',
+                width: 32,
+                height: 32,
+                '&:hover': { bgcolor: 'rgba(200, 121, 65, 0.15)' },
+              }}
+            >
+              <EditIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete" arrow>
+            <IconButton
+              size="small"
+              onClick={() => handleDeleteCategory(params.row.id)}
+              sx={{
+                color: '#EF5350',
+                width: 32,
+                height: 32,
+                '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.1)' },
+              }}
+            >
+              <DeleteIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      ),
     },
   ];
 
+  // Helper to get measurement type name
+  const getMeasurementName = (typeId: string) => {
+    const mt = measurementTypes.find((m) => m.id === typeId);
+    return mt?.name || 'Size';
+  };
+
+  // Menu Items DataGrid columns - Clean table design with description
   const itemColumns: GridColDef[] = [
     {
       field: 'imageUrls',
       headerName: 'Image',
-      width: 100,
+      width: 80,
       headerAlign: 'center',
       align: 'center',
       sortable: false,
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
-      ),
       renderCell: (params) => {
         const imageUrl = params.row.imageUrls?.[0];
+        const imageCount = params.row.imageUrls?.length || 0;
         return imageUrl ? (
-          <Box
-            component="img"
-            src={getImageUrl(imageUrl)}
-            alt={params.row.name}
-            sx={{
-              width: 60,
-              height: 60,
-              objectFit: 'cover',
-              borderRadius: 1.5,
-              border: '1px solid #E8E3DC',
-            }}
-          />
+          <Box sx={{ position: 'relative' }}>
+            <Box
+              component="img"
+              src={getImageUrl(imageUrl)}
+              alt={params.row.name}
+              sx={{
+                width: 50,
+                height: 50,
+                objectFit: 'cover',
+                borderRadius: 2,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              }}
+            />
+            {imageCount > 1 && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: -6,
+                  right: -6,
+                  bgcolor: '#C87941',
+                  color: 'white',
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid white',
+                }}
+              >
+                {imageCount}
+              </Box>
+            )}
+          </Box>
         ) : (
           <Box
             sx={{
-              width: 60,
-              height: 60,
+              width: 50,
+              height: 50,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              bgcolor: '#F5F5F5',
-              borderRadius: 1.5,
-              border: '1px solid #E8E3DC',
+              bgcolor: 'rgba(200, 121, 65, 0.08)',
+              borderRadius: 2,
+              border: '1px dashed rgba(200, 121, 65, 0.3)',
             }}
           >
-            <ImageIcon sx={{ color: '#999' }} />
+            <ImageIcon sx={{ color: '#C87941', opacity: 0.5, fontSize: 24 }} />
           </Box>
         );
       },
@@ -1594,234 +1694,266 @@ const MenuManagement: React.FC = () => {
     {
       field: 'name',
       headerName: 'Name',
-      width: 160,
-      headerAlign: 'center',
-      align: 'center',
+      width: 180,
+      headerAlign: 'left',
+      align: 'left',
       sortable: true,
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
-      ),
       renderCell: (params) => (
-        <Typography
-          sx={{
-            fontSize: '0.95rem',
-            color: '#2C1810',
-            whiteSpace: 'normal',
-            wordBreak: 'break-word',
-            textAlign: 'center',
-            maxWidth: '100%',
-          }}
-        >
-          {params.value}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            sx={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              bgcolor: params.row.isAvailable ? '#4CAF50' : '#F44336',
+              flexShrink: 0,
+            }}
+          />
+          <Typography
+            sx={{
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              color: '#2C1810',
+            }}
+          >
+            {params.value}
+          </Typography>
+        </Box>
       ),
     },
     {
       field: 'categoryName',
       headerName: 'Category',
-      width: 150,
-      headerAlign: 'center',
-      align: 'center',
+      width: 140,
+      headerAlign: 'left',
+      align: 'left',
       sortable: true,
       renderCell: (params) => (
         <Typography
           sx={{
-            textAlign: 'center',
-            whiteSpace: 'normal',
-            wordBreak: 'break-word',
-            width: '100%',
+            fontSize: '0.85rem',
+            color: '#6B4E3D',
+            bgcolor: 'rgba(200, 121, 65, 0.08)',
+            px: 1.5,
+            py: 0.5,
+            borderRadius: 1,
           }}
         >
-          {params.value}
-        </Typography>
-      ),
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
+          {params.value || 'Uncategorized'}
         </Typography>
       ),
     },
     {
-      field: 'primaryCategoryName',
-      headerName: 'Primary Category',
-      width: 150,
-      headerAlign: 'center',
-      align: 'center',
-      sortable: true,
-      valueGetter: (_value, row) => {
-        const category = categories.find((c) => c.id === row.categoryId);
-        return category?.primaryCategory?.name || 'N/A';
-      },
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
-      ),
+      field: 'description',
+      headerName: 'Description',
+      width: 220,
+      headerAlign: 'left',
+      align: 'left',
+      sortable: false,
       renderCell: (params) => (
-        <Typography
-          sx={{
-            textAlign: 'center',
-            fontSize: '0.9rem',
-            whiteSpace: 'normal',
-            wordBreak: 'break-word',
-            width: '100%',
-          }}
-        >
-          {params.value}
-        </Typography>
+        <Tooltip title={params.value || ''} arrow placement="top">
+          <Typography
+            sx={{
+              fontSize: '0.85rem',
+              color: '#6B4E3D',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {params.value || '—'}
+          </Typography>
+        </Tooltip>
       ),
     },
     {
-      field: 'price',
-      headerName: 'Price',
-      width: 90,
-      headerAlign: 'center',
-      align: 'center',
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
-      ),
+      field: 'pricing',
+      headerName: 'Price / Sizes',
+      width: 200,
+      headerAlign: 'left',
+      align: 'left',
+      sortable: false,
       renderCell: (params) => {
-        const price = parseFloat(params.value);
-        return isNaN(price) ? '$0.00' : `$${price.toFixed(2)}`;
+        const hasMeasurements = params.row.hasMeasurements;
+        const measurements = params.row.measurements || [];
+        const price = parseFloat(params.row.price);
+
+        if (hasMeasurements && measurements.length > 0) {
+          return (
+            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', py: 0.5 }}>
+              {measurements
+                .sort((a: MenuItemMeasurement, b: MenuItemMeasurement) => a.sortOrder - b.sortOrder)
+                .map((m: MenuItemMeasurement, idx: number) => (
+                  <Box
+                    key={m.id || idx}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      bgcolor: m.isAvailable ? 'rgba(46, 125, 50, 0.1)' : 'rgba(158, 158, 158, 0.1)',
+                      borderRadius: 1,
+                      px: 1,
+                      py: 0.25,
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        color: m.isAvailable ? '#6B4E3D' : '#9E9E9E',
+                        textDecoration: m.isAvailable ? 'none' : 'line-through',
+                      }}
+                    >
+                      {getMeasurementName(m.measurementTypeId || '')}:
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: m.isAvailable ? '#2E7D32' : '#9E9E9E',
+                      }}
+                    >
+                      ${Number(m.price).toFixed(2)}
+                    </Typography>
+                  </Box>
+                ))}
+            </Box>
+          );
+        }
+
+        return (
+          <Typography
+            sx={{
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              color: '#2E7D32',
+            }}
+          >
+            {isNaN(price) ? '$0.00' : `$${price.toFixed(2)}`}
+          </Typography>
+        );
       },
-      sortable: true,
     },
     {
       field: 'dietary',
       headerName: 'Dietary',
-      width: 140,
-      headerAlign: 'center',
-      align: 'center',
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
-      ),
-      renderCell: (params) => (
-        <Box>
-          {params.row.isVegetarian && (
-            <Chip label="V" size="small" sx={{ mr: 0.5 }} />
-          )}
-          {params.row.isVegan && (
-            <Chip label="VE" size="small" sx={{ mr: 0.5 }} />
-          )}
-          {params.row.isGlutenFree && (
-            <Chip label="GF" size="small" sx={{ mr: 0.5 }} />
-          )}
-          {params.row.isDairyFree && <Chip label="DF" size="small" />}
-        </Box>
-      ),
-      sortable: false,
-    },
-    {
-      field: 'isAvailable',
-      headerName: 'Available',
       width: 100,
       headerAlign: 'center',
       align: 'center',
-      renderHeader: (params) => (
-        <Typography
-          sx={{
-            fontWeight: 600,
-            color: '#000000',
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          {params.colDef.headerName}
-        </Typography>
-      ),
-      renderCell: (params) => (
-        <StatusChip
-          status={params.value ? 'active' : 'inactive'}
-          label={params.value ? 'Available' : 'Unavailable'}
-          size="small"
-        />
-      ),
+      sortable: false,
+      renderCell: (params) => {
+        const tags = [];
+        if (params.row.isVegetarian) tags.push({ label: 'V', color: '#4CAF50', title: 'Vegetarian' });
+        if (params.row.isVegan) tags.push({ label: 'VE', color: '#8BC34A', title: 'Vegan' });
+        if (params.row.isGlutenFree) tags.push({ label: 'GF', color: '#FF9800', title: 'Gluten Free' });
+        if (params.row.isDairyFree) tags.push({ label: 'DF', color: '#03A9F4', title: 'Dairy Free' });
+
+        if (tags.length === 0) {
+          return <Typography sx={{ fontSize: '0.8rem', color: '#BDBDBD' }}>—</Typography>;
+        }
+
+        return (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {tags.map((tag) => (
+              <Tooltip key={tag.label} title={tag.title} arrow>
+                <Box
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    bgcolor: `${tag.color}20`,
+                    color: tag.color,
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {tag.label}
+                </Box>
+              </Tooltip>
+            ))}
+          </Box>
+        );
+      },
     },
     {
       field: 'actions',
-      type: 'actions',
       headerName: 'Actions',
-      width: 180,
+      width: 140,
       headerAlign: 'center',
       align: 'center',
-      getActions: (params) => [
-        <Tooltip title="Move Up" key="up">
-          <GridActionsCellItem
-            icon={<ArrowUpIcon />}
-            label="Move Up"
-            onClick={() => handleMoveItemOrder(params.row.id, 'up')}
-            disabled={params.row.sortOrder === 0}
-          />
-        </Tooltip>,
-        <Tooltip title="Move Down" key="down">
-          <GridActionsCellItem
-            icon={<ArrowDownIcon />}
-            label="Move Down"
-            onClick={() => handleMoveItemOrder(params.row.id, 'down')}
-            disabled={
-              menuItems
-                .filter((item) => item.categoryId === params.row.categoryId)
-                .sort((a, b) => a.sortOrder - b.sortOrder)
-                .pop()?.id === params.row.id
-            }
-          />
-        </Tooltip>,
-        <Tooltip title="Edit" key="edit">
-          <GridActionsCellItem
-            icon={<EditIcon />}
-            label="Edit"
-            onClick={() => handleEditItem(params.row)}
-          />
-        </Tooltip>,
-        <Tooltip title="Delete" key="delete">
-          <GridActionsCellItem
-            icon={<DeleteIcon />}
-            label="Delete"
-            onClick={() => handleDeleteItem(params.row.id)}
-          />
-        </Tooltip>,
-      ],
+      sortable: false,
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', gap: 0.5, width: '100%', justifyContent: 'center', alignItems: 'center' }}>
+          <Tooltip title="Move Up" arrow>
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => handleMoveItemOrder(params.row.id, 'up')}
+                disabled={params.row.sortOrder === 0}
+                sx={{
+                  color: '#8B7355',
+                  '&:hover': { bgcolor: 'rgba(200, 121, 65, 0.1)', color: '#C87941' },
+                  '&.Mui-disabled': { opacity: 0.3 },
+                }}
+              >
+                <ArrowUpIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Move Down" arrow>
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => handleMoveItemOrder(params.row.id, 'down')}
+                disabled={
+                  menuItems
+                    .filter((item) => item.categoryId === params.row.categoryId)
+                    .sort((a, b) => a.sortOrder - b.sortOrder)
+                    .pop()?.id === params.row.id
+                }
+                sx={{
+                  color: '#8B7355',
+                  '&:hover': { bgcolor: 'rgba(200, 121, 65, 0.1)', color: '#C87941' },
+                  '&.Mui-disabled': { opacity: 0.3 },
+                }}
+              >
+                <ArrowDownIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Edit" arrow>
+            <IconButton
+              size="small"
+              onClick={() => handleEditItem(params.row)}
+              sx={{
+                color: '#C87941',
+                width: 32,
+                height: 32,
+                '&:hover': { bgcolor: 'rgba(200, 121, 65, 0.15)' },
+              }}
+            >
+              <EditIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete" arrow>
+            <IconButton
+              size="small"
+              onClick={() => handleDeleteItem(params.row.id)}
+              sx={{
+                color: '#EF5350',
+                width: 32,
+                height: 32,
+                '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.1)' },
+              }}
+            >
+              <DeleteIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      ),
     },
   ];
 
@@ -1865,6 +1997,44 @@ const MenuManagement: React.FC = () => {
               : 'Add Menu Item'}
           </Button>
         }
+      />
+
+      {/* Summary Statistics */}
+      <SummaryStats
+        stats={[
+          {
+            label: 'Primary Categories',
+            value: primaryCategories.length,
+            icon: <FolderIcon fontSize="small" />,
+            color: '#C87941',
+          },
+          {
+            label: 'Categories',
+            value: categories.length,
+            icon: <CategoryIcon fontSize="small" />,
+            color: '#2196F3',
+          },
+          {
+            label: 'Menu Items',
+            value: menuItems.length,
+            icon: <RestaurantIcon fontSize="small" />,
+            color: '#4CAF50',
+          },
+          {
+            label: 'Active Items',
+            value: menuItems.filter((item) => item.isAvailable).length,
+            icon: <CheckCircleIcon fontSize="small" />,
+            color: '#43A047',
+          },
+          {
+            label: 'Inactive Items',
+            value: menuItems.filter((item) => !item.isAvailable).length,
+            icon: <CancelIcon fontSize="small" />,
+            color: '#EF5350',
+          },
+        ] as StatItem[]}
+        variant="compact"
+        columns={5}
       />
 
       {/* Tabs moved outside table for better UX */}
@@ -2031,11 +2201,12 @@ const MenuManagement: React.FC = () => {
         sx={{
           width: '100%',
           mb: 3,
-          borderRadius: 4,
-          border: '2px solid rgba(200, 121, 65, 0.2)',
-          boxShadow: '0 12px 40px rgba(200, 121, 65, 0.12)',
+          borderRadius: 2.5,
+          border: '1px solid rgba(200, 121, 65, 0.08)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
           overflow: 'hidden',
-          background: 'linear-gradient(to bottom, #FFFFFF 0%, #FFFBF7 100%)',
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(16px)',
         }}
       >
         {/* Search bar for all tabs */}
@@ -2046,55 +2217,333 @@ const MenuManagement: React.FC = () => {
             background: 'linear-gradient(180deg, #FFFBF7 0%, #FFFFFF 100%)',
           }}
         >
-          <TextField
-            size="small"
-            fullWidth
-            placeholder={
-              activeTab === 0
-                ? 'Search primary categories...'
-                : activeTab === 1
-                ? 'Search categories...'
-                : 'Search menu items...'
-            }
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: '#C87941', fontSize: '1.2rem' }} />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'white',
-                borderRadius: 2,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                '& fieldset': {
-                  borderColor: 'rgba(200, 121, 65, 0.2)',
-                  borderWidth: '1.5px',
-                },
-                '&:hover': {
-                  backgroundColor: '#FFFBF7',
-                  '& fieldset': {
-                    borderColor: '#C87941',
+          <Grid container spacing={2} alignItems="center">
+            {/* Search Field */}
+            <Grid size={{ xs: 12, md: activeTab === 2 ? 4 : activeTab === 1 ? 5 : 12 }}>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder={
+                  activeTab === 0
+                    ? 'Search primary categories...'
+                    : activeTab === 1
+                    ? 'Search categories...'
+                    : 'Search menu items...'
+                }
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ color: '#C87941', fontSize: '1.2rem' }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'white',
+                    borderRadius: 2,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '& fieldset': {
+                      borderColor: 'rgba(200, 121, 65, 0.2)',
+                      borderWidth: '1.5px',
+                    },
+                    '&:hover': {
+                      backgroundColor: '#FFFBF7',
+                      '& fieldset': {
+                        borderColor: '#C87941',
+                      },
+                    },
+                    '&.Mui-focused': {
+                      backgroundColor: 'white',
+                      boxShadow: '0 2px 8px rgba(200, 121, 65, 0.12)',
+                      '& fieldset': {
+                        borderColor: '#C87941',
+                        borderWidth: '1.5px',
+                      },
+                    },
                   },
-                },
-                '&.Mui-focused': {
-                  backgroundColor: 'white',
-                  boxShadow: '0 2px 8px rgba(200, 121, 65, 0.12)',
-                  '& fieldset': {
-                    borderColor: '#C87941',
-                    borderWidth: '1.5px',
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.9rem',
+                    padding: '8px 12px 8px 0',
                   },
-                },
-              },
-              '& .MuiInputBase-input': {
-                fontSize: '0.9rem',
-                padding: '8px 12px 8px 0',
-              },
-            }}
-          />
+                }}
+              />
+            </Grid>
+
+            {/* Category Filter - Only for Categories tab */}
+            {activeTab === 1 && (
+              <Grid size={{ xs: 12, md: 4 }}>
+                <FormControl
+                  size="small"
+                  fullWidth
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'white',
+                      borderRadius: 2,
+                      '& fieldset': {
+                        borderColor: 'rgba(200, 121, 65, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: '#C87941',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#C87941',
+                      },
+                    },
+                  }}
+                >
+                  <InputLabel sx={{ '&.Mui-focused': { color: '#C87941' } }}>
+                    Filter by Primary Category
+                  </InputLabel>
+                  <Select
+                    value={filterPrimaryCategory}
+                    onChange={(e) => setFilterPrimaryCategory(e.target.value)}
+                    label="Filter by Primary Category"
+                  >
+                    <MenuItem value="all">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <FolderIcon sx={{ fontSize: 18, color: '#C87941' }} />
+                        All Primary Categories
+                      </Box>
+                    </MenuItem>
+                    {primaryCategories.map((pc) => (
+                      <MenuItem key={pc.id} value={pc.id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <FolderIcon sx={{ fontSize: 18, color: '#6B4E3D' }} />
+                          {pc.name}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
+
+            {/* Clear Filters Button - Categories tab */}
+            {activeTab === 1 && filterPrimaryCategory !== 'all' && (
+              <Grid size={{ xs: 12, md: 3 }}>
+                <Button
+                  size="small"
+                  onClick={() => setFilterPrimaryCategory('all')}
+                  startIcon={<CloseIcon />}
+                  sx={{
+                    color: '#C87941',
+                    borderColor: 'rgba(200, 121, 65, 0.3)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(200, 121, 65, 0.08)',
+                      borderColor: '#C87941',
+                    },
+                  }}
+                  variant="outlined"
+                >
+                  Clear Filters
+                </Button>
+              </Grid>
+            )}
+
+            {/* Category Filter - Only for Menu Items tab */}
+            {activeTab === 2 && (
+              <>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <FormControl
+                    size="small"
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: 'rgba(200, 121, 65, 0.2)',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#C87941',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#C87941',
+                        },
+                      },
+                    }}
+                  >
+                    <InputLabel sx={{ '&.Mui-focused': { color: '#C87941' } }}>
+                      Filter by Category
+                    </InputLabel>
+                    <Select
+                      value={filterCategory}
+                      onChange={(e) => setFilterCategory(e.target.value)}
+                      label="Filter by Category"
+                    >
+                      <MenuItem value="all">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CategoryIcon sx={{ fontSize: 18, color: '#C87941' }} />
+                          All Categories
+                        </Box>
+                      </MenuItem>
+                      {categories.map((cat) => (
+                        <MenuItem key={cat.id} value={cat.id}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CategoryIcon sx={{ fontSize: 18, color: '#6B4E3D' }} />
+                            {cat.name}
+                            {cat.primaryCategory && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  color: '#8B7355',
+                                  ml: 0.5,
+                                  fontSize: '0.7rem',
+                                }}
+                              >
+                                ({cat.primaryCategory.name})
+                              </Typography>
+                            )}
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid size={{ xs: 12, md: 2.5 }}>
+                  <FormControl
+                    size="small"
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: 'rgba(200, 121, 65, 0.2)',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#C87941',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#C87941',
+                        },
+                      },
+                    }}
+                  >
+                    <InputLabel sx={{ '&.Mui-focused': { color: '#C87941' } }}>
+                      Availability
+                    </InputLabel>
+                    <Select
+                      value={filterAvailability}
+                      onChange={(e) => setFilterAvailability(e.target.value)}
+                      label="Availability"
+                    >
+                      <MenuItem value="all">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <RestaurantIcon sx={{ fontSize: 18, color: '#C87941' }} />
+                          All Items
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="available">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CheckCircleIcon sx={{ fontSize: 18, color: '#4CAF50' }} />
+                          Available Only
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="unavailable">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CancelIcon sx={{ fontSize: 18, color: '#F44336' }} />
+                          Unavailable Only
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {/* Clear Filters Button - Menu Items tab */}
+                {(filterCategory !== 'all' || filterAvailability !== 'all') && (
+                  <Grid size={{ xs: 12, md: 2.5 }}>
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        setFilterCategory('all');
+                        setFilterAvailability('all');
+                      }}
+                      startIcon={<CloseIcon />}
+                      sx={{
+                        color: '#C87941',
+                        borderColor: 'rgba(200, 121, 65, 0.3)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(200, 121, 65, 0.08)',
+                          borderColor: '#C87941',
+                        },
+                      }}
+                      variant="outlined"
+                    >
+                      Clear Filters
+                    </Button>
+                  </Grid>
+                )}
+              </>
+            )}
+          </Grid>
+
+          {/* Active filter chips display */}
+          {((activeTab === 1 && filterPrimaryCategory !== 'all') ||
+            (activeTab === 2 && (filterCategory !== 'all' || filterAvailability !== 'all'))) && (
+            <Box sx={{ mt: 1.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Typography variant="caption" sx={{ color: '#6B4E3D', alignSelf: 'center', mr: 0.5 }}>
+                Active filters:
+              </Typography>
+
+              {activeTab === 1 && filterPrimaryCategory !== 'all' && (
+                <Chip
+                  size="small"
+                  label={`Primary: ${primaryCategories.find(pc => pc.id === filterPrimaryCategory)?.name || 'Unknown'}`}
+                  onDelete={() => setFilterPrimaryCategory('all')}
+                  sx={{
+                    backgroundColor: 'rgba(200, 121, 65, 0.12)',
+                    color: '#C87941',
+                    '& .MuiChip-deleteIcon': {
+                      color: '#C87941',
+                      '&:hover': { color: '#A66934' },
+                    },
+                  }}
+                />
+              )}
+
+              {activeTab === 2 && filterCategory !== 'all' && (
+                <Chip
+                  size="small"
+                  label={`Category: ${categories.find(c => c.id === filterCategory)?.name || 'Unknown'}`}
+                  onDelete={() => setFilterCategory('all')}
+                  sx={{
+                    backgroundColor: 'rgba(200, 121, 65, 0.12)',
+                    color: '#C87941',
+                    '& .MuiChip-deleteIcon': {
+                      color: '#C87941',
+                      '&:hover': { color: '#A66934' },
+                    },
+                  }}
+                />
+              )}
+
+              {activeTab === 2 && filterAvailability !== 'all' && (
+                <Chip
+                  size="small"
+                  label={`Status: ${filterAvailability === 'available' ? 'Available' : 'Unavailable'}`}
+                  onDelete={() => setFilterAvailability('all')}
+                  sx={{
+                    backgroundColor: filterAvailability === 'available'
+                      ? 'rgba(76, 175, 80, 0.12)'
+                      : 'rgba(244, 67, 54, 0.12)',
+                    color: filterAvailability === 'available' ? '#4CAF50' : '#F44336',
+                    '& .MuiChip-deleteIcon': {
+                      color: filterAvailability === 'available' ? '#4CAF50' : '#F44336',
+                      '&:hover': { color: filterAvailability === 'available' ? '#388E3C' : '#D32F2F' },
+                    },
+                  }}
+                />
+              )}
+
+              <Typography variant="caption" sx={{ color: '#8B7355', alignSelf: 'center', ml: 1 }}>
+                ({activeTab === 1 ? filteredCategories.length : filteredItems.length} results)
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         <Box
@@ -2104,120 +2553,70 @@ const MenuManagement: React.FC = () => {
             backgroundColor: 'white',
             borderRadius: 2,
             overflow: 'hidden',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
           }}
         >
           {activeTab === 0 ? (
             <DataGrid
               rows={filteredPrimaryCategories}
               columns={primaryCategoryColumns}
-              rowHeight={64}
+              rowHeight={65}
+              getRowId={(row) => row.id}
               initialState={{
                 pagination: {
                   paginationModel: { page: 0, pageSize: 10 },
                 },
               }}
-              pageSizeOptions={[10, 25, 50]}
+              pageSizeOptions={[10, 25, 50, 100, 200, 300]}
               disableRowSelectionOnClick
               sx={{
-                border: '1px solid rgba(200, 121, 65, 0.12)',
+                border: 'none',
                 borderRadius: 2,
-                '& .MuiDataGrid-root': {
-                  backgroundColor: 'white',
-                },
+                backgroundColor: '#FEFEFE',
                 '& .MuiDataGrid-columnHeaders': {
-                  background:
-                    'linear-gradient(135deg, rgba(200,121,65,0.06) 0%, rgba(255,255,255,0.98) 100%)',
-                  color: '#2C1810',
-                  fontWeight: 700,
-                  fontSize: '0.95rem',
-                  borderRadius: 0,
-                  borderBottom: '1px solid rgba(200,121,65,0.12)',
-                  minHeight: 56,
+                  backgroundColor: 'rgba(200, 121, 65, 0.04)',
+                  borderBottom: '2px solid rgba(200, 121, 65, 0.15)',
+                  minHeight: 52,
                   '& .MuiDataGrid-columnHeader': {
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    px: 1,
-                    '&:focus': {
-                      outline: 'none',
-                    },
-                    '& .MuiIconButton-root, & .MuiSvgIcon-root, & .MuiDataGrid-iconButtonContainer':
-                      {
-                        color: '#2C1810',
-                        opacity: 1,
-                        position: 'absolute',
-                        right: 8,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        zIndex: 2,
-                      },
+                    '&:focus': { outline: 'none' },
+                    '&:focus-within': { outline: 'none' },
                   },
-                  '& .MuiDataGrid-columnSeparator': {
-                    display: 'none',
-                  },
+                  '& .MuiDataGrid-columnSeparator': { display: 'none' },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     color: '#2C1810',
                     fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flex: '1 1 0',
-                    textAlign: 'center',
-                    pr: '36px',
-                    whiteSpace: 'normal',
+                    fontSize: '0.8rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
                   },
                 },
                 '& .MuiDataGrid-row': {
-                  transition: 'all 0.2s ease',
+                  transition: 'background-color 0.15s ease',
                   '&:hover': {
-                    backgroundColor: 'rgba(200, 121, 65, 0.08)',
-                  },
-                  '&.Mui-selected': {
-                    backgroundColor: 'rgba(200, 121, 65, 0.12)',
-                    '&:hover': {
-                      backgroundColor: 'rgba(200, 121, 65, 0.16)',
-                    },
+                    backgroundColor: 'rgba(200, 121, 65, 0.06)',
                   },
                 },
                 '& .MuiDataGrid-cell': {
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
                   borderBottom: '1px solid rgba(200, 121, 65, 0.08)',
-                  borderRight: '1px solid rgba(200, 121, 65, 0.06)',
                   color: '#2C1810',
-                  fontSize: '0.875rem',
-                  padding: '12px',
-                  textAlign: 'center',
-                  '&:focus': {
-                    outline: 'none',
-                  },
-                  '&:last-child': {
-                    borderRight: 'none',
-                  },
+                  fontSize: '0.85rem',
+                  padding: '8px 16px',
+                  '&:focus': { outline: 'none' },
+                  '&:focus-within': { outline: 'none' },
                 },
                 '& .MuiDataGrid-footerContainer': {
-                  background:
-                    'linear-gradient(180deg, #FFFFFF 0%, #FFF8F0 100%)',
-                  borderTop: '2px solid rgba(200, 121, 65, 0.15)',
+                  backgroundColor: 'rgba(255, 248, 240, 0.5)',
+                  borderTop: '1px solid rgba(200, 121, 65, 0.1)',
                 },
                 '& .MuiTablePagination-root': {
                   color: '#6B4E3D',
                 },
-                '& .MuiTablePagination-select': {
-                  borderRadius: 1.5,
-                },
-                '& .MuiTablePagination-selectIcon': {
+                '& .MuiTablePagination-selectIcon': { color: '#C87941' },
+                '& .MuiTablePagination-actions .MuiIconButton-root': {
                   color: '#C87941',
-                },
-                '& .MuiIconButton-root': {
-                  color: '#C87941',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    backgroundColor: 'rgba(200, 121, 65, 0.1)',
-                    transform: 'scale(1.1)',
-                  },
+                  '&.Mui-disabled': { color: 'rgba(107, 78, 61, 0.3)' },
                 },
               }}
             />
@@ -2225,114 +2624,63 @@ const MenuManagement: React.FC = () => {
             <DataGrid
               rows={filteredCategories}
               columns={categoryColumns}
-              rowHeight={64}
+              rowHeight={65}
+              getRowId={(row) => row.id}
               initialState={{
                 pagination: {
                   paginationModel: { page: 0, pageSize: 10 },
                 },
               }}
-              pageSizeOptions={[10, 25, 50]}
+              pageSizeOptions={[10, 25, 50, 100, 200, 300]}
               disableRowSelectionOnClick
               sx={{
-                border: '1px solid rgba(200, 121, 65, 0.12)',
+                border: 'none',
                 borderRadius: 2,
-                '& .MuiDataGrid-root': {
-                  backgroundColor: 'white',
-                },
+                backgroundColor: '#FEFEFE',
                 '& .MuiDataGrid-columnHeaders': {
-                  background:
-                    'linear-gradient(135deg, rgba(200,121,65,0.06) 0%, rgba(255,255,255,0.98) 100%)',
-                  color: '#2C1810',
-                  fontWeight: 700,
-                  fontSize: '0.95rem',
-                  borderRadius: 0,
-                  borderBottom: '1px solid rgba(200,121,65,0.12)',
-                  minHeight: 56,
+                  backgroundColor: 'rgba(200, 121, 65, 0.04)',
+                  borderBottom: '2px solid rgba(200, 121, 65, 0.15)',
+                  minHeight: 52,
                   '& .MuiDataGrid-columnHeader': {
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    px: 1,
-                    '&:focus': {
-                      outline: 'none',
-                    },
-                    '& .MuiIconButton-root, & .MuiSvgIcon-root, & .MuiDataGrid-iconButtonContainer':
-                      {
-                        color: '#2C1810',
-                        opacity: 1,
-                        position: 'absolute',
-                        right: 8,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        zIndex: 2,
-                      },
+                    '&:focus': { outline: 'none' },
+                    '&:focus-within': { outline: 'none' },
                   },
-                  '& .MuiDataGrid-columnSeparator': {
-                    display: 'none',
-                  },
+                  '& .MuiDataGrid-columnSeparator': { display: 'none' },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     color: '#2C1810',
                     fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flex: '1 1 0',
-                    textAlign: 'center',
-                    pr: '36px',
-                    whiteSpace: 'normal',
+                    fontSize: '0.8rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
                   },
-                  '& .MuiDataGrid-columnHeader .MuiIconButton-root, & .MuiDataGrid-columnHeader .MuiSvgIcon-root':
-                    {
-                      color: '#2C1810',
-                    },
                 },
                 '& .MuiDataGrid-row': {
-                  transition: 'all 0.2s ease',
+                  transition: 'background-color 0.15s ease',
                   '&:hover': {
-                    backgroundColor: 'rgba(200, 121, 65, 0.08)',
-                  },
-                  '&.Mui-selected': {
-                    backgroundColor: 'rgba(200, 121, 65, 0.12)',
-                    '&:hover': {
-                      backgroundColor: 'rgba(200, 121, 65, 0.16)',
-                    },
+                    backgroundColor: 'rgba(200, 121, 65, 0.06)',
                   },
                 },
                 '& .MuiDataGrid-cell': {
+                  display: 'flex',
+                  alignItems: 'center',
                   borderBottom: '1px solid rgba(200, 121, 65, 0.08)',
-                  borderRight: '1px solid rgba(200, 121, 65, 0.06)',
                   color: '#2C1810',
-                  fontSize: '0.875rem',
-                  padding: '12px',
-                  '&:focus': {
-                    outline: 'none',
-                  },
-                  '&:last-child': {
-                    borderRight: 'none',
-                  },
+                  fontSize: '0.85rem',
+                  padding: '8px 16px',
+                  '&:focus': { outline: 'none' },
+                  '&:focus-within': { outline: 'none' },
                 },
                 '& .MuiDataGrid-footerContainer': {
-                  background:
-                    'linear-gradient(180deg, #FFFFFF 0%, #FFF8F0 100%)',
-                  borderTop: '2px solid rgba(200, 121, 65, 0.15)',
+                  backgroundColor: 'rgba(255, 248, 240, 0.5)',
+                  borderTop: '1px solid rgba(200, 121, 65, 0.1)',
                 },
                 '& .MuiTablePagination-root': {
                   color: '#6B4E3D',
                 },
-                '& .MuiTablePagination-select': {
-                  borderRadius: 1.5,
-                },
-                '& .MuiTablePagination-selectIcon': {
+                '& .MuiTablePagination-selectIcon': { color: '#C87941' },
+                '& .MuiTablePagination-actions .MuiIconButton-root': {
                   color: '#C87941',
-                },
-                '& .MuiIconButton-root': {
-                  color: '#C87941',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    backgroundColor: 'rgba(200, 121, 65, 0.1)',
-                    transform: 'scale(1.1)',
-                  },
+                  '&.Mui-disabled': { color: 'rgba(107, 78, 61, 0.3)' },
                 },
               }}
             />
@@ -2340,102 +2688,63 @@ const MenuManagement: React.FC = () => {
             <DataGrid
               rows={filteredItems}
               columns={itemColumns}
-              rowHeight={64}
+              getRowId={(row) => row.id}
+              getRowHeight={() => 'auto'}
               initialState={{
                 pagination: {
                   paginationModel: { page: 0, pageSize: 10 },
                 },
               }}
-              pageSizeOptions={[10, 25, 50]}
+              pageSizeOptions={[10, 25, 50, 100, 200, 300]}
               disableRowSelectionOnClick
               sx={{
-                border: '1px solid rgba(200, 121, 65, 0.12)',
+                border: 'none',
                 borderRadius: 2,
-                '& .MuiDataGrid-root': {
-                  backgroundColor: 'white',
-                },
+                backgroundColor: '#FEFEFE',
                 '& .MuiDataGrid-columnHeaders': {
-                  background:
-                    'linear-gradient(135deg, rgba(200,121,65,0.06) 0%, rgba(255,255,255,0.98) 100%)',
-                  color: '#2C1810',
-                  fontWeight: 700,
-                  fontSize: '0.95rem',
-                  borderRadius: 0,
-                  borderBottom: '1px solid rgba(200,121,65,0.12)',
-                  minHeight: 56,
+                  backgroundColor: 'rgba(200, 121, 65, 0.04)',
+                  borderBottom: '2px solid rgba(200, 121, 65, 0.15)',
+                  minHeight: 52,
                   '& .MuiDataGrid-columnHeader': {
-                    '&:focus': {
-                      outline: 'none',
-                    },
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    '&:focus': { outline: 'none' },
+                    '&:focus-within': { outline: 'none' },
                   },
-                  '& .MuiDataGrid-columnSeparator': {
-                    display: 'none',
-                  },
+                  '& .MuiDataGrid-columnSeparator': { display: 'none' },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     color: '#2C1810',
                     fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flex: '1 1 0',
-                    textAlign: 'center',
-                    pr: '36px',
-                    whiteSpace: 'normal',
+                    fontSize: '0.8rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
                   },
-                  '& .MuiDataGrid-columnHeader .MuiIconButton-root, & .MuiDataGrid-columnHeader .MuiSvgIcon-root':
-                    {
-                      color: '#2C1810',
-                    },
                 },
                 '& .MuiDataGrid-row': {
-                  transition: 'all 0.2s ease',
+                  transition: 'background-color 0.15s ease',
                   '&:hover': {
-                    backgroundColor: 'rgba(200, 121, 65, 0.08)',
-                  },
-                  '&.Mui-selected': {
-                    backgroundColor: 'rgba(200, 121, 65, 0.12)',
-                    '&:hover': {
-                      backgroundColor: 'rgba(200, 121, 65, 0.16)',
-                    },
+                    backgroundColor: 'rgba(200, 121, 65, 0.06)',
                   },
                 },
                 '& .MuiDataGrid-cell': {
+                  display: 'flex',
+                  alignItems: 'center',
                   borderBottom: '1px solid rgba(200, 121, 65, 0.08)',
-                  borderRight: '1px solid rgba(200, 121, 65, 0.06)',
                   color: '#2C1810',
-                  fontSize: '0.875rem',
-                  padding: '12px',
-                  '&:focus': {
-                    outline: 'none',
-                  },
-                  '&:last-child': {
-                    borderRight: 'none',
-                  },
+                  fontSize: '0.85rem',
+                  padding: '8px 16px',
+                  '&:focus': { outline: 'none' },
+                  '&:focus-within': { outline: 'none' },
                 },
                 '& .MuiDataGrid-footerContainer': {
-                  background:
-                    'linear-gradient(180deg, #FFFFFF 0%, #FFF8F0 100%)',
-                  borderTop: '2px solid rgba(200, 121, 65, 0.15)',
+                  backgroundColor: 'rgba(255, 248, 240, 0.5)',
+                  borderTop: '1px solid rgba(200, 121, 65, 0.1)',
                 },
                 '& .MuiTablePagination-root': {
                   color: '#6B4E3D',
                 },
-                '& .MuiTablePagination-select': {
-                  borderRadius: 1.5,
-                },
-                '& .MuiTablePagination-selectIcon': {
+                '& .MuiTablePagination-selectIcon': { color: '#C87941' },
+                '& .MuiTablePagination-actions .MuiIconButton-root': {
                   color: '#C87941',
-                },
-                '& .MuiIconButton-root': {
-                  color: '#C87941',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    backgroundColor: 'rgba(200, 121, 65, 0.1)',
-                    transform: 'scale(1.1)',
-                  },
+                  '&.Mui-disabled': { color: 'rgba(107, 78, 61, 0.3)' },
                 },
               }}
             />
@@ -2457,8 +2766,8 @@ const MenuManagement: React.FC = () => {
         TransitionComponent={Zoom}
         PaperProps={{
           sx: {
-            borderRadius: 3,
-            boxShadow: '0 20px 60px rgba(200, 121, 65, 0.25)',
+            borderRadius: 2.5,
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',
           },
         }}
       >
@@ -2711,8 +3020,8 @@ const MenuManagement: React.FC = () => {
         TransitionComponent={Zoom}
         PaperProps={{
           sx: {
-            borderRadius: 3,
-            boxShadow: '0 20px 60px rgba(200, 121, 65, 0.25)',
+            borderRadius: 2.5,
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',
           },
         }}
       >
@@ -2958,8 +3267,8 @@ const MenuManagement: React.FC = () => {
         TransitionComponent={Zoom}
         PaperProps={{
           sx: {
-            borderRadius: 3,
-            boxShadow: '0 20px 60px rgba(200, 121, 65, 0.25)',
+            borderRadius: 2.5,
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',
           },
         }}
       >
@@ -3507,6 +3816,7 @@ const MenuManagement: React.FC = () => {
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        sx={{ zIndex: 99999, position: 'fixed' }}
       >
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}

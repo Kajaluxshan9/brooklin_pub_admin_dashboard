@@ -325,14 +325,15 @@ const Settings: React.FC = () => {
         subtitle="Manage your profile and security preferences"
       />
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         {/* Profile Settings Section */}
         <Card
           sx={{
-            borderRadius: 3,
-            boxShadow: '0 4px 12px rgba(139, 69, 19, 0.15)',
-            border: '1px solid #d7ccc8',
-            backgroundColor: 'white',
+            borderRadius: 2.5,
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+            border: '1px solid rgba(200, 121, 65, 0.08)',
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(16px)',
           }}
         >
           <CardContent sx={{ p: 4 }}>
@@ -574,10 +575,11 @@ const Settings: React.FC = () => {
         {/* Security Settings Section */}
         <Card
           sx={{
-            borderRadius: 3,
-            boxShadow: '0 4px 12px rgba(139, 69, 19, 0.15)',
-            border: '1px solid #d7ccc8',
-            backgroundColor: 'white',
+            borderRadius: 2.5,
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+            border: '1px solid rgba(200, 121, 65, 0.08)',
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(16px)',
           }}
         >
           <CardContent sx={{ p: 4 }}>
@@ -681,6 +683,7 @@ const Settings: React.FC = () => {
         autoHideDuration={4000}
         onClose={() => setNotification({ ...notification, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        sx={{ zIndex: 99999, position: 'fixed' }}
       >
         <Alert
           onClose={() => setNotification({ ...notification, open: false })}

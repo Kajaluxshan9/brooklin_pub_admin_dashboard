@@ -33,7 +33,12 @@ import {
   CalendarToday as CalendarTodayIcon,
   Image as ImageIcon,
   AcUnit as SeasonalIcon,
-} from "@mui/icons-material";
+  LocalOffer as SpecialIcon,
+  CheckCircle as ActiveIcon,
+  Cancel as InactiveIcon,
+  Restaurant as DailyIcon,
+  SportsEsports as GameTimeIcon,
+} from '@mui/icons-material';
 import { DateTimePicker } from "@mui/x-date-pickers";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
@@ -43,6 +48,8 @@ import { getImageUrl, getErrorMessage } from "../utils/uploadHelpers";
 import { StatusChip } from "../components/common/StatusChip";
 import { ActionButtons } from "../components/common/ActionButtons";
 import { PageHeader } from "../components/common/PageHeader";
+import { SummaryStats } from '../components/common/SummaryStats';
+import type { StatItem } from '../components/common/SummaryStats';
 import logger from "../utils/logger";
 
 const TIMEZONE = "America/Toronto";
@@ -393,12 +400,13 @@ const SpecialsManagement: React.FC = () => {
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          borderRadius: 3,
-          backgroundColor: 'white',
-          boxShadow: '0 4px 16px rgba(200, 121, 65, 0.12)',
-          border: '2px solid',
-          borderColor: 'rgba(200, 121, 65, 0.2)',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          borderRadius: 2.5,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(16px)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+          border: '1px solid',
+          borderColor: 'rgba(200, 121, 65, 0.1)',
+          transition: 'all 0.2s ease',
           overflow: 'hidden',
           position: 'relative',
           '&::before': {
@@ -407,16 +415,115 @@ const SpecialsManagement: React.FC = () => {
             top: 0,
             left: 0,
             right: 0,
-            height: '4px',
-            background: 'linear-gradient(90deg, #C87941 0%, #E89B5C 100%)',
+            height: '2px',
+            background: '#C87941',
           },
           '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: '0 8px 24px rgba(200, 121, 65, 0.25)',
-            borderColor: '#C87941',
+            transform: 'translateY(-2px)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.06)',
           },
         }}
       >
+        {/* Image Preview Section */}
+        {special.imageUrls && special.imageUrls.length > 0 && (
+          <Box
+            sx={{
+              position: 'relative',
+              height: 180,
+              overflow: 'hidden',
+              bgcolor: 'grey.100',
+            }}
+          >
+            {special.imageUrls.length === 1 ? (
+              <Box
+                component="img"
+                src={getImageUrl(special.imageUrls[0])}
+                alt={special.title}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+            ) : (
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns:
+                    special.imageUrls.length === 2 ? '1fr 1fr' : '1fr 1fr',
+                  gridTemplateRows:
+                    special.imageUrls.length <= 2 ? '1fr' : '1fr 1fr',
+                  gap: 0.5,
+                  height: '100%',
+                }}
+              >
+                {special.imageUrls.slice(0, 4).map((url, idx) => (
+                  <Box
+                    key={idx}
+                    sx={{
+                      position: 'relative',
+                      overflow: 'hidden',
+                      gridColumn:
+                        special.imageUrls.length === 3 && idx === 0
+                          ? 'span 2'
+                          : 'auto',
+                    }}
+                  >
+                    <Box
+                      component="img"
+                      src={getImageUrl(url)}
+                      alt={`${special.title} ${idx + 1}`}
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                    {idx === 3 && special.imageUrls.length > 4 && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          inset: 0,
+                          bgcolor: 'rgba(0,0,0,0.5)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: '1.2rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        +{special.imageUrls.length - 4}
+                      </Box>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            )}
+            {/* Image count badge */}
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 8,
+                right: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                px: 1.5,
+                py: 0.5,
+                borderRadius: 2,
+                bgcolor: 'rgba(0,0,0,0.6)',
+                color: 'white',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+              }}
+            >
+              <ImageIcon sx={{ fontSize: 16 }} />
+              {special.imageUrls.length}
+            </Box>
+          </Box>
+        )}
+
         <CardContent sx={{ flexGrow: 1, p: 3 }}>
           <Box
             display="flex"
@@ -446,7 +553,13 @@ const SpecialsManagement: React.FC = () => {
             variant="body2"
             color="text.secondary"
             mb={2}
-            sx={{ lineHeight: 1.5 }}
+            sx={{
+              lineHeight: 1.5,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
           >
             {special.description}
           </Typography>
@@ -505,24 +618,6 @@ const SpecialsManagement: React.FC = () => {
               </Box>
             )}
           </Box>
-          {special.imageUrls && special.imageUrls.length > 0 && (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                p: 1,
-                bgcolor: 'grey.50',
-                borderRadius: 1,
-              }}
-            >
-              <ImageIcon fontSize="small" color="action" />
-              <Typography variant="body2" color="text.secondary">
-                {special.imageUrls.length} image
-                {special.imageUrls.length > 1 ? 's' : ''}
-              </Typography>
-            </Box>
-          )}
         </CardContent>
         <CardActions
           sx={{
@@ -636,6 +731,18 @@ const SpecialsManagement: React.FC = () => {
     }
   };
 
+  // Calculate specials stats
+  const specialsStats = useMemo(() => {
+    return {
+      total: specials.length,
+      active: specials.filter((s) => s.isActive).length,
+      inactive: specials.filter((s) => !s.isActive).length,
+      daily: specials.filter((s) => s.type === 'daily').length,
+      gameTime: specials.filter((s) => s.type === 'game_time').length,
+      seasonal: specials.filter((s) => s.type === 'seasonal').length,
+    };
+  }, [specials]);
+
   return (
     <LocalizationProvider dateAdapter={AdapterMoment}>
       <Box
@@ -672,15 +779,62 @@ const SpecialsManagement: React.FC = () => {
           }
         />
 
+        {/* Summary Statistics */}
+        <SummaryStats
+          stats={
+            [
+              {
+                label: 'Total Specials',
+                value: specialsStats.total,
+                icon: <SpecialIcon fontSize="small" />,
+                color: '#C87941',
+              },
+              {
+                label: 'Active',
+                value: specialsStats.active,
+                icon: <ActiveIcon fontSize="small" />,
+                color: '#4CAF50',
+              },
+              {
+                label: 'Inactive',
+                value: specialsStats.inactive,
+                icon: <InactiveIcon fontSize="small" />,
+                color: '#9E9E9E',
+              },
+              {
+                label: 'Daily Specials',
+                value: specialsStats.daily,
+                icon: <DailyIcon fontSize="small" />,
+                color: '#2196F3',
+              },
+              {
+                label: 'Game Time',
+                value: specialsStats.gameTime,
+                icon: <GameTimeIcon fontSize="small" />,
+                color: '#9C27B0',
+              },
+              {
+                label: 'Seasonal',
+                value: specialsStats.seasonal,
+                icon: <SeasonalIcon fontSize="small" />,
+                color: '#00BCD4',
+              },
+            ] as StatItem[]
+          }
+          variant="compact"
+          columns={6}
+        />
+
         <Box
           sx={{
             maxWidth: 1400,
             mx: 'auto',
-            backgroundColor: 'white',
-            borderRadius: 3,
-            boxShadow: '0 2px 12px rgba(200, 121, 65, 0.12)',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(16px)',
+            borderRadius: 2.5,
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
             overflow: 'visible',
-            border: '1px solid #E8DDD0',
+            border: '1px solid rgba(200, 121, 65, 0.08)',
           }}
         >
           {loading && (
@@ -700,15 +854,13 @@ const SpecialsManagement: React.FC = () => {
             sx={{
               mb: 3,
               mt: 2,
-              background:
-                'linear-gradient(135deg, rgba(255, 248, 240, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              borderRadius: 3,
+              background: 'rgba(255, 255, 255, 0.8)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              borderRadius: 2,
               p: 1,
-              border: '2px solid rgba(200, 121, 65, 0.2)',
-              boxShadow:
-                '0 8px 24px rgba(200, 121, 65, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.8)',
+              border: '1px solid rgba(200, 121, 65, 0.1)',
+              boxShadow: 'none',
             }}
           >
             <Tabs

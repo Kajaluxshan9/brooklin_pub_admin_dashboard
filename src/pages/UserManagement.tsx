@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { API_BASE_URL } from '../config/env.config';
 import {
   Box,
@@ -37,6 +37,10 @@ import {
   SupervisorAccount as SuperAdminIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
+  Group as GroupIcon,
+  CheckCircle as ActiveIcon,
+  Cancel as InactiveIcon,
+  VerifiedUser as VerifiedIcon,
 } from '@mui/icons-material';
 import moment from 'moment-timezone';
 import { useAuth } from '../contexts/AuthContext';
@@ -44,6 +48,8 @@ import logger from '../utils/logger';
 import { useGlobalToast } from '../contexts/ToastContext';
 import { getErrorMessage } from '../utils/uploadHelpers';
 import { PageHeader } from '../components/common/PageHeader';
+import { SummaryStats } from '../components/common/SummaryStats';
+import type { StatItem } from '../components/common/SummaryStats';
 import { StatusChip } from '../components/common/StatusChip';
 import { ActionButtons } from '../components/common/ActionButtons';
 
@@ -294,10 +300,7 @@ const UserManagement: React.FC = () => {
           showToast('User deleted successfully', 'success');
         } else {
           const errorData = await response.json();
-          showToast(
-            errorData.message || 'Failed to delete user',
-            'error',
-          );
+          showToast(errorData.message || 'Failed to delete user', 'error');
           logger.error('Failed to delete user');
         }
       } catch (error) {
@@ -346,7 +349,10 @@ const UserManagement: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        showToast(data.message || 'Verification email sent successfully', 'success');
+        showToast(
+          data.message || 'Verification email sent successfully',
+          'success',
+        );
       } else {
         const errorData = await response.json();
         showToast(
@@ -400,10 +406,7 @@ const UserManagement: React.FC = () => {
         showToast('User status updated successfully', 'success');
       } else {
         const errorData = await response.json();
-        showToast(
-          errorData.message || 'Failed to toggle user status',
-          'error',
-        );
+        showToast(errorData.message || 'Failed to toggle user status', 'error');
         logger.error('Failed to toggle user status');
       }
     } catch (error) {
@@ -439,8 +442,20 @@ const UserManagement: React.FC = () => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
+  // Calculate user stats
+  const userStats = useMemo(() => {
+    return {
+      total: users.length,
+      active: users.filter((u) => u.isActive).length,
+      inactive: users.filter((u) => !u.isActive).length,
+      superAdmins: users.filter((u) => u.role === 'super_admin').length,
+      admins: users.filter((u) => u.role === 'admin').length,
+      verified: users.filter((u) => u.isEmailVerified).length,
+    };
+  }, [users]);
+
   return (
-    <Box sx={{ backgroundColor: '#FFF8F0', minHeight: '100vh', p: 3 }}>
+    <Box sx={{ backgroundColor: '#FEFDFB', minHeight: '100vh', p: 3 }}>
       <PageHeader
         title="User Management"
         subtitle="Manage admin users and their access permissions"
@@ -461,6 +476,52 @@ const UserManagement: React.FC = () => {
         }
       />
 
+      {/* Summary Statistics */}
+      <SummaryStats
+        stats={
+          [
+            {
+              label: 'Total Users',
+              value: userStats.total,
+              icon: <GroupIcon fontSize="small" />,
+              color: '#C87941',
+            },
+            {
+              label: 'Active',
+              value: userStats.active,
+              icon: <ActiveIcon fontSize="small" />,
+              color: '#4CAF50',
+            },
+            {
+              label: 'Inactive',
+              value: userStats.inactive,
+              icon: <InactiveIcon fontSize="small" />,
+              color: '#9E9E9E',
+            },
+            {
+              label: 'Super Admins',
+              value: userStats.superAdmins,
+              icon: <SuperAdminIcon fontSize="small" />,
+              color: '#9C27B0',
+            },
+            {
+              label: 'Admins',
+              value: userStats.admins,
+              icon: <AdminIcon fontSize="small" />,
+              color: '#2196F3',
+            },
+            {
+              label: 'Email Verified',
+              value: userStats.verified,
+              icon: <VerifiedIcon fontSize="small" />,
+              color: '#00BCD4',
+            },
+          ] as StatItem[]
+        }
+        variant="compact"
+        columns={6}
+      />
+
       <Grid container spacing={3}>
         {users.map((user) => (
           <Grid size={{ xs: 12, md: 6, lg: 4 }} key={user.id}>
@@ -471,6 +532,16 @@ const UserManagement: React.FC = () => {
                 flexDirection: 'column',
                 position: 'relative',
                 opacity: user.isActive ? 1 : 0.7,
+                borderRadius: 2.5,
+                border: '1px solid rgba(200, 121, 65, 0.08)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+                background: 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(16px)',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.06)',
+                },
               }}
             >
               <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>

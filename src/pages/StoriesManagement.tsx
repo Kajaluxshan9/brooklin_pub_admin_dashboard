@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { API_BASE_URL } from '../config/env.config';
 import {
   Box,
@@ -9,6 +9,10 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   FormControlLabel,
   Switch,
   Card,
@@ -18,6 +22,14 @@ import {
   Alert,
   Snackbar,
   LinearProgress,
+  Chip,
+  Grid,
+  Paper,
+  InputAdornment,
+  Tooltip,
+  Zoom,
+  Collapse,
+  Badge,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -26,8 +38,20 @@ import {
   CloudUpload as UploadIcon,
   Close as CloseIcon,
   Image as ImageIcon,
+  AutoStories as StoriesIcon,
+  Category as CategoryIcon,
+  Photo as PhotoIcon,
+  CheckCircle as ActiveIcon,
+  Search as SearchIcon,
+  FilterList as FilterIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Visibility as ViewIcon,
+  Collections as GalleryIcon,
 } from '@mui/icons-material';
 import { PageHeader } from '../components/common/PageHeader';
+import { SummaryStats } from '../components/common/SummaryStats';
+import type { StatItem } from '../components/common/SummaryStats';
 import { StatusChip } from '../components/common/StatusChip';
 import { getImageUrl, getErrorMessage } from '../utils/uploadHelpers';
 import logger from '../utils/logger';
@@ -88,6 +112,16 @@ const StoriesManagement: React.FC = () => {
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
     null,
   );
+
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'active' | 'inactive'
+  >('all');
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(),
+  );
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const showSnackbar = useCallback(
     (message: string, severity: SnackbarState['severity'] = 'success') => {
@@ -290,15 +324,7 @@ const StoriesManagement: React.FC = () => {
     setStoryDialog(true);
   };
 
-  const handleEditStory = (story: Story) => {
-    setEditingStory(story);
-    setSelectedCategory(story.category || null);
-    setExistingImageUrls(story.imageUrls || []);
-    setSelectedFiles([]);
-    setImagePreviews([]);
-    setImagesToDelete([]);
-    setStoryDialog(true);
-  };
+  // Edit story is currently handled via the story dialog creation route.
 
   const handleCloseStoryDialog = () => {
     setStoryDialog(false);
@@ -319,8 +345,15 @@ const StoriesManagement: React.FC = () => {
         return;
       }
       // For edit require at least one file or existing image
-      if (editingStory && selectedFiles.length === 0 && existingImageUrls.length === 0) {
-        showSnackbar('Please select at least one image or keep existing images', 'error');
+      if (
+        editingStory &&
+        selectedFiles.length === 0 &&
+        existingImageUrls.length === 0
+      ) {
+        showSnackbar(
+          'Please select at least one image or keep existing images',
+          'error',
+        );
         return;
       }
 
@@ -350,12 +383,15 @@ const StoriesManagement: React.FC = () => {
       if (editingStory) {
         // Update existing story
         const finalImageUrls = [...existingImageUrls, ...imageUrls];
-        storyResponse = await fetch(`${API_BASE_URL}/stories/${editingStory.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ imageUrls: finalImageUrls }),
-        });
+        storyResponse = await fetch(
+          `${API_BASE_URL}/stories/${editingStory.id}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ imageUrls: finalImageUrls }),
+          },
+        );
       } else {
         // Create story
         storyResponse = await fetch(`${API_BASE_URL}/stories`, {
@@ -430,6 +466,68 @@ const StoriesManagement: React.FC = () => {
     }
   };
 
+  // Filter categories based on search and status
+  const filteredCategories = useMemo(() => {
+    let result = categories;
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      const isActive = statusFilter === 'active';
+      result = result.filter((c) => c.isActive === isActive);
+    }
+
+    // Filter by search term
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.name.toLowerCase().includes(term) ||
+          (c.description && c.description.toLowerCase().includes(term)),
+      );
+    }
+
+    return result;
+  }, [categories, searchTerm, statusFilter]);
+
+  // Toggle category expansion
+  const toggleCategoryExpansion = useCallback((categoryId: string) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Expand all categories
+  const expandAllCategories = useCallback(() => {
+    setExpandedCategories(new Set(categories.map((c) => c.id)));
+  }, [categories]);
+
+  // Collapse all categories
+  const collapseAllCategories = useCallback(() => {
+    setExpandedCategories(new Set());
+  }, []);
+
+  // Calculate stories stats
+  const storiesStats = useMemo(() => {
+    const allStories = categories.flatMap((c) => c.stories || []);
+    const totalImages = allStories.reduce(
+      (acc, s) => acc + (s.imageUrls?.length || 0),
+      0,
+    );
+    return {
+      totalCategories: categories.length,
+      activeCategories: categories.filter((c) => c.isActive).length,
+      totalStories: allStories.length,
+      activeStories: allStories.filter((s) => s.isActive).length,
+      totalImages,
+    };
+  }, [categories]);
+
   return (
     <Box sx={{ p: 3 }}>
       <PageHeader
@@ -455,6 +553,46 @@ const StoriesManagement: React.FC = () => {
         }
       />
 
+      {/* Summary Statistics */}
+      <SummaryStats
+        stats={
+          [
+            {
+              label: 'Categories',
+              value: storiesStats.totalCategories,
+              icon: <CategoryIcon fontSize="small" />,
+              color: '#C87941',
+            },
+            {
+              label: 'Active Categories',
+              value: storiesStats.activeCategories,
+              icon: <ActiveIcon fontSize="small" />,
+              color: '#4CAF50',
+            },
+            {
+              label: 'Total Stories',
+              value: storiesStats.totalStories,
+              icon: <StoriesIcon fontSize="small" />,
+              color: '#2196F3',
+            },
+            {
+              label: 'Active Stories',
+              value: storiesStats.activeStories,
+              icon: <ActiveIcon fontSize="small" />,
+              color: '#43A047',
+            },
+            {
+              label: 'Total Images',
+              value: storiesStats.totalImages,
+              icon: <PhotoIcon fontSize="small" />,
+              color: '#9C27B0',
+            },
+          ] as StatItem[]
+        }
+        variant="compact"
+        columns={5}
+      />
+
       {loading && (
         <LinearProgress
           sx={{
@@ -465,167 +603,658 @@ const StoriesManagement: React.FC = () => {
         />
       )}
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {categories.map((category) => (
-          <Box key={category.id}>
-            <Card
+      {/* Search and Filter Bar */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          mb: 3,
+          borderRadius: 2.5,
+          border: '1px solid rgba(200, 121, 65, 0.08)',
+          background: 'linear-gradient(180deg, #FFFBF7 0%, #FFFFFF 100%)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+        }}
+      >
+        <Grid container spacing={2} alignItems="center">
+          <Grid size={{ xs: 12, md: 5 }}>
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="Search categories..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: '#C87941', fontSize: '1.2rem' }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
-                borderRadius: 3,
-                boxShadow: '0 2px 12px rgba(200, 121, 65, 0.12)',
-                border: '1px solid #E8DDD0',
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'white',
+                  borderRadius: 2,
+                  '& fieldset': { borderColor: 'rgba(200, 121, 65, 0.2)' },
+                  '&:hover fieldset': { borderColor: '#C87941' },
+                  '&.Mui-focused fieldset': { borderColor: '#C87941' },
+                },
+              }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <FormControl
+              size="small"
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'white',
+                  borderRadius: 2,
+                  '& fieldset': { borderColor: 'rgba(200, 121, 65, 0.2)' },
+                  '&:hover fieldset': { borderColor: '#C87941' },
+                  '&.Mui-focused fieldset': { borderColor: '#C87941' },
+                },
               }}
             >
-              <CardContent>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    mb: 2,
+              <InputLabel sx={{ '&.Mui-focused': { color: '#C87941' } }}>
+                Status
+              </InputLabel>
+              <Select
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as typeof statusFilter)
+                }
+                label="Status"
+              >
+                <MenuItem value="all">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FilterIcon sx={{ fontSize: 18, color: '#C87941' }} />
+                    All Categories
+                  </Box>
+                </MenuItem>
+                <MenuItem value="active">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ActiveIcon sx={{ fontSize: 18, color: '#4CAF50' }} />
+                    Active Only
+                  </Box>
+                </MenuItem>
+                <MenuItem value="inactive">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CloseIcon sx={{ fontSize: 18, color: '#F44336' }} />
+                    Inactive Only
+                  </Box>
+                </MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+              <Button
+                size="small"
+                onClick={expandAllCategories}
+                startIcon={<ExpandMoreIcon />}
+                sx={{
+                  color: '#6B4E3D',
+                  '&:hover': { backgroundColor: 'rgba(200, 121, 65, 0.08)' },
+                }}
+              >
+                Expand All
+              </Button>
+              <Button
+                size="small"
+                onClick={collapseAllCategories}
+                startIcon={<ExpandLessIcon />}
+                sx={{
+                  color: '#6B4E3D',
+                  '&:hover': { backgroundColor: 'rgba(200, 121, 65, 0.08)' },
+                }}
+              >
+                Collapse All
+              </Button>
+              {(searchTerm || statusFilter !== 'all') && (
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setStatusFilter('all');
                   }}
+                  startIcon={<CloseIcon />}
+                  sx={{
+                    color: '#C87941',
+                    borderColor: 'rgba(200, 121, 65, 0.3)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(200, 121, 65, 0.08)',
+                      borderColor: '#C87941',
+                    },
+                  }}
+                  variant="outlined"
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      {category.name}
-                    </Typography>
-                    <StatusChip
-                      status={category.isActive ? 'active' : 'inactive'}
-                    />
-                  </Box>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButton
-                      onClick={() => handleToggleCategoryStatus(category.id)}
-                      sx={{ color: '#C87941' }}
-                    >
-                      <Switch checked={category.isActive} />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleOpenCategoryDialog(category)}
-                      sx={{ color: '#C87941' }}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleDeleteCategory(category.id)}
-                      sx={{ color: '#d32f2f' }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                    <Button
-                      variant="outlined"
-                      startIcon={<UploadIcon />}
-                      onClick={() => handleOpenStoryDialog(category)}
-                      sx={{
-                        borderColor: '#C87941',
-                        color: '#C87941',
-                        '&:hover': {
-                          borderColor: '#A45F2D',
-                          backgroundColor: 'rgba(200, 121, 65, 0.1)',
-                        },
-                      }}
-                    >
-                      Upload Images
-                    </Button>
-                  </Box>
-                </Box>
+                  Clear Filters
+                </Button>
+              )}
+            </Box>
+          </Grid>
+        </Grid>
 
-                {category.description && (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mb: 2 }}
-                  >
-                    {category.description}
-                  </Typography>
-                )}
+        {/* Active filter chips */}
+        {(searchTerm || statusFilter !== 'all') && (
+          <Box
+            sx={{
+              mt: 1.5,
+              display: 'flex',
+              gap: 1,
+              flexWrap: 'wrap',
+              alignItems: 'center',
+            }}
+          >
+            <Typography variant="caption" sx={{ color: '#6B4E3D', mr: 0.5 }}>
+              Showing:
+            </Typography>
+            {searchTerm && (
+              <Chip
+                size="small"
+                label={`Search: "${searchTerm}"`}
+                onDelete={() => setSearchTerm('')}
+                sx={{
+                  backgroundColor: 'rgba(200, 121, 65, 0.12)',
+                  color: '#C87941',
+                  '& .MuiChip-deleteIcon': { color: '#C87941' },
+                }}
+              />
+            )}
+            {statusFilter !== 'all' && (
+              <Chip
+                size="small"
+                label={`Status: ${
+                  statusFilter === 'active' ? 'Active' : 'Inactive'
+                }`}
+                onDelete={() => setStatusFilter('all')}
+                sx={{
+                  backgroundColor:
+                    statusFilter === 'active'
+                      ? 'rgba(76, 175, 80, 0.12)'
+                      : 'rgba(244, 67, 54, 0.12)',
+                  color: statusFilter === 'active' ? '#4CAF50' : '#F44336',
+                  '& .MuiChip-deleteIcon': {
+                    color: statusFilter === 'active' ? '#4CAF50' : '#F44336',
+                  },
+                }}
+              />
+            )}
+            <Typography variant="caption" sx={{ color: '#8B7355', ml: 1 }}>
+              ({filteredCategories.length} of {categories.length} categories)
+            </Typography>
+          </Box>
+        )}
+      </Paper>
 
-                {/* Display stories */}
-                {category.stories && category.stories.length > 0 ? (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                    {category.stories.map((story) => (
-                      <Box key={story.id} sx={{ position: 'relative' }}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: 1,
-                          }}
-                        >
-                          {story.imageUrls.map((url, idx) => (
-                            <Card
-                              key={idx}
-                              sx={{
-                                width: 150,
-                                height: 150,
-                                position: 'relative',
-                              }}
-                            >
-                              <CardMedia
-                                component="img"
-                                height="150"
-                                image={getImageUrl(url)}
-                                alt={`Story image ${idx + 1}`}
-                              />
-                            </Card>
-                          ))}
-                        </Box>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            gap: 1,
-                            position: 'absolute',
-                            top: 4,
-                            right: 4,
-                          }}
-                        >
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEditStory(story)}
-                            sx={{
-                              bgcolor: 'rgba(255,255,255,0.9)',
-                              '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
-                            }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteStory(story.id)}
-                            sx={{
-                              bgcolor: 'rgba(255,255,255,0.9)',
-                              '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" color="error" />
-                          </IconButton>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                ) : (
+      {/* Categories List */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {filteredCategories.length === 0 ? (
+          <Paper
+            sx={{
+              p: 6,
+              textAlign: 'center',
+              borderRadius: 2.5,
+              border: '2px dashed rgba(200, 121, 65, 0.3)',
+              background: 'rgba(255, 251, 247, 0.5)',
+            }}
+          >
+            <StoriesIcon
+              sx={{ fontSize: 64, color: '#C87941', opacity: 0.4, mb: 2 }}
+            />
+            <Typography variant="h6" sx={{ color: '#6B4E3D', mb: 1 }}>
+              {categories.length === 0
+                ? 'No Categories Yet'
+                : 'No Results Found'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {categories.length === 0
+                ? 'Create your first story category to get started.'
+                : 'Try adjusting your search or filter criteria.'}
+            </Typography>
+          </Paper>
+        ) : (
+          filteredCategories.map((category) => {
+            const storyCount = category.stories?.length || 0;
+            const totalImages =
+              category.stories?.reduce(
+                (acc, s) => acc + (s.imageUrls?.length || 0),
+                0,
+              ) || 0;
+            const isExpanded = expandedCategories.has(category.id);
+
+            return (
+              <Card
+                key={category.id}
+                sx={{
+                  borderRadius: 2.5,
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+                  border: '1px solid rgba(200, 121, 65, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(16px)',
+                  overflow: 'visible',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 8px 32px rgba(200, 121, 65, 0.12)',
+                  },
+                }}
+              >
+                <CardContent sx={{ pb: isExpanded ? 2 : '16px !important' }}>
+                  {/* Category Header */}
                   <Box
                     sx={{
-                      textAlign: 'center',
-                      py: 4,
-                      bgcolor: 'grey.50',
-                      borderRadius: 2,
-                      border: '2px dashed',
-                      borderColor: 'grey.300',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      cursor: 'pointer',
                     }}
+                    onClick={() => toggleCategoryExpansion(category.id)}
                   >
-                    <ImageIcon
-                      sx={{ fontSize: 48, color: 'grey.400', mb: 1 }}
-                    />
-                    <Typography variant="body2" color="text.secondary">
-                      No stories yet. Click "Upload Images" to add stories.
-                    </Typography>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        flex: 1,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 2,
+                          background:
+                            'linear-gradient(135deg, #C87941 0%, #A45F2D 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 4px 12px rgba(200, 121, 65, 0.25)',
+                        }}
+                      >
+                        <CategoryIcon sx={{ color: 'white', fontSize: 24 }} />
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <Typography
+                            variant="h6"
+                            sx={{ fontWeight: 700, color: '#2C1810' }}
+                          >
+                            {category.name}
+                          </Typography>
+                          <StatusChip
+                            status={category.isActive ? 'active' : 'inactive'}
+                          />
+                          <Chip
+                            size="small"
+                            icon={
+                              <GalleryIcon
+                                sx={{ fontSize: '16px !important' }}
+                              />
+                            }
+                            label={`${storyCount} stories`}
+                            sx={{
+                              backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                              color: '#2196F3',
+                              fontWeight: 600,
+                              fontSize: '0.75rem',
+                            }}
+                          />
+                          <Chip
+                            size="small"
+                            icon={
+                              <PhotoIcon sx={{ fontSize: '16px !important' }} />
+                            }
+                            label={`${totalImages} images`}
+                            sx={{
+                              backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                              color: '#9C27B0',
+                              fontWeight: 600,
+                              fontSize: '0.75rem',
+                            }}
+                          />
+                        </Box>
+                        {category.description && (
+                          <Typography
+                            variant="body2"
+                            sx={{ color: '#6B4E3D', mt: 0.5, maxWidth: 500 }}
+                            noWrap
+                          >
+                            {category.description}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+
+                    {/* Action Buttons */}
+                    <Box
+                      sx={{ display: 'flex', gap: 1, alignItems: 'center' }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Tooltip
+                        title={category.isActive ? 'Deactivate' : 'Activate'}
+                        arrow
+                      >
+                        <Switch
+                          checked={category.isActive}
+                          onChange={() =>
+                            handleToggleCategoryStatus(category.id)
+                          }
+                          sx={{
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                              color: '#4CAF50',
+                            },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+                              {
+                                backgroundColor: '#4CAF50',
+                              },
+                          }}
+                        />
+                      </Tooltip>
+                      <Tooltip title="Edit Category" arrow>
+                        <IconButton
+                          onClick={() => handleOpenCategoryDialog(category)}
+                          sx={{
+                            color: '#C87941',
+                            '&:hover': {
+                              backgroundColor: 'rgba(200, 121, 65, 0.1)',
+                            },
+                          }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete Category" arrow>
+                        <IconButton
+                          onClick={() => handleDeleteCategory(category.id)}
+                          sx={{
+                            color: '#d32f2f',
+                            '&:hover': {
+                              backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                            },
+                          }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<UploadIcon />}
+                        onClick={() => handleOpenStoryDialog(category)}
+                        sx={{
+                          backgroundColor: '#C87941',
+                          color: 'white',
+                          borderRadius: 2,
+                          px: 2,
+                          boxShadow: '0 4px 12px rgba(200, 121, 65, 0.25)',
+                          '&:hover': { backgroundColor: '#A45F2D' },
+                        }}
+                      >
+                        Upload
+                      </Button>
+                      <IconButton
+                        sx={{ color: '#6B4E3D' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleCategoryExpansion(category.id);
+                        }}
+                      >
+                        {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                      </IconButton>
+                    </Box>
                   </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Box>
-        ))}
+
+                  {/* Collapsible Stories Section */}
+                  <Collapse in={isExpanded}>
+                    <Box
+                      sx={{
+                        mt: 3,
+                        pt: 2,
+                        borderTop: '1px solid rgba(200, 121, 65, 0.1)',
+                      }}
+                    >
+                      {category.stories && category.stories.length > 0 ? (
+                        <Grid container spacing={2}>
+                          {category.stories.map((story) => (
+                            <Grid key={story.id}>
+                              <Box sx={{ position: 'relative' }}>
+                                {/* Story Image Grid */}
+                                <Box
+                                  sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: `repeat(${Math.min(
+                                      story.imageUrls.length,
+                                      4,
+                                    )}, 1fr)`,
+                                    gap: 0.5,
+                                    borderRadius: 2,
+                                    overflow: 'hidden',
+                                    border:
+                                      '1px solid rgba(200, 121, 65, 0.12)',
+                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+                                    maxWidth:
+                                      story.imageUrls.length === 1 ? 180 : 360,
+                                  }}
+                                >
+                                  {story.imageUrls
+                                    .slice(0, 4)
+                                    .map((url, idx) => (
+                                      <Box
+                                        key={idx}
+                                        sx={{
+                                          position: 'relative',
+                                          aspectRatio: '1',
+                                          overflow: 'hidden',
+                                          cursor: 'pointer',
+                                          '&:hover': {
+                                            '& img': {
+                                              transform: 'scale(1.1)',
+                                            },
+                                            '& .preview-overlay': {
+                                              opacity: 1,
+                                            },
+                                          },
+                                        }}
+                                        onClick={() =>
+                                          setPreviewImage(getImageUrl(url))
+                                        }
+                                      >
+                                        <Box
+                                          component="img"
+                                          src={getImageUrl(url)}
+                                          alt={`Story ${idx + 1}`}
+                                          sx={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                            transition: 'transform 0.3s ease',
+                                          }}
+                                        />
+                                        <Box
+                                          className="preview-overlay"
+                                          sx={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            backgroundColor:
+                                              'rgba(0, 0, 0, 0.4)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            opacity: 0,
+                                            transition: 'opacity 0.2s ease',
+                                          }}
+                                        >
+                                          <ViewIcon
+                                            sx={{
+                                              color: 'white',
+                                              fontSize: 24,
+                                            }}
+                                          />
+                                        </Box>
+                                        {/* +X indicator for more images */}
+                                        {idx === 3 &&
+                                          story.imageUrls.length > 4 && (
+                                            <Box
+                                              sx={{
+                                                position: 'absolute',
+                                                inset: 0,
+                                                backgroundColor:
+                                                  'rgba(0, 0, 0, 0.6)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                              }}
+                                            >
+                                              <Typography
+                                                sx={{
+                                                  color: 'white',
+                                                  fontWeight: 700,
+                                                  fontSize: '1.25rem',
+                                                }}
+                                              >
+                                                +{story.imageUrls.length - 4}
+                                              </Typography>
+                                            </Box>
+                                          )}
+                                      </Box>
+                                    ))}
+                                </Box>
+
+                                {/* Story Action Buttons (remove Edit in preview expanded grid) */}
+                                <Box
+                                  sx={{
+                                    position: 'absolute',
+                                    top: -8,
+                                    right: -8,
+                                    display: 'flex',
+                                    gap: 0.5,
+                                  }}
+                                >
+                                  <Tooltip
+                                    title="Delete Story"
+                                    arrow
+                                    TransitionComponent={Zoom}
+                                  >
+                                    <IconButton
+                                      size="small"
+                                      onClick={() =>
+                                        handleDeleteStory(story.id)
+                                      }
+                                      sx={{
+                                        bgcolor: 'white',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                        '&:hover': { bgcolor: '#FFF0F0' },
+                                      }}
+                                    >
+                                      <DeleteIcon
+                                        fontSize="small"
+                                        color="error"
+                                      />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+
+                                {/* Image count badge */}
+                                <Badge
+                                  badgeContent={story.imageUrls.length}
+                                  sx={{
+                                    position: 'absolute',
+                                    bottom: 8,
+                                    right: 8,
+                                    '& .MuiBadge-badge': {
+                                      backgroundColor:
+                                        'rgba(200, 121, 65, 0.9)',
+                                      color: 'white',
+                                      fontWeight: 600,
+                                      fontSize: '0.7rem',
+                                    },
+                                  }}
+                                />
+                              </Box>
+                            </Grid>
+                          ))}
+                        </Grid>
+                      ) : (
+                        <Box
+                          sx={{
+                            textAlign: 'center',
+                            py: 4,
+                            bgcolor: 'rgba(255, 251, 247, 0.5)',
+                            borderRadius: 2,
+                            border: '2px dashed rgba(200, 121, 65, 0.2)',
+                          }}
+                        >
+                          <ImageIcon
+                            sx={{
+                              fontSize: 48,
+                              color: '#C87941',
+                              opacity: 0.4,
+                              mb: 1,
+                            }}
+                          />
+                          <Typography variant="body2" sx={{ color: '#6B4E3D' }}>
+                            No stories yet. Click "Upload" to add images.
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Collapse>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </Box>
+
+      {/* Image Preview Dialog */}
+      <Dialog
+        open={!!previewImage}
+        onClose={() => setPreviewImage(null)}
+        maxWidth="lg"
+        PaperProps={{
+          sx: {
+            backgroundColor: 'transparent',
+            boxShadow: 'none',
+            overflow: 'visible',
+          },
+        }}
+      >
+        <Box sx={{ position: 'relative' }}>
+          <IconButton
+            onClick={() => setPreviewImage(null)}
+            sx={{
+              position: 'absolute',
+              top: -48,
+              right: 0,
+              color: 'white',
+              bgcolor: 'rgba(0, 0, 0, 0.5)',
+              '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.7)' },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+          {previewImage && (
+            <Box
+              component="img"
+              src={previewImage}
+              alt="Preview"
+              sx={{
+                maxWidth: '90vw',
+                maxHeight: '80vh',
+                borderRadius: 2,
+                boxShadow: '0 16px 64px rgba(0, 0, 0, 0.3)',
+              }}
+            />
+          )}
+        </Box>
+      </Dialog>
 
       {/* Category Dialog */}
       <Dialog

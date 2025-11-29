@@ -13,3 +13,5 @@ export { SearchBar } from "./SearchBar";
 export { Toast } from "./Toast";
 export { EnhancedTooltip } from "./Tooltip";
 export { ConfirmDialog } from "./ConfirmDialog";
+export { SummaryStats } from './SummaryStats';
+export type { StatItem } from './SummaryStats';

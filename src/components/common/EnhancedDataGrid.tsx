@@ -31,11 +31,13 @@ export const EnhancedDataGrid: React.FC<EnhancedDataGridProps> = ({
     <Paper
       sx={{
         borderRadius: 2.5,
-        border: "1px solid",
-        borderColor: STANDARD_COLORS.ui.border,
-        overflow: "hidden",
-        boxShadow:
-          "0 1px 3px 0 rgba(212, 165, 116, 0.1), 0 1px 2px 0 rgba(212, 165, 116, 0.06)",
+        border: '1px solid',
+        borderColor: 'rgba(200, 121, 65, 0.08)',
+        overflow: 'hidden',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+        background: 'rgba(255, 255, 255, 0.9)',
+        backdropFilter: 'blur(16px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
       }}
     >
       {(title || subtitle) && (
@@ -43,7 +45,7 @@ export const EnhancedDataGrid: React.FC<EnhancedDataGridProps> = ({
           sx={{
             p: 3,
             pb: 2,
-            borderBottom: "1px solid",
+            borderBottom: '1px solid',
             borderColor: STANDARD_COLORS.ui.border,
           }}
         >
@@ -75,46 +77,46 @@ export const EnhancedDataGrid: React.FC<EnhancedDataGridProps> = ({
             paginationModel: { pageSize, page: 0 },
           },
         }}
-        pageSizeOptions={[5, 10, 25, 50]}
+        pageSizeOptions={[10, 25, 50, 100, 200, 300]}
         checkboxSelection={checkboxSelection}
         disableRowSelectionOnClick={disableRowSelectionOnClick}
         onRowClick={onRowClick}
         sx={{
-          border: "none",
-          "& .MuiDataGrid-cell": {
-            borderBottom: "1px solid",
+          border: 'none',
+          '& .MuiDataGrid-cell': {
+            borderBottom: '1px solid',
             borderColor: STANDARD_COLORS.ui.border,
             py: 1.5,
           },
-          "& .MuiDataGrid-columnHeaders": {
+          '& .MuiDataGrid-columnHeaders': {
             bgcolor: STANDARD_COLORS.ui.background,
-            borderBottom: "2px solid",
+            borderBottom: '2px solid',
             borderColor: STANDARD_COLORS.ui.border,
-            "& .MuiDataGrid-columnHeaderTitle": {
+            '& .MuiDataGrid-columnHeaderTitle': {
               fontWeight: 600,
-              fontSize: "0.813rem",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
+              fontSize: '0.813rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
               color: STANDARD_COLORS.text.secondary,
             },
           },
-          "& .MuiDataGrid-row": {
-            "&:hover": {
+          '& .MuiDataGrid-row': {
+            '&:hover': {
               bgcolor: `${STANDARD_COLORS.brand.primary}08`,
             },
-            "&.Mui-selected": {
+            '&.Mui-selected': {
               bgcolor: `${STANDARD_COLORS.brand.primary}15`,
-              "&:hover": {
+              '&:hover': {
                 bgcolor: `${STANDARD_COLORS.brand.primary}20`,
               },
             },
           },
-          "& .MuiDataGrid-footerContainer": {
-            borderTop: "2px solid",
+          '& .MuiDataGrid-footerContainer': {
+            borderTop: '2px solid',
             borderColor: STANDARD_COLORS.ui.border,
             bgcolor: STANDARD_COLORS.ui.background,
           },
-          "& .MuiTablePagination-root": {
+          '& .MuiTablePagination-root': {
             color: STANDARD_COLORS.text.secondary,
           },
         }}

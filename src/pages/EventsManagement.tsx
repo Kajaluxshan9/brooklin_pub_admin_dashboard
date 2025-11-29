@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { API_BASE_URL } from "../config/env.config";
+import React, { useState, useEffect, useMemo } from 'react';
+import { API_BASE_URL } from '../config/env.config';
 import {
   Box,
   Typography,
@@ -29,10 +29,16 @@ import {
   IconButton,
   Alert,
   Snackbar,
-} from "@mui/material";
-import { PageHeader } from "../components/common/PageHeader";
-import logger from "../utils/logger";
-import { uploadImages, getErrorMessage, getImageUrl } from '../utils/uploadHelpers';
+} from '@mui/material';
+import { PageHeader } from '../components/common/PageHeader';
+import { SummaryStats } from '../components/common/SummaryStats';
+import type { StatItem } from '../components/common/SummaryStats';
+import logger from '../utils/logger';
+import {
+  uploadImages,
+  getErrorMessage,
+  getImageUrl,
+} from '../utils/uploadHelpers';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -48,22 +54,26 @@ import {
   CloudUpload as UploadIcon,
   Close as CloseIcon,
   Image as ImageIcon,
-} from "@mui/icons-material";
-import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
-import moment from "moment-timezone";
-import { EVENT_TYPE_COLORS } from "../utils/standardColors";
+  Upcoming as UpcomingIcon,
+  PlayCircle as OngoingIcon,
+  History as PastIcon,
+  CheckCircle as ActiveIcon,
+} from '@mui/icons-material';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import moment from 'moment-timezone';
+import { EVENT_TYPE_COLORS } from '../utils/standardColors';
 
-const TIMEZONE = "America/Toronto";
+const TIMEZONE = 'America/Toronto';
 
 const EventType = {
-  LIVE_MUSIC: "live_music",
-  SPORTS_VIEWING: "sports_viewing",
-  TRIVIA_NIGHT: "trivia_night",
-  PRIVATE_PARTY: "private_party",
-  SPECIAL_EVENT: "special_event",
-  KARAOKE: "karaoke",
+  LIVE_MUSIC: 'live_music',
+  SPORTS_VIEWING: 'sports_viewing',
+  TRIVIA_NIGHT: 'trivia_night',
+  PRIVATE_PARTY: 'private_party',
+  SPECIAL_EVENT: 'special_event',
+  KARAOKE: 'karaoke',
 } as const;
 
 type EventTypeValue = (typeof EventType)[keyof typeof EventType];
@@ -89,8 +99,8 @@ const EventsManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
-    message: "",
-    severity: "success" as "success" | "error",
+    message: '',
+    severity: 'success' as 'success' | 'error',
   });
 
   const [eventForm, setEventForm] = useState<{
@@ -104,8 +114,8 @@ const EventsManagement: React.FC = () => {
     imageUrls: string[];
     isActive: boolean;
   }>({
-    title: "",
-    description: "",
+    title: '',
+    description: '',
     type: EventType.SPECIAL_EVENT,
     displayStartDate: null,
     displayEndDate: null,
@@ -116,6 +126,7 @@ const EventsManagement: React.FC = () => {
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
@@ -322,23 +333,23 @@ const EventsManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this event?")) {
+    if (window.confirm('Are you sure you want to delete this event?')) {
       try {
         const response = await fetch(`${API_BASE_URL}/events/${id}`, {
-          method: "DELETE",
-          credentials: "include",
+          method: 'DELETE',
+          credentials: 'include',
         });
 
         if (response.ok) {
           loadEvents();
-          showSnackbar("Event deleted successfully", "success");
+          showSnackbar('Event deleted successfully', 'success');
         } else {
           const errorData = await response.json().catch(() => ({}));
-          showSnackbar(errorData.message || "Failed to delete event", "error");
+          showSnackbar(errorData.message || 'Failed to delete event', 'error');
         }
       } catch (error) {
-        logger.error("Error deleting event:", error);
-        showSnackbar(getErrorMessage(error), "error");
+        logger.error('Error deleting event:', error);
+        showSnackbar(getErrorMessage(error), 'error');
       }
     }
   };
@@ -381,19 +392,35 @@ const EventsManagement: React.FC = () => {
     }
   };
 
-  const getEventStatus = (event: Event): "upcoming" | "ongoing" | "past" => {
+  const getEventStatus = (event: Event): 'upcoming' | 'ongoing' | 'past' => {
     const now = moment().tz(TIMEZONE);
     const startDate = moment.tz(event.eventStartDate, TIMEZONE);
     const endDate = moment.tz(event.eventEndDate, TIMEZONE);
 
     if (now.isBefore(startDate)) {
-      return "upcoming";
-    } else if (now.isBetween(startDate, endDate, null, "[]")) {
-      return "ongoing";
+      return 'upcoming';
+    } else if (now.isBetween(startDate, endDate, null, '[]')) {
+      return 'ongoing';
     } else {
-      return "past";
+      return 'past';
     }
   };
+
+  // Calculate event stats
+  const eventStats = useMemo(() => {
+    const stats = {
+      total: events.length,
+      active: events.filter((e) => e.isActive).length,
+      upcoming: 0,
+      ongoing: 0,
+      past: 0,
+    };
+    events.forEach((event) => {
+      const status = getEventStatus(event);
+      stats[status]++;
+    });
+    return stats;
+  }, [events]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterMoment}>
@@ -425,6 +452,46 @@ const EventsManagement: React.FC = () => {
           }
         />
 
+        {/* Summary Statistics */}
+        <SummaryStats
+          stats={
+            [
+              {
+                label: 'Total Events',
+                value: eventStats.total,
+                icon: <EventIcon fontSize="small" />,
+                color: '#C87941',
+              },
+              {
+                label: 'Upcoming',
+                value: eventStats.upcoming,
+                icon: <UpcomingIcon fontSize="small" />,
+                color: '#4CAF50',
+              },
+              {
+                label: 'Ongoing',
+                value: eventStats.ongoing,
+                icon: <OngoingIcon fontSize="small" />,
+                color: '#2196F3',
+              },
+              {
+                label: 'Past Events',
+                value: eventStats.past,
+                icon: <PastIcon fontSize="small" />,
+                color: '#9E9E9E',
+              },
+              {
+                label: 'Active',
+                value: eventStats.active,
+                icon: <ActiveIcon fontSize="small" />,
+                color: '#43A047',
+              },
+            ] as StatItem[]
+          }
+          variant="compact"
+          columns={5}
+        />
+
         {/* Events Grid */}
         <Grid container spacing={3}>
           {events.map((event) => (
@@ -435,25 +502,21 @@ const EventsManagement: React.FC = () => {
                   display: 'flex',
                   flexDirection: 'column',
                   position: 'relative',
-                  borderRadius: 4,
-                  background:
-                    'linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 247, 0.98) 100%)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  boxShadow:
-                    '0 8px 32px rgba(200, 121, 65, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.8)',
-                  border: `3px solid ${
+                  borderRadius: 2.5,
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+                  border: `1px solid ${
                     getEventStatus(event) === 'upcoming'
-                      ? getEventTypeColor(event.type)
-                      : 'rgba(200, 121, 65, 0.25)'
+                      ? `${getEventTypeColor(event.type)}30`
+                      : 'rgba(200, 121, 65, 0.1)'
                   }`,
-                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transition: 'all 0.2s ease',
                   overflow: 'hidden',
                   '&:hover': {
-                    transform: 'translateY(-8px) scale(1.02)',
-                    boxShadow:
-                      '0 16px 48px rgba(200, 121, 65, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.9)',
-                    borderColor: getEventTypeColor(event.type),
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.06)',
                   },
                 }}
               >
@@ -494,11 +557,17 @@ const EventsManagement: React.FC = () => {
                   <Box
                     sx={{
                       height: 200,
-                      backgroundImage: `url(${event.imageUrls[0]})`,
+                      backgroundImage: `url(${getImageUrl(
+                        event.imageUrls[0],
+                      )})`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       borderRadius: '12px 12px 0 0',
+                      cursor: 'pointer',
                     }}
+                    onClick={() =>
+                      setPreviewImage(getImageUrl(event.imageUrls[0]))
+                    }
                   />
                 )}
 
@@ -937,7 +1006,7 @@ const EventsManagement: React.FC = () => {
                             borderRadius: 2,
                             overflow: 'hidden',
                             backgroundColor: 'white',
-                            border: '2px solid #d7ccc8',
+                            border: '1px solid rgba(200, 121, 65, 0.1)',
                           }}
                         >
                           <Box
@@ -1087,10 +1156,51 @@ const EventsManagement: React.FC = () => {
             {snackbar.message}
           </Alert>
         </Snackbar>
+        {/* Image preview dialog */}
+        <Dialog
+          open={!!previewImage}
+          onClose={() => setPreviewImage(null)}
+          maxWidth="lg"
+          PaperProps={{
+            sx: {
+              backgroundColor: 'transparent',
+              boxShadow: 'none',
+              overflow: 'visible',
+            },
+          }}
+        >
+          <Box sx={{ position: 'relative' }}>
+            <IconButton
+              onClick={() => setPreviewImage(null)}
+              sx={{
+                position: 'absolute',
+                top: -48,
+                right: 0,
+                color: 'white',
+                bgcolor: 'rgba(0,0,0,0.5)',
+                '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+            {previewImage && (
+              <Box
+                component="img"
+                src={previewImage}
+                alt="Preview"
+                sx={{
+                  maxWidth: '90vw',
+                  maxHeight: '80vh',
+                  borderRadius: 2,
+                  boxShadow: '0 16px 64px rgba(0, 0, 0, 0.3)',
+                }}
+              />
+            )}
+          </Box>
+        </Dialog>
       </Box>
     </LocalizationProvider>
   );
 };
 
 export default EventsManagement;
-

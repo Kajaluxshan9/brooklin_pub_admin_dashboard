@@ -558,53 +558,32 @@ const Dashboard: React.FC = () => {
                 onClick={() => navigate(card.path)}
                 sx={{
                   height: '100%',
-                  borderRadius: 4,
-                  border: '2px solid',
-                  borderColor: `${card.color}20`,
-                  background: `linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, ${card.color}08 50%, rgba(255, 255, 255, 0.98) 100%)`,
-                  boxShadow: `0 8px 20px ${card.color}18, 0 4px 8px ${card.color}12, inset 0 1px 2px rgba(255, 255, 255, 0.8)`,
-                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'rgba(200, 121, 65, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(16px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   cursor: 'pointer',
                   position: 'relative',
                   overflow: 'hidden',
                   boxSizing: 'border-box',
-                  backdropFilter: 'blur(10px)',
-                  WebkitBackdropFilter: 'blur(10px)',
                   '&::before': {
                     content: '""',
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     right: 0,
-                    height: '5px',
-                    background: `linear-gradient(90deg, transparent 0%, ${card.color} 20%, ${card.color}CC 50%, ${card.color} 80%, transparent 100%)`,
-                    borderRadius: '16px 16px 0 0',
-                    boxShadow: `0 2px 8px ${card.color}40`,
-                  },
-                  '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    top: -2,
-                    left: -2,
-                    right: -2,
-                    bottom: -2,
-                    background: `linear-gradient(135deg, ${card.color}40, ${card.color}20)`,
-                    borderRadius: 4,
-                    opacity: 0,
-                    transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    zIndex: -1,
+                    height: '3px',
+                    background: `linear-gradient(90deg, ${card.color}80, ${card.color})`,
+                    borderRadius: '12px 12px 0 0',
                   },
                   '&:hover': {
-                    transform: 'translateY(-6px) scale(1.02)',
-                    boxShadow: `0 16px 40px ${card.color}30, 0 8px 20px ${card.color}20, inset 0 1px 2px rgba(255, 255, 255, 0.9)`,
-                    borderColor: card.color,
-                    background: `linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, ${card.color}15 50%, rgba(255, 255, 255, 0.98) 100%)`,
-                  },
-                  '&:hover::after': {
-                    opacity: 1,
-                  },
-                  '&:active': {
-                    transform: 'translateY(-2px) scale(1.01)',
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.08)',
+                    borderColor: 'rgba(200, 121, 65, 0.15)',
                   },
                 }}
               >
@@ -749,63 +728,35 @@ const Dashboard: React.FC = () => {
           <Paper
             sx={{
               p: 0,
-              borderRadius: 4,
+              borderRadius: 3,
               height: 'fit-content',
-              backgroundColor: 'rgba(255, 255, 255, 0.98)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              boxShadow:
-                '0 8px 24px rgba(200, 121, 65, 0.15), 0 4px 12px rgba(200, 121, 65, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.8)',
-              border: '2px solid',
-              borderColor: 'rgba(200, 121, 65, 0.2)',
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(16px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+              border: '1px solid rgba(200, 121, 65, 0.08)',
               overflow: 'hidden',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
-                boxShadow:
-                  '0 12px 32px rgba(200, 121, 65, 0.2), 0 6px 16px rgba(200, 121, 65, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.9)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
                 transform: 'translateY(-2px)',
               },
             }}
           >
             <Box
               sx={{
-                p: 3.5,
-                background:
-                  'linear-gradient(135deg, #C87941 0%, #E89B5C 50%, #F5A94C 100%)',
+                p: 3,
+                background: 'linear-gradient(135deg, #C87941 0%, #E89B5C 100%)',
                 position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background:
-                    'radial-gradient(circle at top right, rgba(255, 255, 255, 0.2), transparent 70%)',
-                },
-                '&::after': {
-                  content: '""',
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: '3px',
-                  background:
-                    'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%)',
-                },
               }}
             >
               <Typography
                 variant="h6"
                 sx={{
-                  fontWeight: 800,
-                  fontSize: '1.2rem',
+                  fontWeight: 700,
+                  fontSize: '1.125rem',
                   color: 'white',
-                  textShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-                  letterSpacing: '0.5px',
-                  position: 'relative',
-                  zIndex: 1,
+                  letterSpacing: '0.3px',
                 }}
               >
                 Recent Activity
@@ -893,10 +844,11 @@ const Dashboard: React.FC = () => {
           <Card
             sx={{
               borderRadius: 3,
-              boxShadow: '0 4px 16px rgba(200, 121, 65, 0.12)',
-              border: '2px solid',
-              borderColor: 'rgba(200, 121, 65, 0.15)',
-              backgroundColor: 'white',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+              border: '1px solid rgba(200, 121, 65, 0.08)',
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(16px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(16px) saturate(180%)',
               overflow: 'hidden',
             }}
           >
@@ -904,16 +856,6 @@ const Dashboard: React.FC = () => {
               sx={{
                 p: 3,
                 background: 'linear-gradient(135deg, #C87941 0%, #E89B5C 100%)',
-                position: 'relative',
-                '&::after': {
-                  content: '""',
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: '2px',
-                  background: 'rgba(255, 255, 255, 0.2)',
-                },
               }}
             >
               <Box
@@ -929,7 +871,6 @@ const Dashboard: React.FC = () => {
                     fontWeight: 700,
                     fontSize: '1.125rem',
                     color: 'white',
-                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                   }}
                 >
                   Tasks & To-Do
@@ -943,15 +884,13 @@ const Dashboard: React.FC = () => {
                     backgroundColor: 'rgba(255, 255, 255, 0.2)',
                     backdropFilter: 'blur(10px)',
                     color: 'white',
-                    border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
                     '&:hover': {
                       backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                     },
                     textTransform: 'none',
                     fontWeight: 600,
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
                 >
                   Add Task

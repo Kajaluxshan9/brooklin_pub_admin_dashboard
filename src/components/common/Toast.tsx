@@ -52,13 +52,14 @@ export const Toast: React.FC<ToastProps> = ({
       sx={{
         // Ensure toast appears above all overlays including dialogs/modals
         '&.MuiSnackbar-root': {
-          zIndex: 9999,
+          zIndex: 99999,
           top: { xs: 16, sm: 24 },
+          position: 'fixed',
         },
       }}
       slotProps={{
         root: {
-          style: { zIndex: 9999 },
+          style: { zIndex: 99999 },
         },
       }}
     >

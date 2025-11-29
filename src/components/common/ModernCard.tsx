@@ -41,30 +41,29 @@ export const ModernCard: React.FC<ModernCardProps> = ({
     switch (variant) {
       case "gradient":
         return {
-          background: `linear-gradient(135deg, ${color}15 0%, ${color}08 100%)`,
-          border: `2px solid ${color}30`,
-          boxShadow: `0 8px 24px ${color}20, inset 0 1px 2px rgba(255,255,255,0.5)`,
+          background: `linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, ${color}08 100%)`,
+          border: `1px solid ${color}15`,
+          boxShadow: `0 4px 20px rgba(0, 0, 0, 0.05)`,
         };
       case "glass":
         return {
-          background: "rgba(255, 255, 255, 0.7)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          border: "1px solid rgba(255, 255, 255, 0.3)",
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.08)",
+          background: 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(16px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+          border: '1px solid rgba(255, 255, 255, 0.4)',
+          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.06)',
         };
       case "elevated":
         return {
-          background: "#fff",
-          border: "none",
-          boxShadow:
-            "0 12px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)",
+          background: 'rgba(255, 255, 255, 0.95)',
+          border: '1px solid rgba(200, 121, 65, 0.06)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06)',
         };
       default:
         return {
-          background: "#fff",
-          border: "1px solid rgba(200, 121, 65, 0.12)",
-          boxShadow: "0 4px 12px rgba(200, 121, 65, 0.08)",
+          background: 'rgba(255, 255, 255, 0.9)',
+          border: '1px solid rgba(200, 121, 65, 0.08)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
         };
     }
   };
@@ -73,47 +72,44 @@ export const ModernCard: React.FC<ModernCardProps> = ({
     <Card
       onClick={onClick}
       sx={{
-        borderRadius: 3,
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        cursor: onClick ? "pointer" : "default",
-        position: "relative",
-        overflow: "visible",
+        borderRadius: 2.5,
+        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        cursor: onClick ? 'pointer' : 'default',
+        position: 'relative',
+        overflow: 'visible',
         ...getVariantStyles(),
-        "&:hover": onClick
+        '&:hover': onClick
           ? {
-              transform: "translateY(-4px) scale(1.01)",
-              boxShadow:
-                variant === "glass"
-                  ? "0 12px 40px rgba(0, 0, 0, 0.12)"
-                  : `0 16px 48px ${color}25`,
+              transform: 'translateY(-2px)',
+              boxShadow: '0 12px 32px rgba(0, 0, 0, 0.08)',
             }
           : {},
-        "&::before": {
+        '&::before': {
           content: '""',
-          position: "absolute",
+          position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          height: "3px",
-          background: `linear-gradient(90deg, ${color} 0%, ${color}CC 50%, transparent 100%)`,
-          borderRadius: "12px 12px 0 0",
-          opacity: 0.8,
+          height: '2px',
+          background: `linear-gradient(90deg, ${color}80 0%, ${color} 50%, ${color}80 100%)`,
+          borderRadius: '10px 10px 0 0',
+          opacity: 0.7,
         },
       }}
     >
-      <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
+      <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
         {/* Header Section */}
         {(title || action || icon || tag || onMenuClick) && (
           <Box
             sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
               mb: title || subtitle ? 2.5 : 0,
             }}
           >
             <Box
-              sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}
+              sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}
             >
               {icon && (
                 <Avatar
@@ -132,8 +128,8 @@ export const ModernCard: React.FC<ModernCardProps> = ({
               <Box sx={{ flex: 1 }}>
                 <Box
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
+                    display: 'flex',
+                    alignItems: 'center',
                     gap: 1.5,
                     mb: subtitle ? 0.5 : 0,
                   }}
@@ -143,9 +139,9 @@ export const ModernCard: React.FC<ModernCardProps> = ({
                       variant="h6"
                       sx={{
                         fontWeight: 700,
-                        fontSize: "1.125rem",
-                        color: "text.primary",
-                        letterSpacing: "-0.01em",
+                        fontSize: '1.125rem',
+                        color: 'text.primary',
+                        letterSpacing: '-0.01em',
                       }}
                     >
                       {title}
@@ -157,9 +153,9 @@ export const ModernCard: React.FC<ModernCardProps> = ({
                       size="small"
                       sx={{
                         height: 22,
-                        fontSize: "0.688rem",
+                        fontSize: '0.688rem',
                         fontWeight: 700,
-                        letterSpacing: "0.5px",
+                        letterSpacing: '0.5px',
                         background: tagColor || `${color}20`,
                         color: tagColor || color,
                         border: `1.5px solid ${tagColor || color}40`,
@@ -171,8 +167,8 @@ export const ModernCard: React.FC<ModernCardProps> = ({
                   <Typography
                     variant="body2"
                     sx={{
-                      color: "text.secondary",
-                      fontSize: "0.875rem",
+                      color: 'text.secondary',
+                      fontSize: '0.875rem',
                       fontWeight: 500,
                     }}
                   >
@@ -181,7 +177,7 @@ export const ModernCard: React.FC<ModernCardProps> = ({
                 )}
               </Box>
             </Box>
-            <Box sx={{ display: "flex", gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1 }}>
               {action}
               {onMenuClick && (
                 <IconButton
@@ -191,8 +187,8 @@ export const ModernCard: React.FC<ModernCardProps> = ({
                     onMenuClick();
                   }}
                   sx={{
-                    color: "text.secondary",
-                    "&:hover": {
+                    color: 'text.secondary',
+                    '&:hover': {
                       backgroundColor: `${color}15`,
                       color,
                     },
