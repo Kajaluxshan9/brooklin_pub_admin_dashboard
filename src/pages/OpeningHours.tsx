@@ -22,6 +22,7 @@ import {
 import moment from 'moment-timezone';
 import { useAuth } from '../contexts/AuthContext';
 import { PageHeader } from '../components/common/PageHeader';
+import { getErrorMessage } from '../utils/uploadHelpers';
 import logger from '../utils/logger';
 import { StatusChip } from '../components/common/StatusChip';
 
@@ -172,7 +173,7 @@ const OpeningHours: React.FC = () => {
   const saveOpeningHours = async (
     dayOfWeek: DayOfWeekValue,
     hoursData: EditFormData,
-  ): Promise<boolean> => {
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       setSaving(true);
       const existingHours = openingHours.find(
@@ -205,7 +206,10 @@ const OpeningHours: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`,
+        );
       }
 
       const result = await response.json();
@@ -223,10 +227,10 @@ const OpeningHours: React.FC = () => {
         setOpeningHours((prev) => [...prev, { ...payload, id: result.id }]);
       }
 
-      return true;
+      return { success: true };
     } catch (error) {
       logger.error('Error saving opening hours:', error);
-      return false;
+      return { success: false, error: getErrorMessage(error) };
     } finally {
       setSaving(false);
     }
@@ -260,9 +264,9 @@ const OpeningHours: React.FC = () => {
       return;
     }
 
-    const success = await saveOpeningHours(editingDay, editForm);
+    const result = await saveOpeningHours(editingDay, editForm);
 
-    if (success) {
+    if (result.success) {
       showNotification(
         `${getDayDisplayName(editingDay)} hours updated successfully`,
         'success',
@@ -278,7 +282,7 @@ const OpeningHours: React.FC = () => {
       });
     } else {
       showNotification(
-        'Failed to save opening hours. Please try again.',
+        result.error || 'Failed to save opening hours. Please try again.',
         'error',
       );
     }

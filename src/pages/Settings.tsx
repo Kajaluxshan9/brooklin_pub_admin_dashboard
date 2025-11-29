@@ -19,6 +19,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../utils/api';
+import { getErrorMessage } from '../utils/uploadHelpers';
 import { PageHeader } from '../components/common/PageHeader';
 import logger from '../utils/logger';
 
@@ -267,11 +268,12 @@ const Settings: React.FC = () => {
         setOriginalProfileForm(profileForm);
         setIsEditingProfile(false);
       } else {
-        showNotification('Failed to update profile', 'error');
+        const errorData = response.data;
+        showNotification(errorData?.message || 'Failed to update profile', 'error');
       }
     } catch (error) {
       logger.error('Error updating profile:', error);
-      showNotification('Error updating profile', 'error');
+      showNotification(getErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -298,11 +300,12 @@ const Settings: React.FC = () => {
           confirmPassword: '',
         });
       } else {
-        showNotification('Failed to change password', 'error');
+        const errorData = response.data;
+        showNotification(errorData?.message || 'Failed to change password', 'error');
       }
     } catch (error) {
       logger.error('Error changing password:', error);
-      showNotification('Error changing password', 'error');
+      showNotification(getErrorMessage(error), 'error');
     } finally {
       setPasswordLoading(false);
     }

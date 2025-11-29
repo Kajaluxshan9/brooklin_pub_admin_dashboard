@@ -29,7 +29,7 @@ import {
 } from '@mui/icons-material';
 import { PageHeader } from '../components/common/PageHeader';
 import { StatusChip } from '../components/common/StatusChip';
-import { getImageUrl } from '../utils/uploadHelpers';
+import { getImageUrl, getErrorMessage } from '../utils/uploadHelpers';
 import logger from '../utils/logger';
 
 interface StoryCategory {
@@ -110,7 +110,7 @@ const StoriesManagement: React.FC = () => {
       }
     } catch (error) {
       logger.error('Error loading categories:', error);
-      showSnackbar('Error loading story categories', 'error');
+      showSnackbar(getErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -174,7 +174,7 @@ const StoriesManagement: React.FC = () => {
       }
     } catch (error) {
       logger.error('Error saving category:', error);
-      showSnackbar('Error saving category', 'error');
+      showSnackbar(getErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -204,7 +204,7 @@ const StoriesManagement: React.FC = () => {
       }
     } catch (error) {
       logger.error('Error deleting category:', error);
-      showSnackbar('Error deleting category', 'error');
+      showSnackbar(getErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -228,7 +228,7 @@ const StoriesManagement: React.FC = () => {
       }
     } catch (error) {
       logger.error('Error toggling status:', error);
-      showSnackbar('Error updating category status', 'error');
+      showSnackbar(getErrorMessage(error), 'error');
     }
   };
 
@@ -398,7 +398,7 @@ const StoriesManagement: React.FC = () => {
       }
     } catch (error) {
       logger.error('Error saving story:', error);
-      showSnackbar('Error saving story', 'error');
+      showSnackbar(getErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -424,7 +424,7 @@ const StoriesManagement: React.FC = () => {
       }
     } catch (error) {
       logger.error('Error deleting story:', error);
-      showSnackbar('Error deleting story', 'error');
+      showSnackbar(getErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }

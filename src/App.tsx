@@ -152,6 +152,17 @@ const theme = createTheme({
     'none',
     'none',
   ],
+  // Ensure Snackbar (toast) always appears above dialogs/modals
+  zIndex: {
+    mobileStepper: 1000,
+    fab: 1050,
+    speedDial: 1050,
+    appBar: 1100,
+    drawer: 1200,
+    modal: 1300,
+    snackbar: 1500,
+    tooltip: 1600,
+  },
   components: {
     MuiCssBaseline: {
       styleOverrides: {
@@ -159,6 +170,16 @@ const theme = createTheme({
           fontFeatureSettings: '"cv02", "cv03", "cv04", "cv11"',
           fontVariationSettings: '"opsz" 32',
         },
+      },
+    },
+    MuiSnackbar: {
+      styleOverrides: {
+        root: {
+          zIndex: 9999,
+        },
+      },
+      defaultProps: {
+        anchorOrigin: { vertical: 'top', horizontal: 'center' },
       },
     },
     MuiAppBar: {

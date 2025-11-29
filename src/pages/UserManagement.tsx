@@ -42,6 +42,7 @@ import moment from 'moment-timezone';
 import { useAuth } from '../contexts/AuthContext';
 import logger from '../utils/logger';
 import { useGlobalToast } from '../contexts/ToastContext';
+import { getErrorMessage } from '../utils/uploadHelpers';
 import { PageHeader } from '../components/common/PageHeader';
 import { StatusChip } from '../components/common/StatusChip';
 import { ActionButtons } from '../components/common/ActionButtons';
@@ -254,15 +255,16 @@ const UserManagement: React.FC = () => {
       }
     } catch (error) {
       logger.error('Error saving user:', error);
-      showToast('Error saving user. Please try again.', 'error');
+      showToast(getErrorMessage(error), 'error');
     }
   };
 
   const handleDelete = async (id: string) => {
     // Check if trying to delete self
     if (currentUser?.id === id) {
-      alert(
-        'Error: You cannot delete your own account. Please ask another administrator to perform this action.',
+      showToast(
+        'You cannot delete your own account. Please ask another administrator to perform this action.',
+        'error',
       );
       return;
     }
@@ -289,16 +291,18 @@ const UserManagement: React.FC = () => {
 
         if (response.ok) {
           loadUsers();
+          showToast('User deleted successfully', 'success');
         } else {
           const errorData = await response.json();
-          alert(
-            `Failed to delete user: ${errorData.message || 'Unknown error'}`,
+          showToast(
+            errorData.message || 'Failed to delete user',
+            'error',
           );
           logger.error('Failed to delete user');
         }
       } catch (error) {
         logger.error('Error deleting user:', error);
-        alert('Error: Failed to delete user. Please try again.');
+        showToast(getErrorMessage(error), 'error');
       }
     }
   };
@@ -342,18 +346,17 @@ const UserManagement: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        alert(data.message || 'Verification email sent successfully');
+        showToast(data.message || 'Verification email sent successfully', 'success');
       } else {
         const errorData = await response.json();
-        alert(
-          `Failed to resend verification: ${
-            errorData.message || 'Unknown error'
-          }`,
+        showToast(
+          errorData.message || 'Failed to resend verification',
+          'error',
         );
       }
     } catch (error) {
       logger.error('Error resending verification:', error);
-      alert('Error: Failed to resend verification email. Please try again.');
+      showToast(getErrorMessage(error), 'error');
     }
     handleMenuClose();
   };
@@ -361,8 +364,9 @@ const UserManagement: React.FC = () => {
   const handleToggleStatus = async (userId: string) => {
     // Check if trying to inactivate self
     if (currentUser?.id === userId) {
-      alert(
-        'Error: You cannot change your own account status. Please ask another administrator to perform this action.',
+      showToast(
+        'You cannot change your own account status. Please ask another administrator to perform this action.',
+        'error',
       );
       handleMenuClose();
       return;
@@ -393,18 +397,18 @@ const UserManagement: React.FC = () => {
 
       if (response.ok) {
         loadUsers();
+        showToast('User status updated successfully', 'success');
       } else {
         const errorData = await response.json();
-        alert(
-          `Failed to toggle user status: ${
-            errorData.message || 'Unknown error'
-          }`,
+        showToast(
+          errorData.message || 'Failed to toggle user status',
+          'error',
         );
         logger.error('Failed to toggle user status');
       }
     } catch (error) {
       logger.error('Error toggling user status:', error);
-      alert('Error: Failed to toggle user status. Please try again.');
+      showToast(getErrorMessage(error), 'error');
     }
     handleMenuClose();
   };

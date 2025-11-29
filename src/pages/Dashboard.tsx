@@ -37,10 +37,12 @@ import {
 import moment from "moment-timezone";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useGlobalToast } from '../contexts/ToastContext';
 import { PageHeader } from "../components/common/PageHeader";
 import logger from "../utils/logger";
 import { StatusChip } from "../components/common/StatusChip";
 import { ActionButtons } from "../components/common/ActionButtons";
+import { getErrorMessage } from '../utils/uploadHelpers';
 
 interface DashboardStats {
   menuItems: number;
@@ -88,6 +90,7 @@ interface Todo {
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showToast } = useGlobalToast();
   const [stats, setStats] = useState<DashboardStats>({
     menuItems: 0,
     activeMenuItems: 0,
@@ -392,11 +395,11 @@ const Dashboard: React.FC = () => {
         await loadTodos();
         await loadDashboardData();
       } else {
-        alert('Failed to save todo. Please try again.');
+        showToast('Failed to save todo. Please try again.', 'error');
       }
     } catch (error) {
       logger.error('Error saving todo:', error);
-      alert('Error saving todo. Please try again.');
+      showToast(`Failed to save todo: ${getErrorMessage(error)}`, 'error');
     }
   };
 
@@ -408,11 +411,11 @@ const Dashboard: React.FC = () => {
           await loadTodos();
           await loadDashboardData();
         } else {
-          alert('Failed to delete todo. Please try again.');
+          showToast('Failed to delete todo. Please try again.', 'error');
         }
       } catch (error) {
         logger.error('Error deleting todo:', error);
-        alert('Error deleting todo. Please try again.');
+        showToast(`Failed to delete todo: ${getErrorMessage(error)}`, 'error');
       }
     }
   };

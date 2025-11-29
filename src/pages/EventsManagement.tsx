@@ -310,11 +310,12 @@ const EventsManagement: React.FC = () => {
           'success',
         );
       } else {
-        showSnackbar('Failed to save event', 'error');
+        const errorData = await response.json().catch(() => ({}));
+        showSnackbar(errorData.message || 'Failed to save event', 'error');
       }
     } catch (error) {
       logger.error('Error saving event:', error);
-      showSnackbar('Error saving event', 'error');
+      showSnackbar(getErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -332,11 +333,12 @@ const EventsManagement: React.FC = () => {
           loadEvents();
           showSnackbar("Event deleted successfully", "success");
         } else {
-          showSnackbar("Failed to delete event", "error");
+          const errorData = await response.json().catch(() => ({}));
+          showSnackbar(errorData.message || "Failed to delete event", "error");
         }
       } catch (error) {
         logger.error("Error deleting event:", error);
-        showSnackbar("Error deleting event", "error");
+        showSnackbar(getErrorMessage(error), "error");
       }
     }
   };

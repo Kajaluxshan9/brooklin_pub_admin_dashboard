@@ -39,7 +39,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import moment from "moment-timezone";
 import { api } from "../utils/api";
-import { getImageUrl } from "../utils/uploadHelpers";
+import { getImageUrl, getErrorMessage } from "../utils/uploadHelpers";
 import { StatusChip } from "../components/common/StatusChip";
 import { ActionButtons } from "../components/common/ActionButtons";
 import { PageHeader } from "../components/common/PageHeader";
@@ -157,8 +157,8 @@ const SpecialsManagement: React.FC = () => {
     try {
       const res = await api.get('/specials');
       setSpecials(res.data || []);
-    } catch {
-      showSnackbar('Error fetching specials', 'error');
+    } catch (error) {
+      showSnackbar(getErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -296,8 +296,8 @@ const SpecialsManagement: React.FC = () => {
 
       fetchSpecials();
       handleCloseDialog();
-    } catch {
-      showSnackbar('Error saving special', 'error');
+    } catch (error) {
+      showSnackbar(getErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -311,8 +311,8 @@ const SpecialsManagement: React.FC = () => {
       await api.delete(`/specials/${id}`);
       showSnackbar('Special deleted successfully', 'success');
       fetchSpecials();
-    } catch {
-      showSnackbar('Error deleting special', 'error');
+    } catch (error) {
+      showSnackbar(getErrorMessage(error), 'error');
     }
   };
 
@@ -321,8 +321,8 @@ const SpecialsManagement: React.FC = () => {
       await api.patch(`/specials/${special.id}`, { isActive: !special.isActive });
       showSnackbar('Special status updated', 'success');
       fetchSpecials();
-    } catch {
-      showSnackbar('Error updating special status', 'error');
+    } catch (error) {
+      showSnackbar(getErrorMessage(error), 'error');
     }
   };
 

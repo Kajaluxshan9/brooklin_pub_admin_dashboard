@@ -50,18 +50,17 @@ export const Toast: React.FC<ToastProps> = ({
       anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       TransitionComponent={SlideTransition}
       sx={{
-        // Make snackbar top of all overlays (dialogs, modals)
-        zIndex: 99999,
-        position: 'fixed',
-        '& .MuiSnackbar-root': {
-          top: { xs: 8, sm: 24 },
+        // Ensure toast appears above all overlays including dialogs/modals
+        '&.MuiSnackbar-root': {
+          zIndex: 9999,
+          top: { xs: 16, sm: 24 },
         },
       }}
-      // Ensure popup is rendered in a portal at the end of the DOM tree
-      // and container gets high z-index; Material-UI uses a Portal by default,
-      // but we can ensure the portal style is consistent for cross-browser support.
-      // @ts-ignore PortalProps typed as any
-      PortalProps={{ style: { zIndex: 99999 } }}
+      slotProps={{
+        root: {
+          style: { zIndex: 9999 },
+        },
+      }}
     >
       <Alert
         onClose={onClose}
