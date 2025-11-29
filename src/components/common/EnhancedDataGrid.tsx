@@ -77,7 +77,7 @@ export const EnhancedDataGrid: React.FC<EnhancedDataGridProps> = ({
             paginationModel: { pageSize, page: 0 },
           },
         }}
-        pageSizeOptions={[10, 25, 50, 100, 200, 300]}
+        pageSizeOptions={[10, 25, 50, 100]}
         checkboxSelection={checkboxSelection}
         disableRowSelectionOnClick={disableRowSelectionOnClick}
         onRowClick={onRowClick}
