@@ -58,6 +58,7 @@ import {
   PlayCircle as OngoingIcon,
   History as PastIcon,
   CheckCircle as ActiveIcon,
+  Link as LinkIcon,
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -89,6 +90,7 @@ interface Event {
   eventEndDate: Date;
   imageUrls: string[];
   isActive: boolean;
+  ticketLink?: string;
   createdAt: Date;
 }
 
@@ -113,6 +115,7 @@ const EventsManagement: React.FC = () => {
     eventEndDate: moment.Moment | null;
     imageUrls: string[];
     isActive: boolean;
+    ticketLink: string;
   }>({
     title: '',
     description: '',
@@ -123,6 +126,7 @@ const EventsManagement: React.FC = () => {
     eventEndDate: null,
     imageUrls: [],
     isActive: true,
+    ticketLink: '',
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -167,6 +171,7 @@ const EventsManagement: React.FC = () => {
       eventEndDate: null,
       imageUrls: [],
       isActive: true,
+      ticketLink: '',
     });
     setDialogOpen(true);
     setSelectedFiles([]);
@@ -185,6 +190,7 @@ const EventsManagement: React.FC = () => {
       eventEndDate: moment.tz(event.eventEndDate, TIMEZONE),
       imageUrls: event.imageUrls || [],
       isActive: event.isActive,
+      ticketLink: event.ticketLink || '',
     });
     setSelectedFiles([]);
     setImagePreviews([]);
@@ -278,6 +284,7 @@ const EventsManagement: React.FC = () => {
         eventEndDate: eventForm.eventEndDate?.utc().toISOString(),
         imageUrls: finalImageUrls,
         isActive: eventForm.isActive,
+        ticketLink: eventForm.ticketLink || null,
       };
 
       const url = selectedEvent
@@ -1085,6 +1092,40 @@ const EventsManagement: React.FC = () => {
                     ))}
                   </Grid>
                 )}
+              </Grid>
+
+              {/* Ticket Link Section */}
+              <Grid size={{ xs: 12 }}>
+                <Typography
+                  variant="h6"
+                  sx={{ color: '#C87941', fontWeight: 600, mb: 2 }}
+                >
+                  Ticket Link (Optional)
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Ticket Purchase URL"
+                  placeholder="https://example.com/tickets"
+                  value={eventForm.ticketLink}
+                  onChange={(e) =>
+                    setEventForm({ ...eventForm, ticketLink: e.target.value })
+                  }
+                  InputProps={{
+                    startAdornment: (
+                      <LinkIcon sx={{ color: '#C87941', mr: 1 }} />
+                    ),
+                  }}
+                  helperText="If provided, a 'Get Your Ticket' button will appear on the frontend"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'white',
+                      '&:hover fieldset': { borderColor: '#C87941' },
+                      '&.Mui-focused fieldset': { borderColor: '#C87941' },
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': { color: '#C87941' },
+                    '& .MuiFormHelperText-root': { color: '#6B4E3D' },
+                  }}
+                />
               </Grid>
 
               <Grid size={{ xs: 12 }}>
