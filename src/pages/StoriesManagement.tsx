@@ -51,6 +51,7 @@ import { PageHeader } from '../components/common/PageHeader';
 import { SummaryStats } from '../components/common/SummaryStats';
 import type { StatItem } from '../components/common/SummaryStats';
 import { StatusChip } from '../components/common/StatusChip';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { getImageUrl, getErrorMessage } from '../utils/uploadHelpers';
 import logger from '../utils/logger';
 
@@ -117,6 +118,12 @@ const StoriesManagement: React.FC = () => {
     new Set(),
   );
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: 'category' | 'story';
+    id: string;
+    name: string;
+  } | null>(null);
 
   const showSnackbar = useCallback(
     (message: string, severity: SnackbarState['severity'] = 'success') => {
@@ -227,32 +234,55 @@ const StoriesManagement: React.FC = () => {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (
-      !window.confirm(
-        'Are you sure you want to delete this category? All stories in this category will also be deleted.',
-      )
-    ) {
-      return;
-    }
+    const category = categories.find((c) => c.id === id);
+    setDeleteTarget({
+      type: 'category',
+      id,
+      name: category?.name || 'this category',
+    });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteStoryConfirm = (storyId: string) => {
+    setDeleteTarget({
+      type: 'story',
+      id: storyId,
+      name: 'this story',
+    });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
 
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/stories/categories/${id}`, {
+      const url =
+        deleteTarget.type === 'category'
+          ? `${API_BASE_URL}/stories/categories/${deleteTarget.id}`
+          : `${API_BASE_URL}/stories/${deleteTarget.id}`;
+      const response = await fetch(url, {
         method: 'DELETE',
         credentials: 'include',
       });
 
       if (response.ok) {
-        showSnackbar('Category deleted successfully');
+        showSnackbar(
+          `${deleteTarget.type === 'category' ? 'Category' : 'Story'} deleted successfully`,
+        );
         loadCategories();
       } else {
-        throw new Error('Failed to delete category');
+        throw new Error(
+          `Failed to delete ${deleteTarget.type}`,
+        );
       }
     } catch (error) {
-      logger.error('Error deleting category:', error);
+      logger.error('Error deleting:', error);
       showSnackbar(getErrorMessage(error), 'error');
     } finally {
       setLoading(false);
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -450,29 +480,7 @@ const StoriesManagement: React.FC = () => {
   };
 
   const handleDeleteStory = async (storyId: string) => {
-    if (!window.confirm('Are you sure you want to delete this story?')) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/stories/${storyId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        showSnackbar('Story deleted successfully');
-        loadCategories();
-      } else {
-        throw new Error('Failed to delete story');
-      }
-    } catch (error) {
-      logger.error('Error deleting story:', error);
-      showSnackbar(getErrorMessage(error), 'error');
-    } finally {
-      setLoading(false);
-    }
+    handleDeleteStoryConfirm(storyId);
   };
 
   // Filter and sort categories based on search and status
@@ -1451,12 +1459,36 @@ const StoriesManagement: React.FC = () => {
         onClose={() => setCategoryDialog(false)}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 16px 48px rgba(0, 0, 0, 0.15)',
+          },
+        }}
       >
-        <DialogTitle>
-          {editingCategoryId ? 'Edit Category' : 'Create Category'}
+        <DialogTitle
+          sx={{
+            background: 'linear-gradient(135deg, #C87941 0%, #DDA15E 100%)',
+            color: '#fff',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <CategoryIcon />
+            {editingCategoryId ? 'Edit Category' : 'Create Category'}
+          </Box>
+          <IconButton
+            onClick={() => setCategoryDialog(false)}
+            sx={{ color: 'rgba(255, 255, 255, 0.8)' }}
+          >
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+        <DialogContent sx={{ mt: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 2 }}>
             <TextField
               label="Category Name"
               fullWidth
@@ -1465,6 +1497,10 @@ const StoriesManagement: React.FC = () => {
                 setCategoryForm({ ...categoryForm, name: e.target.value })
               }
               required
+              placeholder="e.g., Food, Events, Atmosphere"
+              InputProps={{
+                sx: { borderRadius: 2 },
+              }}
             />
             <TextField
               label="Description (Optional)"
@@ -1478,6 +1514,10 @@ const StoriesManagement: React.FC = () => {
                   description: e.target.value,
                 })
               }
+              placeholder="Brief description of this story category"
+              InputProps={{
+                sx: { borderRadius: 2 },
+              }}
             />
             <FormControlLabel
               control={
@@ -1489,9 +1529,27 @@ const StoriesManagement: React.FC = () => {
                       isActive: e.target.checked,
                     })
                   }
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': {
+                      color: '#4CAF50',
+                    },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                      backgroundColor: '#4CAF50',
+                    },
+                  }}
                 />
               }
-              label="Active"
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography>Active</Typography>
+                  <Chip
+                    label={categoryForm.isActive ? 'Visible' : 'Hidden'}
+                    size="small"
+                    color={categoryForm.isActive ? 'success' : 'default'}
+                    sx={{ height: 20, fontSize: '0.7rem' }}
+                  />
+                </Box>
+              }
             />
 
             {/* Upload Section - Only show when editing */}
@@ -1781,17 +1839,58 @@ const StoriesManagement: React.FC = () => {
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCategoryDialog(false)}>Cancel</Button>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => setCategoryDialog(false)}
+            sx={{
+              color: 'text.secondary',
+              textTransform: 'none',
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleSaveCategory}
             variant="contained"
-            sx={{ backgroundColor: '#C87941' }}
+            disabled={loading || !categoryForm.name.trim()}
+            sx={{
+              background: 'linear-gradient(135deg, #C87941 0%, #DDA15E 100%)',
+              color: '#fff',
+              fontWeight: 600,
+              px: 3,
+              borderRadius: 2,
+              textTransform: 'none',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #B56A32 0%, #C89A4E 100%)',
+              },
+              '&:disabled': {
+                background: 'rgba(0, 0, 0, 0.12)',
+              },
+            }}
           >
-            {editingCategoryId ? 'Update' : 'Create'}
+            {loading ? 'Saving...' : editingCategoryId ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title={`Delete ${deleteTarget?.type === 'category' ? 'Category' : 'Story'}`}
+        message={
+          deleteTarget?.type === 'category'
+            ? `Are you sure you want to delete "${deleteTarget.name}"? All stories in this category will also be deleted.`
+            : 'Are you sure you want to delete this story? This action cannot be undone.'
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setDeleteTarget(null);
+        }}
+        severity="error"
+      />
 
       <Snackbar
         open={snackbar.open}

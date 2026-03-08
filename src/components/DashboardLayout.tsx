@@ -33,6 +33,7 @@ import {
   AccessTime as AccessTimeIcon,
   PhotoLibrary as StoriesIcon,
   Category as MeasurementsIcon,
+  Email as NewsletterIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -48,6 +49,7 @@ const navigation = [
   { name: 'Events', path: '/events', icon: EventIcon },
   { name: 'Stories', path: '/stories', icon: StoriesIcon },
   { name: 'Opening Hours', path: '/hours', icon: ScheduleIcon },
+  { name: 'Newsletter', path: '/newsletter', icon: NewsletterIcon },
   { name: 'User', path: '/users', icon: PeopleIcon },
   { name: 'Settings', path: '/settings', icon: SettingsIcon },
 ];

@@ -217,6 +217,7 @@ const MeasurementsManagement: React.FC = () => {
   return (
     <Box
       sx={{
+        p: 3,
         animation: 'fadeIn 0.5s ease-out',
         '@keyframes fadeIn': {
           from: { opacity: 0, transform: 'translateY(10px)' },

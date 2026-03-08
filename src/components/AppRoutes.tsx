@@ -15,6 +15,7 @@ import StoriesManagement from "../pages/StoriesManagement";
 import UserManagement from "../pages/UserManagement";
 import OpeningHours from "../pages/OpeningHours";
 import Settings from "../pages/Settings";
+import NewsletterManagement from "../pages/NewsletterManagement";
 import LoadingScreen from "../components/LoadingScreen";
 
 const AppRoutes: React.FC = () => {
@@ -47,6 +48,7 @@ const AppRoutes: React.FC = () => {
         <Route path="stories" element={<StoriesManagement />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="hours" element={<OpeningHours />} />
+        <Route path="newsletter" element={<NewsletterManagement />} />
         <Route path="settings" element={<Settings />} />
       </Route>
       <Route path="/login" element={<Navigate to="/" replace />} />
