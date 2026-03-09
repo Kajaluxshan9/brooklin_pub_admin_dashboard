@@ -16,6 +16,7 @@ import UserManagement from "../pages/UserManagement";
 import OpeningHours from "../pages/OpeningHours";
 import Settings from "../pages/Settings";
 import NewsletterManagement from "../pages/NewsletterManagement";
+import ScheduledNotifications from '../pages/ScheduledNotifications';
 import LoadingScreen from "../components/LoadingScreen";
 
 const AppRoutes: React.FC = () => {
@@ -49,6 +50,7 @@ const AppRoutes: React.FC = () => {
         <Route path="users" element={<UserManagement />} />
         <Route path="hours" element={<OpeningHours />} />
         <Route path="newsletter" element={<NewsletterManagement />} />
+        <Route path="notifications" element={<ScheduledNotifications />} />
         <Route path="settings" element={<Settings />} />
       </Route>
       <Route path="/login" element={<Navigate to="/" replace />} />

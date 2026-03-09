@@ -34,6 +34,7 @@ import {
   PhotoLibrary as StoriesIcon,
   Category as MeasurementsIcon,
   Email as NewsletterIcon,
+  NotificationsActive as NotificationsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -50,6 +51,7 @@ const navigation = [
   { name: 'Stories', path: '/stories', icon: StoriesIcon },
   { name: 'Opening Hours', path: '/hours', icon: ScheduleIcon },
   { name: 'Newsletter', path: '/newsletter', icon: NewsletterIcon },
+  { name: 'Notifications', path: '/notifications', icon: NotificationsIcon },
   { name: 'User', path: '/users', icon: PeopleIcon },
   { name: 'Settings', path: '/settings', icon: SettingsIcon },
 ];
