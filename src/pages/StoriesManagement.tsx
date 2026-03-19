@@ -405,9 +405,21 @@ const StoriesManagement: React.FC = () => {
     });
   };
 
+  const [isDragging, setIsDragging] = useState(false);
+
   const removeImagePreview = (index: number) => {
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const dt = e.dataTransfer;
+    if (dt.files && dt.files.length > 0) {
+      const synthetic = { target: { files: dt.files } } as unknown as React.ChangeEvent<HTMLInputElement>;
+      handleImageUpload(synthetic);
+    }
   };
 
   // Toggle story for deletion (visual only until save)
@@ -425,7 +437,7 @@ const StoriesManagement: React.FC = () => {
 
     let hasChanges = false;
 
-    // Upload new story if files selected
+    // Upload images and create ONE story per image
     if (selectedFiles.length > 0) {
       const formData = new FormData();
       selectedFiles.forEach((file) => {
@@ -444,22 +456,24 @@ const StoriesManagement: React.FC = () => {
       }
 
       const uploadResult = await uploadResponse.json();
-      const imageUrls = uploadResult.urls || [];
+      const imageUrls: string[] = uploadResult.urls || [];
 
-      const storyResponse = await fetch(`${API_BASE_URL}/stories`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          categoryId: selectedCategory.id,
-          imageUrls,
-          isActive: true,
-          sortOrder: 0,
-        }),
-      });
-
-      if (!storyResponse.ok) {
-        throw new Error('Failed to create story');
+      // Create one story per image (not one story with all images)
+      for (const imageUrl of imageUrls) {
+        const storyResponse = await fetch(`${API_BASE_URL}/stories`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            categoryId: selectedCategory.id,
+            imageUrls: [imageUrl],
+            isActive: true,
+            sortOrder: 0,
+          }),
+        });
+        if (!storyResponse.ok) {
+          throw new Error('Failed to create story');
+        }
       }
       hasChanges = true;
     }
@@ -651,13 +665,11 @@ const StoriesManagement: React.FC = () => {
               placeholder="Search categories..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
+              slotProps={{ input: { startAdornment: (
                   <InputAdornment position="start">
                     <SearchIcon sx={{ color: '#C87941', fontSize: '1.2rem' }} />
                   </InputAdornment>
-                ),
-              }}
+                ) } }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   backgroundColor: 'white',
@@ -1123,282 +1135,106 @@ const StoriesManagement: React.FC = () => {
                     </Box>
                   </Box>
 
-                  {/* Collapsible Stories Section */}
+                  {/* Collapsible Stories Section — flat image grid */}
                   <Collapse in={isExpanded}>
-                    <Box
-                      sx={{
-                        mt: 3,
-                        pt: 2,
-                        borderTop: '1px solid rgba(200, 121, 65, 0.1)',
-                      }}
-                    >
+                    <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid rgba(200,121,65,0.1)' }}>
+                      {/* Section label */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#8B7355', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Images · {category.stories?.reduce((acc, s) => acc + (s.imageUrls?.length || 0), 0) || 0} total
+                        </Typography>
+                        <Button size="small" variant="outlined" startIcon={<AddIcon />}
+                          onClick={() => handleOpenCategoryDialog(category)}
+                          sx={{ borderRadius: 2, fontSize: '0.78rem', fontWeight: 600, py: 0.5, px: 1.5, borderColor: 'rgba(200,121,65,0.4)', color: '#C87941', '&:hover': { borderColor: '#C87941', bgcolor: 'rgba(200,121,65,0.05)' } }}>
+                          Add Images
+                        </Button>
+                      </Box>
+
                       {category.stories && category.stories.length > 0 ? (
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: 2,
-                          }}
-                        >
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
                           {category.stories.map((story, storyIndex) => (
-                            <Box
-                              key={story.id}
-                              sx={{
-                                position: 'relative',
-                                borderRadius: 2,
-                                overflow: 'visible',
-                                bgcolor: 'rgba(255, 251, 247, 0.5)',
-                                p: 1,
-                                border: '1px solid rgba(200, 121, 65, 0.1)',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
-                                  '& .story-actions': {
-                                    opacity: 1,
-                                  },
-                                },
-                              }}
-                            >
-                              {/* Story Order Number */}
-                              <Box
+                            story.imageUrls.map((url, imgIdx) => (
+                              <Box key={`${story.id}-${imgIdx}`}
                                 sx={{
-                                  position: 'absolute',
-                                  top: -8,
-                                  left: -8,
-                                  width: 24,
-                                  height: 24,
-                                  borderRadius: '50%',
-                                  bgcolor: '#C87941',
-                                  color: 'white',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 700,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  border: '2px solid white',
-                                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                                  zIndex: 2,
+                                  position: 'relative', width: 130, height: 130,
+                                  borderRadius: 2, overflow: 'hidden',
+                                  border: '1px solid rgba(200,121,65,0.15)',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                                  cursor: 'pointer',
+                                  '&:hover .img-overlay': { opacity: 1 },
+                                  '&:hover img': { transform: 'scale(1.06)' },
                                 }}
                               >
-                                {storyIndex + 1}
-                              </Box>
+                                <Box component="img" src={getImageUrl(url)} alt={`Story ${storyIndex + 1}`}
+                                  sx={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s ease' }}
+                                  onClick={() => setPreviewImage(getImageUrl(url))} />
 
-                              {/* Story Image Grid */}
-                              <Box
-                                sx={{
-                                  display: 'grid',
-                                  gridTemplateColumns: `repeat(${Math.min(
-                                    story.imageUrls.length,
-                                    4,
-                                  )}, 1fr)`,
-                                  gap: 0.5,
-                                  borderRadius: 1.5,
-                                  overflow: 'hidden',
-                                  width:
-                                    story.imageUrls.length === 1 ? 120 : 200,
-                                }}
-                              >
-                                {story.imageUrls.slice(0, 4).map((url, idx) => (
-                                  <Box
-                                    key={idx}
-                                    sx={{
-                                      position: 'relative',
-                                      aspectRatio: '1',
-                                      overflow: 'hidden',
-                                      cursor: 'pointer',
-                                      '&:hover': {
-                                        '& img': {
-                                          transform: 'scale(1.1)',
-                                        },
-                                        '& .preview-overlay': {
-                                          opacity: 1,
-                                        },
-                                      },
-                                    }}
-                                    onClick={() =>
-                                      setPreviewImage(getImageUrl(url))
-                                    }
-                                  >
-                                    <Box
-                                      component="img"
-                                      src={getImageUrl(url)}
-                                      alt={`Story ${idx + 1}`}
-                                      sx={{
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover',
-                                        transition: 'transform 0.3s ease',
-                                      }}
-                                    />
-                                    <Box
-                                      className="preview-overlay"
-                                      sx={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        opacity: 0,
-                                        transition: 'opacity 0.2s ease',
-                                      }}
-                                    >
-                                      <ViewIcon
-                                        sx={{
-                                          color: 'white',
-                                          fontSize: 20,
-                                        }}
-                                      />
-                                    </Box>
-                                    {/* +X indicator for more images */}
-                                    {idx === 3 &&
-                                      story.imageUrls.length > 4 && (
-                                        <Box
-                                          sx={{
-                                            position: 'absolute',
-                                            inset: 0,
-                                            backgroundColor:
-                                              'rgba(0, 0, 0, 0.6)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                          }}
-                                        >
-                                          <Typography
-                                            sx={{
-                                              color: 'white',
-                                              fontWeight: 700,
-                                              fontSize: '1rem',
-                                            }}
-                                          >
-                                            +{story.imageUrls.length - 4}
-                                          </Typography>
-                                        </Box>
-                                      )}
+                                {/* Hover overlay */}
+                                <Box className="img-overlay" sx={{
+                                  position: 'absolute', inset: 0, opacity: 0, transition: 'opacity 0.2s ease',
+                                  background: 'linear-gradient(180deg, rgba(0,0,0,0.0) 40%, rgba(0,0,0,0.65) 100%)',
+                                  display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 0.75,
+                                }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                    <Tooltip title="Delete" arrow>
+                                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteStory(story.id); }}
+                                        sx={{ bgcolor: 'rgba(239,68,68,0.9)', color: 'white', p: 0.5, '&:hover': { bgcolor: '#EF4444' } }}>
+                                        <DeleteIcon sx={{ fontSize: '0.875rem' }} />
+                                      </IconButton>
+                                    </Tooltip>
                                   </Box>
-                                ))}
-                              </Box>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Box sx={{ display: 'flex', gap: 0.25 }}>
+                                      <Tooltip title="Move Earlier" arrow>
+                                        <span>
+                                          <IconButton size="small" onClick={() => handleMoveStoryOrder(story.id, 'up')} disabled={storyIndex === 0}
+                                            sx={{ bgcolor: 'rgba(255,255,255,0.85)', color: '#2C1810', p: 0.4 }}>
+                                            <ArrowUpIcon sx={{ fontSize: '0.875rem' }} />
+                                          </IconButton>
+                                        </span>
+                                      </Tooltip>
+                                      <Tooltip title="Move Later" arrow>
+                                        <span>
+                                          <IconButton size="small" onClick={() => handleMoveStoryOrder(story.id, 'down')} disabled={storyIndex === (category.stories?.length ?? 1) - 1}
+                                            sx={{ bgcolor: 'rgba(255,255,255,0.85)', color: '#2C1810', p: 0.4 }}>
+                                            <ArrowDownIcon sx={{ fontSize: '0.875rem' }} />
+                                          </IconButton>
+                                        </span>
+                                      </Tooltip>
+                                    </Box>
+                                    <ViewIcon sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '1rem' }} onClick={() => setPreviewImage(getImageUrl(url))} />
+                                  </Box>
+                                </Box>
 
-                              {/* Story Footer: Image count + Actions */}
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  mt: 1,
-                                  pt: 0.5,
-                                }}
-                              >
-                                <Typography
-                                  variant="caption"
-                                  sx={{ color: '#6B4E3D', fontWeight: 500 }}
-                                >
-                                  {story.imageUrls.length} image
-                                  {story.imageUrls.length !== 1 ? 's' : ''}
-                                </Typography>
-
-                                {/* Story Actions - Cleaner horizontal layout */}
-                                <Box
-                                  className="story-actions"
-                                  sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 0.25,
-                                    opacity: { xs: 1, md: 0.6 },
-                                    transition: 'opacity 0.2s ease',
-                                  }}
-                                >
-                                  <Tooltip title="Move Up" arrow>
-                                    <span>
-                                      <IconButton
-                                        size="small"
-                                        onClick={() =>
-                                          handleMoveStoryOrder(story.id, 'up')
-                                        }
-                                        disabled={storyIndex === 0}
-                                        sx={{
-                                          p: 0.5,
-                                          color:
-                                            storyIndex === 0
-                                              ? 'rgba(0,0,0,0.26)'
-                                              : '#6B4E3D',
-                                        }}
-                                      >
-                                        <ArrowUpIcon
-                                          sx={{ fontSize: '1rem' }}
-                                        />
-                                      </IconButton>
-                                    </span>
-                                  </Tooltip>
-                                  <Tooltip title="Move Down" arrow>
-                                    <span>
-                                      <IconButton
-                                        size="small"
-                                        onClick={() =>
-                                          handleMoveStoryOrder(story.id, 'down')
-                                        }
-                                        disabled={
-                                          storyIndex ===
-                                          (category.stories?.length ?? 1) - 1
-                                        }
-                                        sx={{
-                                          p: 0.5,
-                                          color:
-                                            storyIndex ===
-                                            (category.stories?.length ?? 1) - 1
-                                              ? 'rgba(0,0,0,0.26)'
-                                              : '#6B4E3D',
-                                        }}
-                                      >
-                                        <ArrowDownIcon
-                                          sx={{ fontSize: '1rem' }}
-                                        />
-                                      </IconButton>
-                                    </span>
-                                  </Tooltip>
-                                  <Tooltip title="Delete Story" arrow>
-                                    <IconButton
-                                      size="small"
-                                      onClick={() =>
-                                        handleDeleteStory(story.id)
-                                      }
-                                      sx={{
-                                        p: 0.5,
-                                        color: '#d32f2f',
-                                        '&:hover': {
-                                          bgcolor: 'rgba(211, 47, 47, 0.1)',
-                                        },
-                                      }}
-                                    >
-                                      <DeleteIcon sx={{ fontSize: '1rem' }} />
-                                    </IconButton>
-                                  </Tooltip>
+                                {/* Order badge */}
+                                <Box sx={{
+                                  position: 'absolute', top: 5, left: 5,
+                                  bgcolor: 'rgba(44,24,16,0.75)', color: 'white',
+                                  fontSize: '0.6rem', fontWeight: 700,
+                                  px: 0.75, py: 0.2, borderRadius: 1,
+                                  backdropFilter: 'blur(4px)',
+                                }}>
+                                  #{storyIndex + 1}
                                 </Box>
                               </Box>
-                            </Box>
+                            ))
                           ))}
                         </Box>
                       ) : (
-                        <Box
-                          sx={{
-                            textAlign: 'center',
-                            py: 4,
-                            bgcolor: 'rgba(255, 251, 247, 0.5)',
-                            borderRadius: 2,
-                            border: '2px dashed rgba(200, 121, 65, 0.2)',
-                          }}
-                        >
-                          <ImageIcon
-                            sx={{
-                              fontSize: 48,
-                              color: '#C87941',
-                              opacity: 0.4,
-                              mb: 1,
-                            }}
-                          />
-                          <Typography variant="body2" sx={{ color: '#6B4E3D' }}>
-                            No stories yet. Click Edit to add images.
+                        <Box sx={{
+                          textAlign: 'center', py: 5,
+                          bgcolor: 'rgba(255,251,247,0.5)',
+                          borderRadius: 2, border: '2px dashed rgba(200,121,65,0.2)',
+                        }}>
+                          <ImageIcon sx={{ fontSize: 44, color: '#C87941', opacity: 0.35, mb: 1 }} />
+                          <Typography variant="body2" sx={{ color: '#6B4E3D', mb: 2 }}>
+                            No images yet in this category
                           </Typography>
+                          <Button size="small" variant="outlined" startIcon={<AddIcon />}
+                            onClick={() => handleOpenCategoryDialog(category)}
+                            sx={{ borderRadius: 2, borderColor: '#C87941', color: '#C87941', fontWeight: 600, '&:hover': { bgcolor: 'rgba(200,121,65,0.06)' } }}>
+                            Add Images
+                          </Button>
                         </Box>
                       )}
                     </Box>
@@ -1415,13 +1251,7 @@ const StoriesManagement: React.FC = () => {
         open={!!previewImage}
         onClose={() => setPreviewImage(null)}
         maxWidth="lg"
-        PaperProps={{
-          sx: {
-            backgroundColor: 'transparent',
-            boxShadow: 'none',
-            overflow: 'visible',
-          },
-        }}
+        slotProps={{ paper: { sx: { backgroundColor: 'transparent', boxShadow: 'none', overflow: 'visible' } } }}
       >
         <Box sx={{ position: 'relative' }}>
           <IconButton
@@ -1454,421 +1284,181 @@ const StoriesManagement: React.FC = () => {
       </Dialog>
 
       {/* Category Dialog */}
-      <Dialog
-        open={categoryDialog}
-        onClose={() => setCategoryDialog(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            boxShadow: '0 16px 48px rgba(0, 0, 0, 0.15)',
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            background: 'linear-gradient(135deg, #C87941 0%, #DDA15E 100%)',
-            color: '#fff',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+      <Dialog open={categoryDialog} onClose={() => setCategoryDialog(false)} maxWidth="md" fullWidth>
+        {/* Clean dialog header */}
+        <DialogTitle sx={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          px: 3, py: 2.5, borderBottom: '1px solid rgba(200,121,65,0.1)',
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <CategoryIcon />
-            {editingCategoryId ? 'Edit Category' : 'Create Category'}
+            <Box sx={{ width: 36, height: 36, borderRadius: 2, background: 'rgba(200,121,65,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C87941' }}>
+              <CategoryIcon fontSize="small" />
+            </Box>
+            <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#2C1810' }}>
+              {editingCategoryId ? 'Edit Category' : 'Create Category'}
+            </Typography>
           </Box>
-          <IconButton
-            onClick={() => setCategoryDialog(false)}
-            sx={{ color: 'rgba(255, 255, 255, 0.8)' }}
-          >
-            <CloseIcon />
+          <IconButton size="small" onClick={() => setCategoryDialog(false)}
+            sx={{ color: 'text.secondary', '&:hover': { color: '#C87941', bgcolor: 'rgba(200,121,65,0.08)' } }}>
+            <CloseIcon fontSize="small" />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 2 }}>
-            <TextField
-              label="Category Name"
-              fullWidth
-              value={categoryForm.name}
-              onChange={(e) =>
-                setCategoryForm({ ...categoryForm, name: e.target.value })
-              }
-              required
-              placeholder="e.g., Food, Events, Atmosphere"
-              InputProps={{
-                sx: { borderRadius: 2 },
-              }}
-            />
-            <TextField
-              label="Description (Optional)"
-              fullWidth
-              multiline
-              rows={3}
+
+        <DialogContent sx={{ px: 3, pt: 3, pb: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <TextField label="Category Name" fullWidth value={categoryForm.name}
+              onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+              required placeholder="e.g., Food, Events, Atmosphere" />
+            <TextField label="Description (Optional)" fullWidth multiline rows={2}
               value={categoryForm.description}
-              onChange={(e) =>
-                setCategoryForm({
-                  ...categoryForm,
-                  description: e.target.value,
-                })
-              }
-              placeholder="Brief description of this story category"
-              InputProps={{
-                sx: { borderRadius: 2 },
-              }}
-            />
+              onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+              placeholder="Brief description of this story category" />
             <FormControlLabel
               control={
-                <Switch
-                  checked={categoryForm.isActive}
-                  onChange={(e) =>
-                    setCategoryForm({
-                      ...categoryForm,
-                      isActive: e.target.checked,
-                    })
-                  }
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: '#4CAF50',
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: '#4CAF50',
-                    },
-                  }}
-                />
+                <Switch checked={categoryForm.isActive}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, isActive: e.target.checked })}
+                  sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#4CAF50' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4CAF50' } }} />
               }
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography>Active</Typography>
-                  <Chip
-                    label={categoryForm.isActive ? 'Visible' : 'Hidden'}
-                    size="small"
-                    color={categoryForm.isActive ? 'success' : 'default'}
-                    sx={{ height: 20, fontSize: '0.7rem' }}
-                  />
+                  <Typography sx={{ fontWeight: 500 }}>Active</Typography>
+                  <Chip label={categoryForm.isActive ? 'Visible' : 'Hidden'} size="small"
+                    sx={{ height: 20, fontSize: '0.7rem', bgcolor: categoryForm.isActive ? 'rgba(76,175,80,0.12)' : 'rgba(0,0,0,0.06)', color: categoryForm.isActive ? '#2E7D32' : '#757575' }} />
                 </Box>
               }
             />
 
-            {/* Upload Section - Only show when editing */}
+            {/* Image Upload Section — shown when editing existing category */}
             {editingCategoryId && selectedCategory && (
-              <Box
-                sx={{
-                  mt: 2,
-                  pt: 2,
-                  borderTop: '1px solid rgba(200, 121, 65, 0.2)',
-                }}
-              >
-                <Typography
-                  variant="subtitle1"
-                  sx={{ fontWeight: 600, color: '#6B4E3D', mb: 2 }}
-                >
-                  Story Images (
-                  {(selectedCategory.stories?.length || 0) -
-                    storiesToDelete.length +
-                    (imagePreviews.length > 0 ? 1 : 0)}{' '}
-                  stories
-                  {(storiesToDelete.length > 0 || imagePreviews.length > 0) && (
-                    <Typography
-                      component="span"
-                      sx={{
-                        color: '#999',
-                        fontWeight: 400,
-                        fontSize: '0.85rem',
-                      }}
-                    >
-                      {' '}
-                      after save
+              <Box sx={{ pt: 2, borderTop: '1px solid rgba(200,121,65,0.12)' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: '#2C1810' }}>
+                    Images
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.78rem', color: '#8B7355' }}>
+                    {(selectedCategory.stories?.length || 0) - storiesToDelete.length} current
+                    {selectedFiles.length > 0 && ` · +${selectedFiles.length} pending`}
+                    {storiesToDelete.length > 0 && ` · −${storiesToDelete.length} to remove`}
+                  </Typography>
+                </Box>
+
+                {/* Existing story thumbnails */}
+                {selectedCategory.stories && selectedCategory.stories.length > 0 && (
+                  <Box sx={{ mb: 2.5 }}>
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#8B7355', textTransform: 'uppercase', letterSpacing: '0.04em', mb: 1.5 }}>
+                      Current Images — click × to remove
                     </Typography>
-                  )}
-                  )
-                </Typography>
-
-                {/* Existing Stories */}
-                {selectedCategory.stories &&
-                  selectedCategory.stories.length > 0 && (
-                    <Box sx={{ mb: 3 }}>
-                      <Typography
-                        variant="body2"
-                        sx={{ color: '#6B4E3D', mb: 1.5, fontWeight: 500 }}
-                      >
-                        Existing Stories:
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-                        {selectedCategory.stories.map((story, idx) => {
-                          const isMarkedForDeletion = storiesToDelete.includes(
-                            story.id,
-                          );
-                          return (
-                            <Box
-                              key={story.id}
-                              sx={{
-                                position: 'relative',
-                                width: 100,
-                                height: 100,
-                                borderRadius: 1.5,
-                                overflow: 'hidden',
-                                border: isMarkedForDeletion
-                                  ? '2px solid #d32f2f'
-                                  : '2px solid rgba(200, 121, 65, 0.2)',
-                                opacity: isMarkedForDeletion ? 0.5 : 1,
-                                filter: isMarkedForDeletion
-                                  ? 'grayscale(100%)'
-                                  : 'none',
-                                transition: 'all 0.2s ease',
-                              }}
-                            >
-                              <Box
-                                component="img"
-                                src={getImageUrl(story.imageUrls[0])}
-                                alt={`Story ${idx + 1}`}
-                                sx={{
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: 'cover',
-                                }}
-                              />
-                              {story.imageUrls.length > 1 && (
-                                <Box
-                                  sx={{
-                                    position: 'absolute',
-                                    bottom: 4,
-                                    right: 4,
-                                    bgcolor: 'rgba(0,0,0,0.7)',
-                                    color: 'white',
-                                    fontSize: '0.65rem',
-                                    fontWeight: 600,
-                                    px: 0.5,
-                                    borderRadius: 0.5,
-                                  }}
-                                >
-                                  +{story.imageUrls.length - 1}
-                                </Box>
-                              )}
-                              {/* Delete/Undo overlay */}
-                              {isMarkedForDeletion && (
-                                <Box
-                                  sx={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    bgcolor: 'rgba(211, 47, 47, 0.3)',
-                                  }}
-                                >
-                                  <Typography
-                                    sx={{
-                                      color: '#d32f2f',
-                                      fontWeight: 700,
-                                      fontSize: '0.65rem',
-                                      textTransform: 'uppercase',
-                                    }}
-                                  >
-                                    Deleted
-                                  </Typography>
-                                </Box>
-                              )}
-                              <IconButton
-                                size="small"
-                                onClick={() => toggleStoryForDeletion(story.id)}
-                                sx={{
-                                  position: 'absolute',
-                                  top: 2,
-                                  right: 2,
-                                  bgcolor: 'rgba(255,255,255,0.9)',
-                                  p: 0.25,
-                                  '&:hover': {
-                                    bgcolor: isMarkedForDeletion
-                                      ? '#E8F5E9'
-                                      : '#FFF0F0',
-                                  },
-                                }}
-                              >
-                                <CloseIcon
-                                  sx={{
-                                    fontSize: '0.875rem',
-                                    color: isMarkedForDeletion
-                                      ? '#4CAF50'
-                                      : '#d32f2f',
-                                    transform: isMarkedForDeletion
-                                      ? 'rotate(45deg)'
-                                      : 'none',
-                                  }}
-                                />
-                              </IconButton>
-                            </Box>
-                          );
-                        })}
-                      </Box>
-                      {storiesToDelete.length > 0 && (
-                        <Typography
-                          variant="caption"
-                          sx={{ display: 'block', color: '#d32f2f', mt: 1 }}
-                        >
-                          {storiesToDelete.length} story(ies) will be deleted on
-                          save
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-
-                {/* Upload New Story */}
-                <Box>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: '#6B4E3D', mb: 1, fontWeight: 500 }}
-                  >
-                    Add New Story:
-                  </Typography>
-                  <Box
-                    component="input"
-                    accept="image/*"
-                    sx={{ display: 'none' }}
-                    id="category-story-upload"
-                    multiple
-                    type="file"
-                    onChange={handleImageUpload}
-                  />
-                  <label htmlFor="category-story-upload">
-                    <Button
-                      variant="outlined"
-                      component="span"
-                      size="small"
-                      startIcon={<UploadIcon />}
-                      sx={{
-                        borderColor: '#C87941',
-                        color: '#C87941',
-                        '&:hover': {
-                          borderColor: '#A45F2D',
-                          bgcolor: 'rgba(200, 121, 65, 0.05)',
-                        },
-                      }}
-                    >
-                      Select Images
-                    </Button>
-                  </label>
-                  <Typography
-                    variant="caption"
-                    sx={{ display: 'block', color: '#999', mt: 0.5 }}
-                  >
-                    Max 50 images, 1MB each
-                  </Typography>
-
-                  {/* Image Previews - New uploads */}
-                  {imagePreviews.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          display: 'block',
-                          color: '#4CAF50',
-                          mb: 1,
-                          fontWeight: 500,
-                        }}
-                      >
-                        {imagePreviews.length} new image(s) will be uploaded on
-                        save
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-                        {imagePreviews.map((preview, index) => (
-                          <Box
-                            key={`preview-${index}`}
-                            sx={{
-                              position: 'relative',
-                              width: 100,
-                              height: 100,
-                              borderRadius: 1.5,
-                              overflow: 'hidden',
-                              border: '2px solid #4CAF50',
-                            }}
-                          >
-                            <Box
-                              component="img"
-                              src={preview}
-                              alt={`Preview ${index + 1}`}
-                              sx={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                              }}
-                            />
-                            {/* New badge */}
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                top: 4,
-                                left: 4,
-                                bgcolor: '#4CAF50',
-                                color: 'white',
-                                fontSize: '0.55rem',
-                                fontWeight: 700,
-                                px: 0.5,
-                                py: 0.15,
-                                borderRadius: 0.5,
-                                textTransform: 'uppercase',
-                              }}
-                            >
-                              New
-                            </Box>
-                            <IconButton
-                              size="small"
-                              onClick={() => removeImagePreview(index)}
-                              sx={{
-                                position: 'absolute',
-                                top: 2,
-                                right: 2,
-                                bgcolor: 'rgba(255,255,255,0.9)',
-                                p: 0.25,
-                                '&:hover': { bgcolor: '#FFF0F0' },
-                              }}
-                            >
-                              <CloseIcon
-                                sx={{ fontSize: '0.875rem', color: '#d32f2f' }}
-                              />
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25 }}>
+                      {selectedCategory.stories.map((story, idx) => {
+                        const isMarkedForDeletion = storiesToDelete.includes(story.id);
+                        return story.imageUrls.map((url, uIdx) => (
+                          <Box key={`${story.id}-${uIdx}`} sx={{
+                            position: 'relative', width: 88, height: 88,
+                            borderRadius: 1.5, overflow: 'hidden',
+                            border: isMarkedForDeletion ? '2px solid #EF4444' : '1px solid rgba(200,121,65,0.2)',
+                            opacity: isMarkedForDeletion ? 0.45 : 1,
+                            filter: isMarkedForDeletion ? 'grayscale(80%)' : 'none',
+                            transition: 'all 0.2s ease',
+                          }}>
+                            <Box component="img" src={getImageUrl(url)} alt={`Img ${idx + 1}`}
+                              sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            {isMarkedForDeletion && (
+                              <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(239,68,68,0.2)' }}>
+                                <Typography sx={{ color: '#EF4444', fontWeight: 800, fontSize: '0.6rem', textTransform: 'uppercase' }}>Remove</Typography>
+                              </Box>
+                            )}
+                            <IconButton size="small" onClick={() => toggleStoryForDeletion(story.id)}
+                              sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'rgba(255,255,255,0.92)', p: 0.25,
+                                '&:hover': { bgcolor: isMarkedForDeletion ? '#E8F5E9' : '#FFF0F0' } }}>
+                              <CloseIcon sx={{ fontSize: '0.8rem', color: isMarkedForDeletion ? '#4CAF50' : '#EF4444',
+                                transform: isMarkedForDeletion ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }} />
                             </IconButton>
                           </Box>
-                        ))}
-                      </Box>
+                        ));
+                      })}
                     </Box>
-                  )}
+                  </Box>
+                )}
+
+                {/* Drag-and-drop upload zone */}
+                <Box
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handleDrop}
+                  sx={{
+                    borderRadius: 2.5,
+                    border: `2px dashed ${isDragging ? '#C87941' : 'rgba(200,121,65,0.3)'}`,
+                    background: isDragging ? 'rgba(200,121,65,0.04)' : 'rgba(255,251,247,0.5)',
+                    transition: 'all 0.2s ease',
+                    p: 3, textAlign: 'center',
+                  }}
+                >
+                  <Box sx={{ width: 48, height: 48, borderRadius: 2, bgcolor: 'rgba(200,121,65,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5 }}>
+                    <UploadIcon sx={{ color: '#C87941', fontSize: '1.5rem' }} />
+                  </Box>
+                  <Typography sx={{ fontWeight: 600, color: '#2C1810', fontSize: '0.9rem', mb: 0.5 }}>
+                    Drop images here or click to browse
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.78rem', color: '#8B7355', mb: 2 }}>
+                    Up to 50 images · Max 1 MB each · Each image = 1 story item
+                  </Typography>
+                  <Box component="input" accept="image/*" sx={{ display: 'none' }}
+                    id="category-story-upload" multiple type="file" onChange={handleImageUpload} />
+                  <label htmlFor="category-story-upload">
+                    <Button variant="outlined" component="span" size="small"
+                      sx={{ borderRadius: 2, borderColor: '#C87941', color: '#C87941', fontWeight: 600, px: 3, '&:hover': { bgcolor: 'rgba(200,121,65,0.06)' } }}>
+                      Browse Files
+                    </Button>
+                  </label>
                 </Box>
+
+                {/* New image previews */}
+                {imagePreviews.length > 0 && (
+                  <Box sx={{ mt: 2.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#2E7D32', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {imagePreviews.length} new image{imagePreviews.length !== 1 ? 's' : ''} ready to upload
+                      </Typography>
+                      <Button size="small" onClick={() => { setImagePreviews([]); setSelectedFiles([]); }}
+                        sx={{ fontSize: '0.72rem', color: '#EF4444', p: 0.5 }}>
+                        Clear all
+                      </Button>
+                    </Box>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, maxHeight: 240, overflowY: 'auto', pr: 0.5 }}>
+                      {imagePreviews.map((preview, index) => (
+                        <Box key={`preview-${index}`} sx={{
+                          position: 'relative', width: 88, height: 88,
+                          borderRadius: 1.5, overflow: 'hidden',
+                          border: '2px solid rgba(46,125,50,0.6)',
+                        }}>
+                          <Box component="img" src={preview} alt={`Preview ${index + 1}`}
+                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <Box sx={{ position: 'absolute', top: 3, left: 3, bgcolor: '#4CAF50', color: 'white',
+                            fontSize: '0.5rem', fontWeight: 700, px: 0.5, py: 0.1, borderRadius: 0.5, textTransform: 'uppercase' }}>
+                            New
+                          </Box>
+                          <IconButton size="small" onClick={() => removeImagePreview(index)}
+                            sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'rgba(255,255,255,0.92)', p: 0.25, '&:hover': { bgcolor: '#FFF0F0' } }}>
+                            <CloseIcon sx={{ fontSize: '0.8rem', color: '#EF4444' }} />
+                          </IconButton>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                )}
               </Box>
             )}
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button
-            onClick={() => setCategoryDialog(false)}
-            sx={{
-              color: 'text.secondary',
-              textTransform: 'none',
-            }}
-          >
+
+        <DialogActions sx={{ px: 3, pb: 3, pt: 2, gap: 1.5 }}>
+          <Button onClick={() => setCategoryDialog(false)} variant="outlined" sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSaveCategory}
-            variant="contained"
+          <Button onClick={handleSaveCategory} variant="contained"
             disabled={loading || !categoryForm.name.trim()}
-            sx={{
-              background: 'linear-gradient(135deg, #C87941 0%, #DDA15E 100%)',
-              color: '#fff',
-              fontWeight: 600,
-              px: 3,
-              borderRadius: 2,
-              textTransform: 'none',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #B56A32 0%, #C89A4E 100%)',
-              },
-              '&:disabled': {
-                background: 'rgba(0, 0, 0, 0.12)',
-              },
-            }}
-          >
-            {loading ? 'Saving...' : editingCategoryId ? 'Update' : 'Create'}
+            sx={{ borderRadius: 2, fontWeight: 600, px: 3, backgroundColor: '#C87941', '&:hover': { backgroundColor: '#A45F2D' } }}>
+            {loading ? 'Saving…' : editingCategoryId ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1879,33 +1469,21 @@ const StoriesManagement: React.FC = () => {
         title={`Delete ${deleteTarget?.type === 'category' ? 'Category' : 'Story'}`}
         message={
           deleteTarget?.type === 'category'
-            ? `Are you sure you want to delete "${deleteTarget.name}"? All stories in this category will also be deleted.`
-            : 'Are you sure you want to delete this story? This action cannot be undone.'
+            ? `Are you sure you want to delete "${deleteTarget.name}"? All images in this category will also be deleted.`
+            : 'Are you sure you want to delete this image? This action cannot be undone.'
         }
         confirmText="Delete"
         cancelText="Cancel"
         onConfirm={confirmDelete}
-        onClose={() => {
-          setDeleteDialogOpen(false);
-          setDeleteTarget(null);
-        }}
+        onClose={() => { setDeleteDialogOpen(false); setDeleteTarget(null); }}
         severity="error"
       />
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
+      <Snackbar open={snackbar.open} autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        sx={{ zIndex: 99999, position: 'fixed' }}
-        // @ts-ignore PortalProps typed as any
-        PortalProps={{ style: { zIndex: 99999 } }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
+        sx={{ zIndex: 99999, position: 'fixed' }}>
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%' }}>
           {snackbar.message}
         </Alert>
       </Snackbar>
