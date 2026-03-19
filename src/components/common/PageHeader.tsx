@@ -34,11 +34,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           position: 'absolute',
           bottom: 0,
           left: 0,
-          width: '120px',
-          height: '2px',
-          background:
-            'linear-gradient(90deg, #C87941 0%, rgba(200, 121, 65, 0.3) 100%)',
-          borderRadius: '2px',
+          width: '60px',
+          height: '3px',
+          background: 'linear-gradient(90deg, #C87941 0%, rgba(200, 121, 65, 0.2) 100%)',
+          borderRadius: '3px',
         },
       }}
     >
@@ -123,10 +122,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             <Typography
               variant="h4"
               sx={{
-                fontWeight: 700,
-                color: '#C87941',
-                fontSize: { xs: '1.75rem', sm: '2rem' },
-                letterSpacing: '-0.01em',
+                fontWeight: 800,
+                color: '#2C1810',
+                fontSize: { xs: '1.625rem', sm: '1.875rem' },
+                letterSpacing: '-0.02em',
+                lineHeight: 1.2,
               }}
             >
               {title}

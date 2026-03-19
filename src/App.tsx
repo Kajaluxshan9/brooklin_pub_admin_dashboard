@@ -189,13 +189,10 @@ const theme = createTheme({
         },
         paper: {
           borderRadius: 16,
-          boxShadow: '0 16px 48px rgba(0, 0, 0, 0.2)',
-          border: '1px solid rgba(200, 121, 65, 0.15)',
+          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.18)',
+          border: '1px solid rgba(200, 121, 65, 0.12)',
           background: '#ffffff',
         },
-      },
-      defaultProps: {
-        hideBackdrop: true,
       },
     },
     MuiModal: {
@@ -489,8 +486,9 @@ const theme = createTheme({
     MuiBackdrop: {
       styleOverrides: {
         root: {
-          backgroundColor: 'transparent',
-          backdropFilter: 'none',
+          backgroundColor: 'rgba(20, 10, 5, 0.45)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
         },
       },
     },

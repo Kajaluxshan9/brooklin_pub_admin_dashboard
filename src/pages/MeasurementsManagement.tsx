@@ -8,18 +8,16 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Paper,
   IconButton,
   Snackbar,
   Alert,
-  LinearProgress,
   FormControlLabel,
   Switch,
   Chip,
   Typography,
+  Skeleton,
+  Tooltip,
 } from '@mui/material';
-import type { GridColDef } from '@mui/x-data-grid';
-import { EnhancedDataGrid } from '../components/common/EnhancedDataGrid';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -28,12 +26,11 @@ import {
   CheckCircle as ActiveIcon,
   Cancel as InactiveIcon,
   Close as CloseIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { PageHeader } from '../components/common/PageHeader';
 import { SummaryStats } from '../components/common/SummaryStats';
 import type { StatItem } from '../components/common/SummaryStats';
-import { StatusChip } from '../components/common/StatusChip';
-import { ConfirmDialog } from '../components/common/ConfirmDialog';
 
 interface MeasurementType {
   id: string;
@@ -215,37 +212,11 @@ const MeasurementsManagement: React.FC = () => {
   }, [measurementTypes]);
 
   return (
-    <Box
-      sx={{
-        p: 3,
-        animation: 'fadeIn 0.5s ease-out',
-        '@keyframes fadeIn': {
-          from: { opacity: 0, transform: 'translateY(10px)' },
-          to: { opacity: 1, transform: 'translateY(0)' },
-        },
-      }}
-    >
-      {/* Loading Bar */}
-      {loading && (
-        <LinearProgress
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 9999,
-            height: 3,
-            '& .MuiLinearProgress-bar': {
-              background: 'linear-gradient(90deg, #C87941, #DDA15E)',
-            },
-          }}
-        />
-      )}
-
+    <Box sx={{ p: 3 }}>
       {/* Page Header */}
       <PageHeader
         title="Measurement Types"
-        subtitle="Manage measurement units for menu items (e.g., oz, ml, pieces)"
+        subtitle="Manage measurement units used for menu items (e.g., oz, ml, pieces)"
         icon={<MeasureIcon />}
         action={
           <Button
@@ -253,20 +224,13 @@ const MeasurementsManagement: React.FC = () => {
             startIcon={<AddIcon />}
             onClick={openCreate}
             sx={{
-              background: 'linear-gradient(135deg, #C87941 0%, #DDA15E 100%)',
+              backgroundColor: '#C87941',
               color: '#fff',
               fontWeight: 600,
               px: 3,
-              py: 1.2,
               borderRadius: 2,
-              boxShadow: '0 4px 14px rgba(200, 121, 65, 0.35)',
-              textTransform: 'none',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #B56A32 0%, #C89A4E 100%)',
-                boxShadow: '0 6px 20px rgba(200, 121, 65, 0.45)',
-                transform: 'translateY(-2px)',
-              },
-              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 14px rgba(200, 121, 65, 0.3)',
+              '&:hover': { backgroundColor: '#A45F2D' },
             }}
           >
             Add Measurement
@@ -277,301 +241,243 @@ const MeasurementsManagement: React.FC = () => {
       {/* Summary Stats */}
       <SummaryStats stats={stats} columns={3} variant="card" />
 
-      {/* Measurements Grid */}
-      <Paper
-        elevation={0}
+      {/* Unit Cards List */}
+      <Box
         sx={{
-          p: 3,
-          borderRadius: 2.5,
-          background: 'rgba(255, 255, 255, 0.9)',
+          borderRadius: 3,
+          background: 'rgba(255,255,255,0.9)',
           backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(200, 121, 65, 0.08)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+          border: '1px solid rgba(200,121,65,0.08)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+          overflow: 'hidden',
         }}
       >
-        {sortedMeasurements.length === 0 && !loading ? (
-          <Box
-            sx={{
-              textAlign: 'center',
-              py: 6,
-              color: 'text.secondary',
-            }}
-          >
-            <MeasureIcon sx={{ fontSize: 48, mb: 2, opacity: 0.3 }} />
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              No Measurement Types
+        {/* List header */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 2fr 80px 100px 120px',
+            px: 3,
+            py: 1.5,
+            borderBottom: '1px solid rgba(200,121,65,0.08)',
+            background: 'rgba(200,121,65,0.03)',
+          }}
+        >
+          {['Unit Name', 'Description', 'Order', 'Status', 'Actions'].map((h) => (
+            <Typography key={h} sx={{ fontSize: '0.72rem', fontWeight: 700, color: '#8B7355', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {h}
             </Typography>
-            <Typography variant="body2" sx={{ mb: 3 }}>
-              Get started by adding your first measurement type
+          ))}
+        </Box>
+
+        {loading ? (
+          <Box sx={{ p: 2 }}>
+            {[...Array(4)].map((_, i) => (
+              <Box key={i} sx={{ display: 'flex', gap: 2, alignItems: 'center', py: 2, px: 1, borderBottom: '1px solid rgba(200,121,65,0.06)' }}>
+                <Skeleton variant="rounded" width={44} height={44} sx={{ flexShrink: 0 }} />
+                <Box sx={{ flex: 1 }}>
+                  <Skeleton variant="text" width="40%" height={22} />
+                  <Skeleton variant="text" width="65%" height={18} />
+                </Box>
+                <Skeleton variant="rounded" width={60} height={24} />
+                <Skeleton variant="rounded" width={72} height={26} />
+                <Skeleton variant="rounded" width={100} height={32} />
+              </Box>
+            ))}
+          </Box>
+        ) : sortedMeasurements.length === 0 ? (
+          <Box sx={{ textAlign: 'center', py: 10 }}>
+            <Box sx={{
+              width: 80, height: 80, borderRadius: '50%',
+              background: 'rgba(200,121,65,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              mx: 'auto', mb: 3,
+            }}>
+              <MeasureIcon sx={{ fontSize: 40, color: 'rgba(200,121,65,0.4)' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#2C1810', mb: 1 }}>
+              No Measurement Types Yet
             </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={openCreate}
-              sx={{
-                borderColor: 'rgba(200, 121, 65, 0.5)',
-                color: '#C87941',
-                '&:hover': {
-                  borderColor: '#C87941',
-                  background: 'rgba(200, 121, 65, 0.05)',
-                },
-              }}
-            >
+            <Typography variant="body2" sx={{ color: '#8B7355', mb: 3 }}>
+              Add your first measurement unit to start sizing menu items
+            </Typography>
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={openCreate}
+              sx={{ borderColor: '#C87941', color: '#C87941', borderRadius: 2, fontWeight: 600, '&:hover': { background: 'rgba(200,121,65,0.06)' } }}>
               Add Measurement Type
             </Button>
           </Box>
         ) : (
-          <EnhancedDataGrid
-            rows={measurementTypes}
-            columns={(() => {
-              const cols: GridColDef[] = [
-                { field: 'name', headerName: 'Name', flex: 1, minWidth: 180 },
-                {
-                  field: 'description',
-                  headerName: 'Description',
-                  flex: 2,
-                  minWidth: 240,
+          sortedMeasurements.map((m, idx) => (
+            <Box
+              key={m.id}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 2fr 80px 100px 120px',
+                alignItems: 'center',
+                px: 3,
+                py: 2,
+                borderBottom: idx < sortedMeasurements.length - 1 ? '1px solid rgba(200,121,65,0.07)' : 'none',
+                borderLeft: '3px solid',
+                borderLeftColor: m.isActive !== false ? '#C87941' : 'transparent',
+                transition: 'all 0.18s ease',
+                '&:hover': {
+                  background: 'rgba(200,121,65,0.03)',
                 },
-                {
-                  field: 'sortOrder',
-                  headerName: 'Order',
-                  width: 100,
-                  headerAlign: 'center',
-                  align: 'center',
-                },
-                {
-                  field: 'isActive',
-                  headerName: 'Status',
-                  width: 120,
-                  headerAlign: 'center',
-                  align: 'center',
-                  renderCell: (params) => (
-                    <StatusChip
-                      label={params.value !== false ? 'Active' : 'Inactive'}
-                      status={params.value !== false ? 'success' : 'inactive'}
-                    />
-                  ),
-                },
-                {
-                  field: 'actions',
-                  headerName: 'Actions',
-                  width: 200,
-                  headerAlign: 'center',
-                  align: 'center',
-                  sortable: false,
-                  renderCell: (params) => (
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        gap: 1,
-                        justifyContent: 'center',
-                        width: '100%',
-                      }}
-                    >
-                      <Button
-                        size="small"
-                        onClick={() => openEdit(params.row as MeasurementType)}
-                        sx={{ color: '#C87941', minWidth: 90 }}
-                        startIcon={<EditIcon sx={{ fontSize: 16 }} />}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="small"
-                        onClick={() =>
-                          handleDeleteClick(params.row as MeasurementType)
-                        }
-                        sx={{ color: '#d32f2f', minWidth: 90 }}
-                        startIcon={<DeleteIcon sx={{ fontSize: 16 }} />}
-                      >
-                        Delete
-                      </Button>
-                    </Box>
-                  ),
-                },
-              ];
-              return cols;
-            })()}
-            loading={loading}
-            pageSize={10}
-            title="Measurement Types"
-          />
-        )}
-      </Paper>
+              }}
+            >
+              {/* Name */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{
+                  width: 40, height: 40, borderRadius: 2,
+                  background: m.isActive !== false ? 'rgba(200,121,65,0.1)' : 'rgba(0,0,0,0.04)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: m.isActive !== false ? '#C87941' : '#9E9E9E',
+                  flexShrink: 0,
+                }}>
+                  <MeasureIcon sx={{ fontSize: '1.1rem' }} />
+                </Box>
+                <Typography sx={{ fontWeight: 700, color: '#2C1810', fontSize: '0.938rem' }}>
+                  {m.name}
+                </Typography>
+              </Box>
 
-      {/* Create/Edit Dialog */}
-      <Dialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            boxShadow: '0 16px 48px rgba(0, 0, 0, 0.15)',
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            background: 'linear-gradient(135deg, #C87941 0%, #DDA15E 100%)',
-            color: '#fff',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <MeasureIcon />
-            {selected ? 'Edit' : 'Create'} Measurement Type
-          </Box>
-          <IconButton
-            onClick={() => setDialogOpen(false)}
-            sx={{ color: 'rgba(255, 255, 255, 0.8)' }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <Box
-            sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}
-          >
-            <TextField
-              fullWidth
-              label="Name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              placeholder="e.g., Ounces, Milliliters, Pieces"
-              InputProps={{
-                sx: { borderRadius: 2 },
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Description"
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              multiline
-              rows={2}
-              placeholder="Optional description for this measurement type"
-              InputProps={{
-                sx: { borderRadius: 2 },
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Sort Order"
-              type="number"
-              value={form.sortOrder}
-              onChange={(e) =>
-                setForm({ ...form, sortOrder: parseInt(e.target.value || '0') })
-              }
-              helperText="Lower numbers appear first"
-              InputProps={{
-                sx: { borderRadius: 2 },
-              }}
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={form.isActive}
-                  onChange={(e) =>
-                    setForm({ ...form, isActive: e.target.checked })
-                  }
+              {/* Description */}
+              <Typography sx={{ color: '#6B4E3D', fontSize: '0.85rem', pr: 2,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {m.description || (
+                  <Box component="span" sx={{ color: '#C0B0A4', fontStyle: 'italic' }}>No description</Box>
+                )}
+              </Typography>
+
+              {/* Order */}
+              <Box>
+                <Chip label={`#${(m.sortOrder ?? 0) + 1}`} size="small"
+                  sx={{ fontSize: '0.75rem', fontWeight: 700, bgcolor: 'rgba(200,121,65,0.08)', color: '#8B7355', border: 'none' }} />
+              </Box>
+
+              {/* Status */}
+              <Box>
+                <Chip
+                  label={m.isActive !== false ? 'Active' : 'Inactive'}
+                  size="small"
                   sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: '#4caf50',
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: '#4caf50',
-                    },
+                    fontSize: '0.72rem', fontWeight: 700,
+                    bgcolor: m.isActive !== false ? 'rgba(76,175,80,0.1)' : 'rgba(0,0,0,0.06)',
+                    color: m.isActive !== false ? '#2E7D32' : '#757575',
                   }}
                 />
+              </Box>
+
+              {/* Actions */}
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                <Tooltip title="Edit">
+                  <IconButton size="small" onClick={() => openEdit(m)}
+                    sx={{ color: '#C87941', '&:hover': { bgcolor: 'rgba(200,121,65,0.1)' } }}>
+                    <EditIcon sx={{ fontSize: '1rem' }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete">
+                  <IconButton size="small" onClick={() => handleDeleteClick(m)}
+                    sx={{ color: '#EF5350', '&:hover': { bgcolor: 'rgba(239,83,80,0.1)' } }}>
+                    <DeleteIcon sx={{ fontSize: '1rem' }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
+          ))
+        )}
+      </Box>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          px: 3, py: 2.5, borderBottom: '1px solid rgba(200,121,65,0.1)',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{ width: 36, height: 36, borderRadius: 2, background: 'rgba(200,121,65,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C87941' }}>
+              <MeasureIcon fontSize="small" />
+            </Box>
+            <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#2C1810' }}>
+              {selected ? 'Edit' : 'New'} Measurement Type
+            </Typography>
+          </Box>
+          <IconButton size="small" onClick={() => setDialogOpen(false)}
+            sx={{ color: 'text.secondary', '&:hover': { color: '#C87941', bgcolor: 'rgba(200,121,65,0.08)' } }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, pt: 3, pb: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <TextField fullWidth label="Name" value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required placeholder="e.g., Ounces, Milliliters, Pieces" />
+            <TextField fullWidth label="Description" value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              multiline rows={2} placeholder="Optional description for this measurement type" />
+            <TextField fullWidth label="Sort Order" type="number" value={form.sortOrder}
+              onChange={(e) => setForm({ ...form, sortOrder: parseInt(e.target.value || '0') })}
+              helperText="Lower numbers appear first in the list" />
+            <FormControlLabel
+              control={
+                <Switch checked={form.isActive}
+                  onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                  sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#4caf50' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4caf50' } }} />
               }
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography>Active</Typography>
-                  <Chip
-                    label={form.isActive ? 'Visible' : 'Hidden'}
-                    size="small"
-                    color={form.isActive ? 'success' : 'default'}
-                    sx={{ height: 20, fontSize: '0.7rem' }}
-                  />
+                  <Typography sx={{ fontWeight: 500 }}>Active</Typography>
+                  <Chip label={form.isActive ? 'Visible' : 'Hidden'} size="small"
+                    sx={{ height: 20, fontSize: '0.7rem', bgcolor: form.isActive ? 'rgba(76,175,80,0.12)' : 'rgba(0,0,0,0.06)', color: form.isActive ? '#2E7D32' : '#757575' }} />
                 </Box>
               }
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button
-            onClick={() => setDialogOpen(false)}
-            sx={{
-              color: 'text.secondary',
-              textTransform: 'none',
-            }}
-          >
+        <DialogActions sx={{ px: 3, pb: 3, pt: 2, gap: 1.5 }}>
+          <Button onClick={() => setDialogOpen(false)} variant="outlined" sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}>
             Cancel
           </Button>
-          <Button
-            onClick={save}
-            variant="contained"
-            disabled={loading || !form.name.trim()}
-            sx={{
-              background: 'linear-gradient(135deg, #C87941 0%, #DDA15E 100%)',
-              color: '#fff',
-              fontWeight: 600,
-              px: 3,
-              borderRadius: 2,
-              textTransform: 'none',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #B56A32 0%, #C89A4E 100%)',
-              },
-              '&:disabled': {
-                background: 'rgba(0, 0, 0, 0.12)',
-              },
-            }}
-          >
-            {loading ? 'Saving...' : selected ? 'Update' : 'Create'}
+          <Button onClick={save} variant="contained" disabled={loading || !form.name.trim()}
+            sx={{ borderRadius: 2, fontWeight: 600, px: 3, backgroundColor: '#C87941', '&:hover': { backgroundColor: '#A45F2D' } }}>
+            {loading ? 'Saving…' : selected ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        open={deleteDialogOpen}
-        title="Delete Measurement Type"
-        message={`Are you sure you want to delete "${measurementToDelete?.name}"? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        onConfirm={confirmDelete}
-        onClose={() => {
-          setDeleteDialogOpen(false);
-          setMeasurementToDelete(null);
-        }}
-        severity="error"
-      />
+      <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); setMeasurementToDelete(null); }} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 3, py: 2.5, borderBottom: '1px solid rgba(200,121,65,0.1)' }}>
+          <Box sx={{ width: 36, height: 36, borderRadius: 2, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444' }}>
+            <WarningIcon fontSize="small" />
+          </Box>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#2C1810' }}>
+            Delete Measurement Type
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, py: 3 }}>
+          <Typography sx={{ color: '#6B4E3D', fontSize: '0.938rem', lineHeight: 1.6 }}>
+            Are you sure you want to delete <strong>"{measurementToDelete?.name}"</strong>? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button onClick={() => { setDeleteDialogOpen(false); setMeasurementToDelete(null); }} variant="outlined" sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}>
+            Cancel
+          </Button>
+          <Button onClick={confirmDelete} variant="contained"
+            sx={{ borderRadius: 2, fontWeight: 600, px: 3, bgcolor: '#EF4444', '&:hover': { bgcolor: '#DC2626' } }}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-      {/* Snackbar Notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
+      {/* Snackbar */}
+      <Snackbar open={snackbar.open} autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        sx={{ zIndex: 99999, position: 'fixed' }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{
-            borderRadius: 2,
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
-          }}
-        >
+        sx={{ zIndex: 99999, position: 'fixed' }}>
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity}
+          variant="filled" sx={{ borderRadius: 2, boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
           {snackbar.message}
         </Alert>
       </Snackbar>

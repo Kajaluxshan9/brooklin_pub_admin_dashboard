@@ -13,6 +13,7 @@ import {
   ListItemText,
   ListItemIcon,
   LinearProgress,
+  Skeleton,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -26,6 +27,7 @@ import {
 } from '@mui/material';
 import {
   Restaurant as RestaurantIcon,
+  Category as CategoryIcon,
   People as PeopleIcon,
   Event as EventIcon,
   Star as SpecialsIcon,
@@ -33,6 +35,7 @@ import {
   CheckCircle as CheckCircleIcon,
   RadioButtonUnchecked as UncheckedIcon,
   Schedule as ScheduleIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import moment from "moment-timezone";
 import { useNavigate } from "react-router-dom";
@@ -110,6 +113,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [todoDialog, setTodoDialog] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [todoForm, setTodoForm] = useState({
     title: "",
@@ -403,20 +407,24 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteTodo = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this todo?')) {
-      try {
-        const response = await api.delete(`/todos/${id}`);
-        if (response.status === 200) {
-          await loadTodos();
-          await loadDashboardData();
-        } else {
-          showToast('Failed to delete todo. Please try again.', 'error');
-        }
-      } catch (error) {
-        logger.error('Error deleting todo:', error);
-        showToast(`Failed to delete todo: ${getErrorMessage(error)}`, 'error');
+  const handleDeleteTodo = (id: string) => {
+    setDeleteConfirmId(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmId) return;
+    try {
+      const response = await api.delete(`/todos/${deleteConfirmId}`);
+      if (response.status === 200) {
+        setDeleteConfirmId(null);
+        await loadTodos();
+        await loadDashboardData();
+      } else {
+        showToast('Failed to delete todo. Please try again.', 'error');
       }
+    } catch (error) {
+      logger.error('Error deleting todo:', error);
+      showToast(`Failed to delete todo: ${getErrorMessage(error)}`, 'error');
     }
   };
 
@@ -476,7 +484,7 @@ const Dashboard: React.FC = () => {
       title: 'Menu Categories',
       value: menuCategoryData.length,
       total: menuCategoryData.length,
-      icon: RestaurantIcon,
+      icon: CategoryIcon,
       color: '#D4842D',
       progress: 100,
       path: '/menu',
@@ -512,22 +520,28 @@ const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '50vh',
-          flexDirection: 'column',
-          gap: 2,
-        }}
-      >
-        <LinearProgress
-          sx={{ width: '100%', maxWidth: 400, borderRadius: 1 }}
-        />
-        <Typography variant="body2" color="text.secondary">
-          Loading dashboard data...
-        </Typography>
+      <Box sx={{ width: '100%' }}>
+        {/* Header skeleton */}
+        <Box sx={{ mb: 4, pb: 3, borderBottom: '2px solid rgba(200,121,65,0.15)' }}>
+          <Skeleton variant="text" width={280} height={48} sx={{ borderRadius: 1 }} />
+          <Skeleton variant="text" width={340} height={28} sx={{ mt: 0.5, borderRadius: 1 }} />
+        </Box>
+        {/* Stats skeleton */}
+        <Grid container spacing={2.5} sx={{ mb: 4 }}>
+          {[...Array(5)].map((_, i) => (
+            <Grid size={{ xs: 12, sm: 6, lg: 2.4 }} key={i}>
+              <Skeleton variant="rounded" height={140} sx={{ borderRadius: 3 }} />
+            </Grid>
+          ))}
+        </Grid>
+        {/* Panels skeleton */}
+        <Grid container spacing={2.5}>
+          {[...Array(2)].map((_, i) => (
+            <Grid size={{ xs: 12, lg: 6 }} key={i}>
+              <Skeleton variant="rounded" height={360} sx={{ borderRadius: 3 }} />
+            </Grid>
+          ))}
+        </Grid>
       </Box>
     );
   }
@@ -1118,6 +1132,58 @@ const Dashboard: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={Boolean(deleteConfirmId)}
+        onClose={() => setDeleteConfirmId(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pt: 3, pb: 1 }}>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <WarningIcon sx={{ color: '#EF4444', fontSize: 22 }} />
+          </Box>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#2C1810', fontSize: '1rem' }}>
+            Delete Task
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pb: 1 }}>
+          <Typography variant="body2" sx={{ color: '#6B4E3D' }}>
+            Are you sure you want to delete this task? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 2, gap: 1 }}>
+          <Button
+            onClick={() => setDeleteConfirmId(null)}
+            variant="outlined"
+            sx={{ borderColor: '#E8DDD0', color: '#6B4E3D', '&:hover': { borderColor: '#C87941', color: '#C87941' } }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmDelete}
+            sx={{
+              background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+              '&:hover': { background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)' },
+            }}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Todo Dialog */}
       <Dialog

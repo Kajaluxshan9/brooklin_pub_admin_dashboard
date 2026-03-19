@@ -88,7 +88,7 @@ const NewsletterManagement: React.FC = () => {
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0); // MUI TablePagination is 0-indexed
-  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Filter + search state
   const [searchTerm, setSearchTerm] = useState('');

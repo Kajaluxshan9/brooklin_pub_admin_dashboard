@@ -41,6 +41,7 @@ import {
   CheckCircle as ActiveIcon,
   Cancel as InactiveIcon,
   VerifiedUser as VerifiedIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import moment from 'moment-timezone';
 import { useAuth } from '../contexts/AuthContext';
@@ -81,6 +82,7 @@ const UserManagement: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuUserId, setMenuUserId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [userForm, setUserForm] = useState<{
     email: string;
     firstName: string;
@@ -288,25 +290,25 @@ const UserManagement: React.FC = () => {
       return;
     }
 
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/users/${id}`, {
-          method: 'DELETE',
-          credentials: 'include',
-        });
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
 
-        if (response.ok) {
-          loadUsers();
-          showToast('User deleted successfully', 'success');
-        } else {
-          const errorData = await response.json();
-          showToast(errorData.message || 'Failed to delete user', 'error');
-          logger.error('Failed to delete user');
-        }
-      } catch (error) {
-        logger.error('Error deleting user:', error);
-        showToast(getErrorMessage(error), 'error');
+      if (response.ok) {
+        loadUsers();
+        showToast('User deleted successfully', 'success');
+      } else {
+        const errorData = await response.json();
+        showToast(errorData.message || 'Failed to delete user', 'error');
+        logger.error('Failed to delete user');
       }
+    } catch (error) {
+      logger.error('Error deleting user:', error);
+      showToast(getErrorMessage(error), 'error');
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -666,7 +668,7 @@ const UserManagement: React.FC = () => {
                   onEdit={() => handleEdit(user)}
                   onDelete={
                     user.role !== UserRole.SUPER_ADMIN
-                      ? () => handleDelete(user.id)
+                      ? () => setDeleteConfirmId(user.id)
                       : undefined
                   }
                 />
@@ -716,7 +718,7 @@ const UserManagement: React.FC = () => {
           <Divider />
           <MenuListItem
             onClick={() => {
-              if (menuUserId) handleDelete(menuUserId);
+              if (menuUserId) setDeleteConfirmId(menuUserId);
               handleMenuClose();
             }}
             sx={{ color: 'error.main' }}
@@ -730,6 +732,35 @@ const UserManagement: React.FC = () => {
           </MenuListItem>
         </MenuList>
       </Menu>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmId !== null} onClose={() => setDeleteConfirmId(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 3, py: 2.5, borderBottom: '1px solid rgba(200, 121, 65, 0.1)' }}>
+          <Box sx={{ width: 36, height: 36, borderRadius: 2, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444' }}>
+            <WarningIcon fontSize="small" />
+          </Box>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#2C1810' }}>
+            Delete User
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, py: 3 }}>
+          <Typography sx={{ color: '#6B4E3D', fontSize: '0.938rem', lineHeight: 1.6 }}>
+            Are you sure you want to delete this user? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button onClick={() => setDeleteConfirmId(null)} variant="outlined" sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => deleteConfirmId !== null && handleDelete(deleteConfirmId)}
+            variant="contained"
+            sx={{ borderRadius: 2, fontWeight: 600, px: 3, bgcolor: '#EF4444', '&:hover': { bgcolor: '#DC2626' } }}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Create/Edit Dialog */}
       <Dialog

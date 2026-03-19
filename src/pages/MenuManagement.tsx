@@ -51,6 +51,7 @@ import {
   Folder as FolderIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import type { GridColDef } from '@mui/x-data-grid';
@@ -209,6 +210,7 @@ const MenuManagement: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; type: 'primary' | 'category' | 'item'; label: string } | null>(null);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: '',
@@ -687,32 +689,26 @@ const MenuManagement: React.FC = () => {
   };
 
   const handleDeletePrimaryCategory = async (id: string) => {
-    if (
-      window.confirm('Are you sure you want to delete this primary category?')
-    ) {
-      try {
-        setLoading(true);
-        const response = await fetch(
-          `${API_BASE_URL}/menu/primary-categories/${id}`,
-          {
-            method: 'DELETE',
-            credentials: 'include',
-          },
-        );
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `${API_BASE_URL}/menu/primary-categories/${id}`,
+        { method: 'DELETE', credentials: 'include' },
+      );
 
-        if (response.ok) {
-          await loadPrimaryCategories();
-          showSnackbar('Primary category deleted successfully');
-        } else {
-          const errorMessage = await parseBackendError(response);
-          throw new Error(errorMessage);
-        }
-      } catch (error) {
-        logger.error('Error deleting primary category:', error);
-        showSnackbar(getErrorMessage(error), 'error');
-      } finally {
-        setLoading(false);
+      if (response.ok) {
+        await loadPrimaryCategories();
+        showSnackbar('Primary category deleted successfully');
+      } else {
+        const errorMessage = await parseBackendError(response);
+        throw new Error(errorMessage);
       }
+    } catch (error) {
+      logger.error('Error deleting primary category:', error);
+      showSnackbar(getErrorMessage(error), 'error');
+    } finally {
+      setLoading(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -895,34 +891,26 @@ const MenuManagement: React.FC = () => {
 
   const handleDeleteCategory = useCallback(
     async (id: string) => {
-      if (
-        window.confirm(
-          'Are you sure you want to delete this category? This will also delete all associated menu items.',
-        )
-      ) {
-        try {
-          setLoading(true);
-          const response = await fetch(
-            `${API_BASE_URL}/menu/categories/${id}`,
-            {
-              method: 'DELETE',
-              credentials: 'include',
-            },
-          );
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `${API_BASE_URL}/menu/categories/${id}`,
+          { method: 'DELETE', credentials: 'include' },
+        );
 
-          if (response.ok) {
-            await loadCategories();
-            await loadMenuItems();
-            showSnackbar('Category deleted successfully');
-          } else {
-            throw new Error('Failed to delete category');
-          }
-        } catch (error) {
-          logger.error('Error deleting category:', error);
-          showSnackbar('Failed to delete category', 'error');
-        } finally {
-          setLoading(false);
+        if (response.ok) {
+          await loadCategories();
+          await loadMenuItems();
+          showSnackbar('Category deleted successfully');
+        } else {
+          throw new Error('Failed to delete category');
         }
+      } catch (error) {
+        logger.error('Error deleting category:', error);
+        showSnackbar('Failed to delete category', 'error');
+      } finally {
+        setLoading(false);
+        setDeleteTarget(null);
       }
     },
     [loadCategories, loadMenuItems, showSnackbar],
@@ -1184,26 +1172,25 @@ const MenuManagement: React.FC = () => {
   };
 
   const handleDeleteItem = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this menu item?')) {
-      try {
-        setLoading(true);
-        const response = await fetch(`${API_BASE_URL}/menu/items/${id}`, {
-          method: 'DELETE',
-          credentials: 'include',
-        });
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/menu/items/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
 
-        if (response.ok) {
-          await loadMenuItems();
-          showSnackbar('Menu item deleted successfully');
-        } else {
-          throw new Error('Failed to delete menu item');
-        }
-      } catch (error) {
-        logger.error('Error deleting menu item:', error);
-        showSnackbar('Failed to delete menu item', 'error');
-      } finally {
-        setLoading(false);
+      if (response.ok) {
+        await loadMenuItems();
+        showSnackbar('Menu item deleted successfully');
+      } else {
+        throw new Error('Failed to delete menu item');
       }
+    } catch (error) {
+      logger.error('Error deleting menu item:', error);
+      showSnackbar('Failed to delete menu item', 'error');
+    } finally {
+      setLoading(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -1385,7 +1372,7 @@ const MenuManagement: React.FC = () => {
           <Tooltip title="Delete" arrow>
             <IconButton
               size="small"
-              onClick={() => handleDeletePrimaryCategory(params.row.id)}
+              onClick={() => setDeleteTarget({ id: params.row.id, type: 'primary', label: 'primary category' })}
               sx={{
                 color: '#EF5350',
                 width: 32,
@@ -1602,7 +1589,7 @@ const MenuManagement: React.FC = () => {
           <Tooltip title="Delete" arrow>
             <IconButton
               size="small"
-              onClick={() => handleDeleteCategory(params.row.id)}
+              onClick={() => setDeleteTarget({ id: params.row.id, type: 'category', label: 'category and all its items' })}
               sx={{
                 color: '#EF5350',
                 width: 32,
@@ -1941,7 +1928,7 @@ const MenuManagement: React.FC = () => {
           <Tooltip title="Delete" arrow>
             <IconButton
               size="small"
-              onClick={() => handleDeleteItem(params.row.id)}
+              onClick={() => setDeleteTarget({ id: params.row.id, type: 'item', label: 'menu item' })}
               sx={{
                 color: '#EF5350',
                 width: 32,
@@ -3806,6 +3793,40 @@ const MenuManagement: React.FC = () => {
             }}
           >
             {selectedItem ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 3, py: 2.5, borderBottom: '1px solid rgba(200, 121, 65, 0.1)' }}>
+          <Box sx={{ width: 36, height: 36, borderRadius: 2, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444' }}>
+            <WarningIcon fontSize="small" />
+          </Box>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#2C1810' }}>
+            Confirm Delete
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, py: 3 }}>
+          <Typography sx={{ color: '#6B4E3D', fontSize: '0.938rem', lineHeight: 1.6 }}>
+            Are you sure you want to delete this {deleteTarget?.label}? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button onClick={() => setDeleteTarget(null)} variant="outlined" sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              if (!deleteTarget) return;
+              if (deleteTarget.type === 'primary') handleDeletePrimaryCategory(deleteTarget.id);
+              else if (deleteTarget.type === 'category') handleDeleteCategory(deleteTarget.id);
+              else handleDeleteItem(deleteTarget.id);
+            }}
+            variant="contained"
+            sx={{ borderRadius: 2, fontWeight: 600, px: 3, bgcolor: '#EF4444', '&:hover': { bgcolor: '#DC2626' } }}
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

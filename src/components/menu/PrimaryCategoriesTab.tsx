@@ -7,13 +7,20 @@ import {
   Alert,
   Snackbar,
 } from "@mui/material";
-import { Add as AddIcon, Search as SearchIcon } from "@mui/icons-material";
+import { Add as AddIcon, Search as SearchIcon, Warning as WarningIcon } from "@mui/icons-material";
 import { DataGrid, GridActionsCellItem } from "@mui/x-data-grid";
 import type { GridColDef } from "@mui/x-data-grid";
       import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from "@mui/icons-material/Delete";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+} from "@mui/material";
 import { StatusChip } from "../common/StatusChip";
 import { api } from "../../utils/api";
 
@@ -47,17 +54,10 @@ export default function PrimaryCategoriesTab({
     message: string;
     severity: "success" | "error";
   }>({ open: false, message: "", severity: "success" });
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const handleDelete = useCallback(
     async (id: string) => {
-      if (
-        !window.confirm(
-          "Are you sure you want to delete this primary category?"
-        )
-      ) {
-        return;
-      }
-
       try {
         await api.delete(`/menu/primary-categories/${id}`);
         setSnackbar({
@@ -74,6 +74,8 @@ export default function PrimaryCategoriesTab({
             "Failed to delete primary category",
           severity: "error",
         });
+      } finally {
+        setDeleteConfirmId(null);
       }
     },
     [onRefresh]
@@ -182,7 +184,7 @@ export default function PrimaryCategoriesTab({
         <GridActionsCellItem
           icon={<DeleteIcon />}
           label="Delete"
-          onClick={() => handleDelete(params.id as string)}
+          onClick={() => setDeleteConfirmId(params.id as string)}
           showInMenu
         />,
       ],
@@ -253,6 +255,34 @@ export default function PrimaryCategoriesTab({
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      <Dialog open={deleteConfirmId !== null} onClose={() => setDeleteConfirmId(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 3, py: 2.5, borderBottom: '1px solid rgba(200, 121, 65, 0.1)' }}>
+          <Box sx={{ width: 36, height: 36, borderRadius: 2, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444' }}>
+            <WarningIcon fontSize="small" />
+          </Box>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#2C1810' }}>
+            Delete Primary Category
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, py: 3 }}>
+          <Typography sx={{ color: '#6B4E3D', fontSize: '0.938rem', lineHeight: 1.6 }}>
+            Are you sure you want to delete this primary category? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button onClick={() => setDeleteConfirmId(null)} variant="outlined" sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+            variant="contained"
+            sx={{ borderRadius: 2, fontWeight: 600, px: 3, bgcolor: '#EF4444', '&:hover': { bgcolor: '#DC2626' } }}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

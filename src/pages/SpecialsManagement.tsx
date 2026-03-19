@@ -38,6 +38,7 @@ import {
   Cancel as InactiveIcon,
   Restaurant as DailyIcon,
   SportsEsports as GameTimeIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { DateTimePicker } from "@mui/x-date-pickers";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -146,6 +147,7 @@ const SpecialsManagement: React.FC = () => {
   });
 
   const [editingSpecial, setEditingSpecial] = useState<Special | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   // Image upload states for preview functionality
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -311,15 +313,14 @@ const SpecialsManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this special?'))
-      return;
-
     try {
       await api.delete(`/specials/${id}`);
       showSnackbar('Special deleted successfully', 'success');
       fetchSpecials();
     } catch (error) {
       showSnackbar(getErrorMessage(error), 'error');
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -630,7 +631,7 @@ const SpecialsManagement: React.FC = () => {
           <ActionButtons
             size="small"
             onEdit={() => handleOpenDialog(special)}
-            onDelete={() => handleDelete(special.id)}
+            onDelete={() => setDeleteConfirmId(special.id)}
           />
           <Button
             size="small"
@@ -958,53 +959,9 @@ const SpecialsManagement: React.FC = () => {
 
             {activeTab === 1 && (
               <Box>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    mb: 3,
-                  }}
-                >
-                  <Typography
-                    variant="h6"
-                    gutterBottom
-                    sx={{ color: 'text.primary', fontWeight: 600, mb: 0 }}
-                  >
-                    Late Night Specials
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() =>
-                      handleOpenDialog(
-                        undefined,
-                        SpecialTypeValues.DAILY,
-                        SpecialCategoryValues.LATE_NIGHT,
-                      )
-                    }
-                    sx={{
-                      background:
-                        'linear-gradient(135deg, #4A148C 0%, #7B1FA2 100%)',
-                      boxShadow: '0 4px 12px rgba(74, 20, 140, 0.3)',
-                      borderRadius: 2,
-                      px: 3,
-                      py: 1.5,
-                      fontSize: '0.9rem',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      '&:hover': {
-                        background:
-                          'linear-gradient(135deg, #2E0051 0%, #4A148C 100%)',
-                        boxShadow: '0 6px 16px rgba(74, 20, 140, 0.4)',
-                        transform: 'translateY(-2px)',
-                      },
-                      transition: 'all 0.3s ease',
-                    }}
-                  >
-                    Add Late Night Special
-                  </Button>
-                </Box>
+                <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 600, mb: 3 }}>
+                  Late Night Specials
+                </Typography>
                 {lateNightSpecials.length === 0 ? (
                   <Box
                     sx={{
@@ -1041,48 +998,9 @@ const SpecialsManagement: React.FC = () => {
 
             {activeTab === 2 && (
               <Box>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    mb: 3,
-                  }}
-                >
-                  <Typography
-                    variant="h6"
-                    gutterBottom
-                    sx={{ color: 'text.primary', fontWeight: 600, mb: 0 }}
-                  >
-                    Game Time Specials
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() =>
-                      handleOpenDialog(undefined, SpecialTypeValues.GAME_TIME)
-                    }
-                    sx={{
-                      background:
-                        'linear-gradient(135deg, #FF5722 0%, #FF9800 100%)',
-                      boxShadow: '0 4px 12px rgba(255, 87, 34, 0.3)',
-                      borderRadius: 2,
-                      px: 3,
-                      py: 1.5,
-                      fontSize: '0.9rem',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      '&:hover': {
-                        background:
-                          'linear-gradient(135deg, #D84315 0%, #FF5722 100%)',
-                        boxShadow: '0 6px 16px rgba(255, 87, 34, 0.4)',
-                        transform: 'translateY(-2px)',
-                      },
-                    }}
-                  >
-                    Add Game Time Special
-                  </Button>
-                </Box>
+                <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 600, mb: 3 }}>
+                  Game Time Specials
+                </Typography>
                 {gameTimeSpecials.length === 0 ? (
                   <Box
                     sx={{
@@ -1118,48 +1036,9 @@ const SpecialsManagement: React.FC = () => {
 
             {activeTab === 3 && (
               <Box>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    mb: 3,
-                  }}
-                >
-                  <Typography
-                    variant="h6"
-                    gutterBottom
-                    sx={{ color: 'text.primary', fontWeight: 600, mb: 0 }}
-                  >
-                    Day Time Specials
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() =>
-                      handleOpenDialog(undefined, SpecialTypeValues.DAY_TIME)
-                    }
-                    sx={{
-                      background:
-                        'linear-gradient(135deg, #2196F3 0%, #64B5F6 100%)',
-                      boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)',
-                      borderRadius: 2,
-                      px: 3,
-                      py: 1.5,
-                      fontSize: '0.9rem',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      '&:hover': {
-                        background:
-                          'linear-gradient(135deg, #1976D2 0%, #2196F3 100%)',
-                        boxShadow: '0 6px 16px rgba(33, 150, 243, 0.4)',
-                        transform: 'translateY(-2px)',
-                      },
-                    }}
-                  >
-                    Add Day Time Special
-                  </Button>
-                </Box>
+                <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 600, mb: 3 }}>
+                  Day Time Specials
+                </Typography>
                 {dayTimeSpecials.length === 0 ? (
                   <Box
                     sx={{
@@ -1194,48 +1073,9 @@ const SpecialsManagement: React.FC = () => {
 
             {activeTab === 4 && (
               <Box>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    mb: 3,
-                  }}
-                >
-                  <Typography
-                    variant="h6"
-                    gutterBottom
-                    sx={{ color: 'text.primary', fontWeight: 600, mb: 0 }}
-                  >
-                    Chef Specials
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() =>
-                      handleOpenDialog(undefined, SpecialTypeValues.CHEF)
-                    }
-                    sx={{
-                      background:
-                        'linear-gradient(135deg, #9C27B0 0%, #BA68C8 100%)',
-                      boxShadow: '0 4px 12px rgba(156, 39, 176, 0.3)',
-                      borderRadius: 2,
-                      px: 3,
-                      py: 1.5,
-                      fontSize: '0.9rem',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      '&:hover': {
-                        background:
-                          'linear-gradient(135deg, #7B1FA2 0%, #9C27B0 100%)',
-                        boxShadow: '0 6px 16px rgba(156, 39, 176, 0.4)',
-                        transform: 'translateY(-2px)',
-                      },
-                    }}
-                  >
-                    Add Chef Special
-                  </Button>
-                </Box>
+                <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 600, mb: 3 }}>
+                  Chef Specials
+                </Typography>
                 {chefSpecials.length === 0 ? (
                   <Box
                     sx={{
@@ -1271,54 +1111,9 @@ const SpecialsManagement: React.FC = () => {
 
             {activeTab === 5 && (
               <Box>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    mb: 3,
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <SeasonalIcon
-                      sx={{ color: '#2E7D32', fontSize: '1.75rem' }}
-                    />
-                    <Typography
-                      variant="h6"
-                      gutterBottom
-                      sx={{ color: 'text.primary', fontWeight: 600, mb: 0 }}
-                    >
-                      Seasonal Specials
-                    </Typography>
-                  </Box>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() =>
-                      handleOpenDialog(undefined, SpecialTypeValues.SEASONAL)
-                    }
-                    sx={{
-                      background:
-                        'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
-                      boxShadow: '0 4px 12px rgba(46, 125, 50, 0.3)',
-                      borderRadius: 2,
-                      px: 3,
-                      py: 1.5,
-                      fontSize: '0.9rem',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      '&:hover': {
-                        background:
-                          'linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%)',
-                        boxShadow: '0 6px 16px rgba(46, 125, 50, 0.4)',
-                        transform: 'translateY(-2px)',
-                      },
-                      transition: 'all 0.3s ease',
-                    }}
-                  >
-                    Add Seasonal Special
-                  </Button>
-                </Box>
+                <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 600, mb: 3 }}>
+                  Seasonal Specials
+                </Typography>
                 {seasonalSpecials.length === 0 ? (
                   <Box
                     sx={{
@@ -1370,28 +1165,33 @@ const SpecialsManagement: React.FC = () => {
           >
             <DialogTitle
               sx={{
-                background: 'linear-gradient(135deg, #C87941 0%, #D4842D 100%)',
-                color: 'white',
-                fontSize: '1.5rem',
-                fontWeight: 700,
-                textAlign: 'center',
-                py: 3,
-                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                px: 3,
+                py: 2.5,
+                borderBottom: '1px solid rgba(200, 121, 65, 0.1)',
               }}
             >
-              {editingSpecial ? 'Edit Special' : 'Create New Special'}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{
+                  width: 36, height: 36, borderRadius: 2,
+                  background: 'rgba(200, 121, 65, 0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#C87941',
+                }}>
+                  <SpecialIcon fontSize="small" />
+                </Box>
+                <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#2C1810' }}>
+                  {editingSpecial ? 'Edit Special' : 'Create New Special'}
+                </Typography>
+              </Box>
               <IconButton
                 onClick={handleCloseDialog}
-                sx={{
-                  position: 'absolute',
-                  right: 16,
-                  top: 16,
-                  color: 'white',
-                  bgcolor: 'rgba(255,255,255,0.1)',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
-                }}
+                size="small"
+                sx={{ color: 'text.secondary', '&:hover': { color: '#C87941', bgcolor: 'rgba(200,121,65,0.08)' } }}
               >
-                <CloseIcon />
+                <CloseIcon fontSize="small" />
               </IconButton>
             </DialogTitle>
             <DialogContent sx={{ p: 4 }}>
@@ -1748,6 +1548,35 @@ const SpecialsManagement: React.FC = () => {
                 }}
               >
                 {editingSpecial ? 'Update Special' : 'Create Special'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Delete Confirmation Dialog */}
+          <Dialog open={deleteConfirmId !== null} onClose={() => setDeleteConfirmId(null)} maxWidth="xs" fullWidth>
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 3, py: 2.5, borderBottom: '1px solid rgba(200, 121, 65, 0.1)' }}>
+              <Box sx={{ width: 36, height: 36, borderRadius: 2, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444' }}>
+                <WarningIcon fontSize="small" />
+              </Box>
+              <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#2C1810' }}>
+                Delete Special
+              </Typography>
+            </DialogTitle>
+            <DialogContent sx={{ px: 3, py: 3 }}>
+              <Typography sx={{ color: '#6B4E3D', fontSize: '0.938rem', lineHeight: 1.6 }}>
+                Are you sure you want to delete this special? This action cannot be undone.
+              </Typography>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+              <Button onClick={() => setDeleteConfirmId(null)} variant="outlined" sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => deleteConfirmId !== null && handleDelete(deleteConfirmId)}
+                variant="contained"
+                sx={{ borderRadius: 2, fontWeight: 600, px: 3, bgcolor: '#EF4444', '&:hover': { bgcolor: '#DC2626' } }}
+              >
+                Delete
               </Button>
             </DialogActions>
           </Dialog>

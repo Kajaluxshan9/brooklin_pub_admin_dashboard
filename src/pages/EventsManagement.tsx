@@ -59,6 +59,7 @@ import {
   History as PastIcon,
   CheckCircle as ActiveIcon,
   Link as LinkIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -132,6 +133,7 @@ const EventsManagement: React.FC = () => {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
   };
@@ -340,24 +342,24 @@ const EventsManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this event?')) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/events/${id}`, {
-          method: 'DELETE',
-          credentials: 'include',
-        });
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
 
-        if (response.ok) {
-          loadEvents();
-          showSnackbar('Event deleted successfully', 'success');
-        } else {
-          const errorData = await response.json().catch(() => ({}));
-          showSnackbar(errorData.message || 'Failed to delete event', 'error');
-        }
-      } catch (error) {
-        logger.error('Error deleting event:', error);
-        showSnackbar(getErrorMessage(error), 'error');
+      if (response.ok) {
+        loadEvents();
+        showSnackbar('Event deleted successfully', 'success');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        showSnackbar(errorData.message || 'Failed to delete event', 'error');
       }
+    } catch (error) {
+      logger.error('Error deleting event:', error);
+      showSnackbar(getErrorMessage(error), 'error');
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -725,7 +727,7 @@ const EventsManagement: React.FC = () => {
                   <Button
                     size="small"
                     color="error"
-                    onClick={() => handleDelete(event.id)}
+                    onClick={() => setDeleteConfirmId(event.id)}
                     sx={{
                       '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' },
                     }}
@@ -1175,6 +1177,35 @@ const EventsManagement: React.FC = () => {
               }}
             >
               {loading ? 'Saving...' : selectedEvent ? 'Update' : 'Create'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteConfirmId !== null} onClose={() => setDeleteConfirmId(null)} maxWidth="xs" fullWidth>
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 3, py: 2.5, borderBottom: '1px solid rgba(200, 121, 65, 0.1)' }}>
+            <Box sx={{ width: 36, height: 36, borderRadius: 2, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444' }}>
+              <WarningIcon fontSize="small" />
+            </Box>
+            <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#2C1810' }}>
+              Delete Event
+            </Typography>
+          </DialogTitle>
+          <DialogContent sx={{ px: 3, py: 3 }}>
+            <Typography sx={{ color: '#6B4E3D', fontSize: '0.938rem', lineHeight: 1.6 }}>
+              Are you sure you want to delete this event? This action cannot be undone.
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+            <Button onClick={() => setDeleteConfirmId(null)} variant="outlined" sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => deleteConfirmId !== null && handleDelete(deleteConfirmId)}
+              variant="contained"
+              sx={{ borderRadius: 2, fontWeight: 600, px: 3, bgcolor: '#EF4444', '&:hover': { bgcolor: '#DC2626' } }}
+            >
+              Delete
             </Button>
           </DialogActions>
         </Dialog>

@@ -10,14 +10,17 @@ import {
   Switch,
   FormControlLabel,
   Alert,
-  CircularProgress,
   Snackbar,
   Chip,
+  Skeleton,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
+  FiberManualRecord as DotIcon,
+  Schedule as ScheduleIcon,
+  EventBusy as ClosedIcon,
 } from '@mui/icons-material';
 import moment from 'moment-timezone';
 import { useAuth } from '../contexts/AuthContext';
@@ -427,26 +430,35 @@ const OpeningHours: React.FC = () => {
     }
   }, [fetchOpeningHours, user]);
 
+  // Helper: convert HH:mm to fractional hours (0-24)
+  const timeToHours = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return h + m / 60;
+  };
+
+  // Skeleton loading
   if (loading) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: 400,
-        }}
-      >
-        <CircularProgress size={40} sx={{ color: 'primary.main' }} />
+      <Box sx={{ maxWidth: '100%', width: '100%' }}>
+        <Box sx={{ mb: 4, pb: 3, borderBottom: '3px solid rgba(200,121,65,0.15)' }}>
+          <Skeleton variant="text" width={320} height={44} />
+          <Skeleton variant="text" width={480} height={24} sx={{ mt: 1 }} />
+        </Box>
+        <Skeleton variant="rounded" height={80} sx={{ mb: 3, borderRadius: 3 }} />
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2.5 }}>
+          {[...Array(7)].map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={110} sx={{ borderRadius: 2.5 }} />
+          ))}
+        </Box>
       </Box>
     );
   }
 
   return (
     <Box sx={{ maxWidth: '100%', width: '100%' }}>
-      {/* Header Section with Status */}
+      {/* Page Header */}
       <PageHeader
-        title="Opening Hours Management"
+        title="Opening Hours"
         subtitle="Manage your pub's operating hours for each day of the week"
         statusChip={
           <StatusChip
@@ -456,436 +468,229 @@ const OpeningHours: React.FC = () => {
         }
       />
 
-      {/* Status Message */}
-      {status.message && (
-        <Box sx={{ mb: 3 }}>
-          <Typography
-            variant="body2"
-            sx={{
-              color: 'text.secondary',
-              fontSize: '0.95rem',
-            }}
-          >
+      {/* Live Status Banner */}
+      <Box
+        sx={{
+          mb: 3,
+          p: 2.5,
+          borderRadius: 3,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          background: status.isOpen
+            ? 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(16,185,129,0.04) 100%)'
+            : 'linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(239,68,68,0.04) 100%)',
+          border: `1px solid ${status.isOpen ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.18)'}`,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+        }}
+      >
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <DotIcon sx={{ fontSize: 16, color: status.isOpen ? '#10B981' : '#EF4444' }} />
+          <Box sx={{
+            position: 'absolute',
+            width: 26, height: 26, borderRadius: '50%',
+            background: status.isOpen ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
+            animation: 'pulse 2s infinite',
+            '@keyframes pulse': {
+              '0%': { transform: 'scale(0.8)', opacity: 1 },
+              '70%': { transform: 'scale(1.4)', opacity: 0 },
+              '100%': { transform: 'scale(0.8)', opacity: 0 },
+            },
+          }} />
+        </Box>
+        <Box>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.938rem', color: status.isOpen ? '#065F46' : '#991B1B', lineHeight: 1.2 }}>
+            {status.isOpen ? 'We are open right now' : 'Currently closed'}
+          </Typography>
+          <Typography sx={{ fontSize: '0.82rem', color: status.isOpen ? '#047857' : '#B91C1C', mt: 0.25 }}>
             {status.message}
           </Typography>
         </Box>
-      )}
-      {/* Opening Hours Cards */}
+      </Box>
+
+      {/* Day Cards Grid */}
       <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' },
-          gap: 3,
+          gap: 2.5,
         }}
       >
         {Object.values(DayOfWeek).map((day) => {
           const dayHours = openingHours.find((oh) => oh.dayOfWeek === day);
           const isToday = isCurrentDay(day);
-
-          // Show default values if no data exists for this day
           const displayData = dayHours || {
-            dayOfWeek: day,
-            openTime: '',
-            closeTime: '',
-            isActive: true,
-            isOpen: false,
-            isClosedNextDay: false,
-            specialNote: '',
+            dayOfWeek: day, openTime: '', closeTime: '',
+            isActive: true, isOpen: false, isClosedNextDay: false, specialNote: '',
           };
+
+          // Time bar calculation
+          const hasTimeBar = displayData.isOpen && displayData.openTime && displayData.closeTime;
+          const openH = hasTimeBar ? timeToHours(displayData.openTime) : 0;
+          const closeH = hasTimeBar ? timeToHours(displayData.closeTime) : 0;
+          const isOvernight = hasTimeBar && closeH < openH;
+          const barLeft = hasTimeBar ? `${(openH / 24) * 100}%` : '0%';
+          const barWidth = hasTimeBar
+            ? isOvernight
+              ? `${((24 - openH) / 24) * 100}%`
+              : `${((closeH - openH) / 24) * 100}%`
+            : '0%';
 
           return (
             <Card
               key={day}
+              elevation={0}
               sx={{
-                border: isToday ? '2px solid' : '1px solid',
-                borderColor: isToday ? '#C87941' : 'rgba(200, 121, 65, 0.1)',
+                border: isToday ? '2px solid #C87941' : '1px solid rgba(200,121,65,0.1)',
                 borderRadius: 2.5,
-                background: isToday
-                  ? 'rgba(200, 121, 65, 0.04)'
-                  : 'rgba(255, 255, 255, 0.9)',
+                background: isToday ? 'rgba(200,121,65,0.03)' : 'rgba(255,255,255,0.92)',
                 backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
-                transition: 'all 0.2s ease',
+                transition: 'box-shadow 0.2s ease',
                 position: 'relative',
                 overflow: 'hidden',
-                boxShadow: isToday
-                  ? '0 4px 16px rgba(200, 121, 65, 0.12)'
-                  : '0 4px 16px rgba(0, 0, 0, 0.04)',
-                '&::before': isToday
-                  ? {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '2px',
-                      background: '#C87941',
-                    }
-                  : {},
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.06)',
-                },
+                boxShadow: isToday ? '0 4px 20px rgba(200,121,65,0.12)' : '0 2px 12px rgba(0,0,0,0.04)',
+                '&:hover': { boxShadow: '0 6px 24px rgba(0,0,0,0.08)' },
               }}
             >
-              <CardContent sx={{ p: 3 }}>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: { xs: 'column', sm: 'row' },
-                    justifyContent: 'space-between',
-                    alignItems: { xs: 'flex-start', sm: 'center' },
-                    gap: 2,
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-start',
-                        flex: 1,
-                      }}
-                    >
-                      <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                      >
-                        <Typography
-                          variant="h6"
-                          sx={{
-                            fontWeight: 700,
-                            color: isToday ? 'primary.main' : 'text.primary',
-                            fontSize: '1.25rem',
-                          }}
-                        >
+              {/* Today accent stripe */}
+              {isToday && (
+                <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #C87941 0%, rgba(200,121,65,0.3) 100%)' }} />
+              )}
+
+              <CardContent sx={{ p: 2.5 }}>
+                {/* Card header row */}
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: editingDay === day ? 2 : 1.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    {/* Day icon */}
+                    <Box sx={{
+                      width: 42, height: 42, borderRadius: 2, flexShrink: 0,
+                      background: isToday ? 'rgba(200,121,65,0.12)' : 'rgba(200,121,65,0.07)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: isToday ? '#C87941' : '#8B7355',
+                    }}>
+                      {displayData.isOpen
+                        ? <ScheduleIcon sx={{ fontSize: '1.2rem' }} />
+                        : <ClosedIcon sx={{ fontSize: '1.2rem' }} />}
+                    </Box>
+                    <Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', color: isToday ? '#C87941' : '#2C1810', lineHeight: 1.1 }}>
                           {getDayDisplayName(day)}
                         </Typography>
                         {isToday && (
-                          <Chip
-                            label="Today"
-                            size="small"
-                            color="primary"
-                            variant="filled"
-                            sx={{
-                              fontWeight: 600,
-                              fontSize: '0.75rem',
-                              height: 24,
-                            }}
-                          />
+                          <Chip label="Today" size="small"
+                            sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: 'rgba(200,121,65,0.15)', color: '#C87941' }} />
                         )}
                       </Box>
-
-                      {editingDay === day ? (
-                        // Edit Mode
-                        <Box sx={{ width: '100%', mt: 2 }}>
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 2,
-                            }}
-                          >
-                            <Box
-                              sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}
-                            >
-                              <FormControlLabel
-                                control={
-                                  <Switch
-                                    checked={editForm.isActive}
-                                    onChange={(e) =>
-                                      setEditForm({
-                                        ...editForm,
-                                        isActive: e.target.checked,
-                                      })
-                                    }
-                                    sx={{
-                                      '& .MuiSwitch-switchBase.Mui-checked': {
-                                        color: 'primary.main',
-                                      },
-                                    }}
-                                  />
-                                }
-                                label="Active"
-                                sx={{
-                                  '& .MuiFormControlLabel-label': {
-                                    fontWeight: 500,
-                                  },
-                                }}
-                              />
-
-                              <FormControlLabel
-                                control={
-                                  <Switch
-                                    checked={!editForm.isOpen}
-                                    onChange={(e) =>
-                                      setEditForm({
-                                        ...editForm,
-                                        isOpen: !e.target.checked,
-                                      })
-                                    }
-                                    sx={{
-                                      '& .MuiSwitch-switchBase.Mui-checked': {
-                                        color: 'error.main',
-                                      },
-                                    }}
-                                  />
-                                }
-                                label="Closed"
-                                sx={{
-                                  '& .MuiFormControlLabel-label': {
-                                    fontWeight: 500,
-                                  },
-                                }}
-                              />
-                            </Box>
-
-                            {editForm.isOpen && (
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  gap: 2,
-                                  flexWrap: 'wrap',
-                                }}
-                              >
-                                <TextField
-                                  label="Open Time"
-                                  type="time"
-                                  value={editForm.openTime}
-                                  onChange={(e) =>
-                                    setEditForm({
-                                      ...editForm,
-                                      openTime: e.target.value,
-                                    })
-                                  }
-                                  InputLabelProps={{ shrink: true }}
-                                  size="small"
-                                  helperText="Opening time"
-                                  sx={{
-                                    flex: '1 1 200px',
-                                    '& .MuiOutlinedInput-root': {
-                                      '&.Mui-focused fieldset': {
-                                        borderColor: 'primary.main',
-                                      },
-                                    },
-                                  }}
-                                />
-                                <TextField
-                                  label="Close Time"
-                                  type="time"
-                                  value={editForm.closeTime}
-                                  onChange={(e) =>
-                                    setEditForm({
-                                      ...editForm,
-                                      closeTime: e.target.value,
-                                    })
-                                  }
-                                  InputLabelProps={{ shrink: true }}
-                                  size="small"
-                                  helperText="Can be next day"
-                                  sx={{
-                                    flex: '1 1 200px',
-                                    '& .MuiOutlinedInput-root': {
-                                      '&.Mui-focused fieldset': {
-                                        borderColor: 'primary.main',
-                                      },
-                                    },
-                                  }}
-                                />
-
-                                <FormControlLabel
-                                  control={
-                                    <Switch
-                                      checked={editForm.isClosedNextDay}
-                                      onChange={(e) =>
-                                        setEditForm({
-                                          ...editForm,
-                                          isClosedNextDay: e.target.checked,
-                                        })
-                                      }
-                                      sx={{
-                                        '& .MuiSwitch-switchBase.Mui-checked': {
-                                          color: 'warning.main',
-                                        },
-                                      }}
-                                    />
-                                  }
-                                  label="Closes Next Day"
-                                  sx={{
-                                    mt: 1,
-                                    '& .MuiFormControlLabel-label': {
-                                      fontSize: '0.875rem',
-                                      color: 'text.secondary',
-                                    },
-                                  }}
-                                />
-                              </Box>
-                            )}
-
-                            <TextField
-                              label="Special Notes"
-                              value={editForm.specialNote}
-                              onChange={(e) =>
-                                setEditForm({
-                                  ...editForm,
-                                  specialNote: e.target.value,
-                                })
-                              }
-                              size="small"
-                              fullWidth
-                              placeholder="e.g., Live Music Night, Happy Hour 5-7 PM"
-                              sx={{
-                                '& .MuiOutlinedInput-root': {
-                                  '&.Mui-focused fieldset': {
-                                    borderColor: 'primary.main',
-                                  },
-                                },
-                              }}
-                            />
-                          </Box>
-                        </Box>
-                      ) : (
-                        // Display Mode
-                        <Box sx={{ mt: 1 }}>
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 2,
-                              mb: 1,
-                            }}
-                          >
-                            <Chip
-                              label={
-                                displayData.isActive ? 'Active' : 'Inactive'
-                              }
-                              color={
-                                displayData.isActive ? 'success' : 'default'
-                              }
-                              size="small"
-                              sx={{ fontWeight: 600 }}
-                            />
-
-                            <Typography
-                              variant="body1"
-                              sx={{
-                                color: 'text.primary',
-                                fontWeight: 600,
-                                fontSize: '1rem',
-                              }}
-                            >
-                              {!displayData.isOpen
-                                ? 'Closed'
-                                : displayData.openTime && displayData.closeTime
-                                ? formatTimeRange(
-                                    displayData.openTime,
-                                    displayData.closeTime,
-                                    displayData.isClosedNextDay,
-                                  )
-                                : 'Hours not set'}
-                            </Typography>
-                          </Box>
-
-                          {displayData.specialNote && (
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                color: 'text.secondary',
-                                fontStyle: 'italic',
-                                mt: 0.5,
-                              }}
-                            >
-                              📝 {displayData.specialNote}
-                            </Typography>
-                          )}
-                        </Box>
+                      {editingDay !== day && (
+                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: displayData.isOpen ? '#2C1810' : '#9E9E9E', mt: 0.25 }}>
+                          {!displayData.isOpen
+                            ? 'Closed'
+                            : displayData.openTime && displayData.closeTime
+                            ? formatTimeRange(displayData.openTime, displayData.closeTime, displayData.isClosedNextDay)
+                            : 'Hours not set'}
+                        </Typography>
                       )}
                     </Box>
                   </Box>
 
-                  {/* Action Buttons */}
-                  <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+                  {/* Action buttons */}
+                  <Box sx={{ display: 'flex', gap: 0.75, flexShrink: 0 }}>
                     {editingDay === day ? (
                       <>
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={<SaveIcon />}
-                          onClick={handleSave}
-                          disabled={saving}
-                          sx={{
-                            backgroundColor: 'primary.main',
-                            '&:hover': { backgroundColor: 'primary.dark' },
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {saving ? 'Saving...' : 'Save'}
+                        <Button size="small" variant="contained" startIcon={<SaveIcon />}
+                          onClick={handleSave} disabled={saving}
+                          sx={{ borderRadius: 2, fontWeight: 600, fontSize: '0.8rem', py: 0.75, px: 1.5, backgroundColor: '#C87941', '&:hover': { backgroundColor: '#A45F2D' } }}>
+                          {saving ? 'Saving…' : 'Save'}
                         </Button>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<CancelIcon />}
-                          onClick={handleCancel}
-                          disabled={saving}
-                          sx={{
-                            borderColor: 'text.secondary',
-                            color: 'text.secondary',
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            '&:hover': {
-                              borderColor: 'text.primary',
-                              color: 'text.primary',
-                            },
-                          }}
-                        >
+                        <Button size="small" variant="outlined" startIcon={<CancelIcon />}
+                          onClick={handleCancel} disabled={saving}
+                          sx={{ borderRadius: 2, fontWeight: 600, fontSize: '0.8rem', py: 0.75, px: 1.5 }}>
                           Cancel
                         </Button>
                       </>
                     ) : (
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<EditIcon />}
-                        onClick={() => handleEdit(day)}
-                        disabled={!!editingDay}
+                      <Button size="small" variant={isToday ? 'contained' : 'outlined'} startIcon={<EditIcon />}
+                        onClick={() => handleEdit(day)} disabled={!!editingDay}
                         sx={{
-                          borderColor: 'primary.main',
-                          color: 'primary.main',
-                          borderRadius: 2,
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          '&:hover': {
-                            backgroundColor: 'primary.50',
-                            borderColor: 'primary.dark',
-                          },
-                        }}
-                      >
+                          borderRadius: 2, fontWeight: 600, fontSize: '0.8rem', py: 0.75, px: 1.5,
+                          ...(isToday
+                            ? { backgroundColor: '#C87941', '&:hover': { backgroundColor: '#A45F2D' } }
+                            : { borderColor: 'rgba(200,121,65,0.4)', color: '#C87941', '&:hover': { borderColor: '#C87941', bgcolor: 'rgba(200,121,65,0.05)' } }),
+                        }}>
                         Edit
                       </Button>
                     )}
                   </Box>
                 </Box>
+
+                {/* Edit form */}
+                {editingDay === day && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1, borderTop: '1px solid rgba(200,121,65,0.1)' }}>
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      <FormControlLabel control={<Switch checked={editForm.isActive} onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })} />} label="Active" />
+                      <FormControlLabel control={<Switch checked={!editForm.isOpen} onChange={(e) => setEditForm({ ...editForm, isOpen: !e.target.checked })}
+                        sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#EF4444' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#EF4444' } }} />} label="Mark as Closed" />
+                    </Box>
+                    {editForm.isOpen && (
+                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                        <TextField label="Open Time" type="time" value={editForm.openTime}
+                          onChange={(e) => setEditForm({ ...editForm, openTime: e.target.value })}
+                          slotProps={{ inputLabel: { shrink: true } }} size="small" helperText="Opening time" sx={{ flex: '1 1 160px' }} />
+                        <TextField label="Close Time" type="time" value={editForm.closeTime}
+                          onChange={(e) => setEditForm({ ...editForm, closeTime: e.target.value })}
+                          slotProps={{ inputLabel: { shrink: true } }} size="small" helperText="Can be next day" sx={{ flex: '1 1 160px' }} />
+                        <FormControlLabel control={<Switch checked={editForm.isClosedNextDay} onChange={(e) => setEditForm({ ...editForm, isClosedNextDay: e.target.checked })} size="small" />}
+                          label={<Typography sx={{ fontSize: '0.85rem' }}>Closes next day</Typography>} />
+                      </Box>
+                    )}
+                    <TextField label="Special Note" value={editForm.specialNote}
+                      onChange={(e) => setEditForm({ ...editForm, specialNote: e.target.value })}
+                      size="small" fullWidth placeholder="e.g., Live Music Night, Happy Hour 5–7 PM" />
+                  </Box>
+                )}
+
+                {/* Time bar visualization */}
+                {editingDay !== day && (
+                  <Box sx={{ mt: 2 }}>
+                    {/* 24h track */}
+                    <Box sx={{ position: 'relative', height: 6, borderRadius: 3, bgcolor: 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                      {hasTimeBar && (
+                        <Box sx={{
+                          position: 'absolute', top: 0, bottom: 0, borderRadius: 3,
+                          left: barLeft, width: barWidth,
+                          background: displayData.isActive
+                            ? 'linear-gradient(90deg, #C87941, #DDA15E)'
+                            : 'rgba(158,158,158,0.4)',
+                        }} />
+                      )}
+                    </Box>
+                    {/* Time labels */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                      {['12am', '6am', '12pm', '6pm', '12am'].map((t) => (
+                        <Typography key={t} sx={{ fontSize: '0.62rem', color: 'rgba(0,0,0,0.3)', fontWeight: 500 }}>{t}</Typography>
+                      ))}
+                    </Box>
+                    {/* Special note */}
+                    {displayData.specialNote && (
+                      <Typography sx={{ fontSize: '0.78rem', color: '#8B7355', mt: 1, fontStyle: 'italic' }}>
+                        ✦ {displayData.specialNote}
+                      </Typography>
+                    )}
+                  </Box>
+                )}
               </CardContent>
             </Card>
           );
         })}
       </Box>
 
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={4000}
+      {/* Snackbar */}
+      <Snackbar open={notification.open} autoHideDuration={4000}
         onClose={() => setNotification({ ...notification, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        sx={{ zIndex: 99999, position: 'fixed' }}
-      >
-        <Alert
-          onClose={() => setNotification({ ...notification, open: false })}
-          severity={notification.type}
-          sx={{ width: '100%' }}
-        >
+        sx={{ zIndex: 99999, position: 'fixed' }}>
+        <Alert onClose={() => setNotification({ ...notification, open: false })} severity={notification.type} sx={{ width: '100%' }}>
           {notification.message}
         </Alert>
       </Snackbar>

@@ -4,12 +4,15 @@ import {
   Paper,
   Typography,
   CircularProgress,
-  Alert,
   Button,
 } from "@mui/material";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
+import MarkEmailReadIcon from "@mui/icons-material/MarkEmailRead";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { api } from "../utils/api";
 
 export default function EmailVerificationPage() {
@@ -35,8 +38,6 @@ export default function EmailVerificationPage() {
         await api.post("/auth/verify-email", { token });
         setSuccess(true);
         setError("");
-
-        // Redirect to login after 3 seconds
         setRedirecting(true);
         setTimeout(() => {
           navigate("/login", {
@@ -60,122 +61,172 @@ export default function EmailVerificationPage() {
     verifyEmail();
   }, [searchParams, navigate]);
 
-  const handleResendVerification = async () => {
-    // This would need the email, but we don't have it from the URL
-    // For now, redirect to forgot password page where they can enter email
+  const handleResendVerification = () => {
     navigate("/forgot-password");
   };
 
+  const bgStyles = {
+    minHeight: '100vh',
+    background: 'linear-gradient(160deg, #FFF8F0 0%, #FFF3E6 40%, #FFF8F0 70%, #FFFFFF 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    p: 2,
+    position: 'relative',
+    overflow: 'hidden',
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      top: '-15%',
+      right: '-10%',
+      width: 420,
+      height: 420,
+      borderRadius: '50%',
+      background: 'radial-gradient(circle, rgba(200, 121, 65, 0.07) 0%, transparent 70%)',
+      pointerEvents: 'none',
+    },
+    '&::after': {
+      content: '""',
+      position: 'absolute',
+      bottom: '-10%',
+      left: '-8%',
+      width: 320,
+      height: 320,
+      borderRadius: '50%',
+      background: 'radial-gradient(circle, rgba(212, 132, 45, 0.05) 0%, transparent 70%)',
+      pointerEvents: 'none',
+    },
+  } as const;
+
+  const paperStyles = {
+    p: { xs: 4, sm: 5 },
+    width: '100%',
+    maxWidth: 460,
+    borderRadius: 4,
+    textAlign: 'center' as const,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backdropFilter: 'blur(24px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(200, 121, 65, 0.06)',
+    border: '1px solid rgba(200, 121, 65, 0.1)',
+    position: 'relative' as const,
+    zIndex: 1,
+  };
+
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #1a1a1a 0%, #2d1b00 100%)",
-        padding: 2,
-      }}
-    >
-      <Paper
-        elevation={6}
-        sx={{
-          maxWidth: 500,
-          width: "100%",
-          padding: 4,
-          borderRadius: 2,
-          backgroundColor: "rgba(255, 255, 255, 0.95)",
-          textAlign: "center",
-        }}
-      >
+    <Box sx={bgStyles}>
+      <Paper elevation={0} sx={paperStyles}>
         {loading ? (
+          /* Loading State */
           <Box>
-            <CircularProgress size={60} sx={{ color: "#d4a574", mb: 3 }} />
-            <Typography variant="h5" gutterBottom fontWeight="bold">
-              Verifying Your Email
+            <Box
+              sx={{
+                width: 72,
+                height: 72,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, rgba(200, 121, 65, 0.12) 0%, rgba(200, 121, 65, 0.06) 100%)',
+                border: '1.5px solid rgba(200, 121, 65, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 3,
+              }}
+            >
+              <MarkEmailReadIcon sx={{ fontSize: 34, color: '#C87941' }} />
+            </Box>
+            <CircularProgress size={32} sx={{ color: '#C87941', mb: 2.5 }} />
+            <Typography variant="h5" sx={{ fontWeight: 800, color: '#2C1810', mb: 1, letterSpacing: '-0.01em' }}>
+              Verifying your email
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Please wait while we verify your email address...
+            <Typography variant="body2" sx={{ color: '#8B7355', fontSize: '0.938rem' }}>
+              Please wait while we confirm your email address…
             </Typography>
           </Box>
         ) : success ? (
+          /* Success State */
           <Box>
-            <CheckCircleIcon sx={{ fontSize: 80, color: "#4caf50", mb: 2 }} />
-            <Typography variant="h4" gutterBottom fontWeight="bold">
-              Email Verified!
+            <Box
+              sx={{
+                width: 72,
+                height: 72,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.06) 100%)',
+                border: '2px solid rgba(16, 185, 129, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 3,
+              }}
+            >
+              <CheckCircleIcon sx={{ fontSize: 38, color: '#10B981' }} />
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: '#2C1810', mb: 1, letterSpacing: '-0.01em' }}>
+              Email verified!
             </Typography>
-            <Alert severity="success" sx={{ mb: 3, textAlign: "left" }}>
-              <Typography variant="body1" gutterBottom>
-                Your email has been successfully verified.
-              </Typography>
-              <Typography variant="body2">
-                {redirecting
-                  ? "Redirecting to login page..."
-                  : "You can now log in to your account."}
-              </Typography>
-            </Alert>
-
+            <Typography variant="body2" sx={{ color: '#8B7355', mb: 4, fontSize: '0.938rem', lineHeight: 1.6 }}>
+              {redirecting
+                ? "Redirecting you to the sign in page…"
+                : "Your email has been successfully verified. You can now log in."}
+            </Typography>
             {!redirecting && (
               <Button
                 fullWidth
                 variant="contained"
                 onClick={() => navigate("/login")}
-                sx={{
-                  backgroundColor: "#d4a574",
-                  color: "white",
-                  py: 1.5,
-                  fontWeight: "bold",
-                  "&:hover": {
-                    backgroundColor: "#b8935f",
-                  },
-                }}
+                sx={{ py: 1.5, fontWeight: 600, borderRadius: 2.5 }}
               >
-                Go to Login
+                Go to Sign In
               </Button>
             )}
           </Box>
         ) : (
+          /* Error State */
           <Box>
-            <ErrorIcon sx={{ fontSize: 80, color: "#f44336", mb: 2 }} />
-            <Typography variant="h4" gutterBottom fontWeight="bold">
-              Verification Failed
+            <Box
+              sx={{
+                width: 72,
+                height: 72,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.06) 100%)',
+                border: '2px solid rgba(239, 68, 68, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 3,
+              }}
+            >
+              <ErrorIcon sx={{ fontSize: 38, color: '#EF4444' }} />
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: '#2C1810', mb: 1, letterSpacing: '-0.01em' }}>
+              Verification failed
             </Typography>
-            <Alert severity="error" sx={{ mb: 3, textAlign: "left" }}>
+            <Typography variant="body2" sx={{ color: '#8B7355', mb: 1.5, fontSize: '0.938rem', lineHeight: 1.6 }}>
               {error}
-            </Alert>
-
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              The verification link may have expired (links are valid for 10
-              minutes) or is invalid.
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#A89588', display: 'block', mb: 4, fontSize: '0.813rem' }}>
+              Links are valid for 10 minutes. Request a new one below.
             </Typography>
 
-            <Box sx={{ display: "flex", gap: 2 }}>
+            <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <Button
                 fullWidth
                 variant="outlined"
-                onClick={() => navigate("/login")}
-                sx={{
-                  borderColor: "#d4a574",
-                  color: "#d4a574",
-                  "&:hover": {
-                    borderColor: "#b8935f",
-                    backgroundColor: "rgba(212, 165, 116, 0.08)",
-                  },
-                }}
+                component={Link}
+                to="/login"
+                startIcon={<ArrowBackIcon />}
+                sx={{ py: 1.25, fontWeight: 600, borderRadius: 2.5 }}
               >
-                Go to Login
+                Sign In
               </Button>
               <Button
                 fullWidth
                 variant="contained"
                 onClick={handleResendVerification}
-                sx={{
-                  backgroundColor: "#d4a574",
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: "#b8935f",
-                  },
-                }}
+                startIcon={<RefreshIcon />}
+                sx={{ py: 1.25, fontWeight: 600, borderRadius: 2.5 }}
               >
                 Request New Link
               </Button>
