@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -17,6 +17,7 @@ import {
   LinearProgress,
   alpha,
   CircularProgress,
+  TablePagination,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -60,6 +61,14 @@ interface Subscriber {
   promoClaimedAt: string | null;
 }
 
+interface PaginatedSubscribersResponse {
+  data: Subscriber[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 interface NewsletterStats {
   total: number;
   active: number;
@@ -74,7 +83,21 @@ type FilterStatus = 'all' | 'active' | 'unsubscribed' | 'promo_pending' | 'promo
 
 const NewsletterManagement: React.FC = () => {
   const { showToast } = useGlobalToast();
+
+  // Subscriber list state
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0); // MUI TablePagination is 0-indexed
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+
+  // Filter + search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  // Debounced search value — only sent to the API after 350 ms of no typing
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Other UI state
   const [stats, setStats] = useState<NewsletterStats>({
     total: 0,
     active: 0,
@@ -83,36 +106,84 @@ const NewsletterManagement: React.FC = () => {
     promoPending: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [subscriberToDelete, setSubscriberToDelete] = useState<Subscriber | null>(null);
-  // Per-subscriber loading flags to prevent double-click / concurrent requests
   const [sendingPromo, setSendingPromo] = useState<Record<string, boolean>>({});
   const [claimingPromo, setClaimingPromo] = useState<Record<string, boolean>>({});
 
-  const fetchData = useCallback(async () => {
+  // ─── Debounce search input ────────────────────────────────────────────────
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(value);
+      setPage(0); // reset to first page on new search
+    }, 350);
+  };
+
+  // ─── Data fetching ────────────────────────────────────────────────────────
+
+  const fetchSubscribers = useCallback(async () => {
     setLoading(true);
     try {
-      const [subscribersRes, statsRes] = await Promise.all([
-        api.get<Subscriber[]>('/newsletter/subscribers'),
-        api.get<NewsletterStats>('/newsletter/stats'),
-      ]);
-      setSubscribers(subscribersRes.data);
-      setStats(statsRes.data);
+      const params: Record<string, string | number> = {
+        page: page + 1, // API is 1-indexed
+        limit: rowsPerPage,
+        status: filterStatus,
+      };
+      if (debouncedSearch) params.search = debouncedSearch;
+
+      const res = await api.get<PaginatedSubscribersResponse>('/newsletter/subscribers', { params });
+      setSubscribers(res.data.data);
+      setTotal(res.data.total);
     } catch (error) {
-      logger.error('Failed to fetch newsletter data:', error);
+      logger.error('Failed to fetch subscribers:', error);
       showToast(getErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [page, rowsPerPage, filterStatus, debouncedSearch, showToast]);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await api.get<NewsletterStats>('/newsletter/stats');
+      setStats(res.data);
+    } catch (error) {
+      logger.error('Failed to fetch stats:', error);
+    }
+  }, []);
+
+  const fetchAll = useCallback(() => {
+    void fetchSubscribers();
+    void fetchStats();
+  }, [fetchSubscribers, fetchStats]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    void fetchSubscribers();
+  }, [fetchSubscribers]);
 
-  // ─── Handlers ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    void fetchStats();
+  }, [fetchStats]);
+
+  // ─── Pagination handlers ─────────────────────────────────────────────────
+
+  const handlePageChange = (_: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleRowsPerPageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(e.target.value, 10));
+    setPage(0);
+  };
+
+  const handleFilterChange = (value: FilterStatus) => {
+    setFilterStatus(value);
+    setPage(0);
+  };
+
+  // ─── Action handlers ─────────────────────────────────────────────────────
 
   const handleDelete = async () => {
     if (!subscriberToDelete) return;
@@ -121,7 +192,7 @@ const NewsletterManagement: React.FC = () => {
       showToast('Subscriber removed successfully', 'success');
       setDeleteDialogOpen(false);
       setSubscriberToDelete(null);
-      fetchData();
+      fetchAll();
     } catch (error) {
       logger.error('Failed to delete subscriber:', error);
       showToast(getErrorMessage(error), 'error');
@@ -130,13 +201,11 @@ const NewsletterManagement: React.FC = () => {
 
   const handleSendPromo = async (subscriber: Subscriber) => {
     if (subscriber.promoCodeSent || sendingPromo[subscriber.id]) return;
-
     setSendingPromo((prev) => ({ ...prev, [subscriber.id]: true }));
     try {
       const res = await api.post<{ message: string; promoCode: string }>(
         `/newsletter/subscribers/${subscriber.id}/send-promo`,
       );
-      // Optimistic update — avoids a full refetch round-trip
       setSubscribers((prev) =>
         prev.map((s) =>
           s.id === subscriber.id
@@ -160,7 +229,6 @@ const NewsletterManagement: React.FC = () => {
 
   const handleMarkClaimed = async (subscriber: Subscriber) => {
     if (!subscriber.promoCodeSent || subscriber.promoClaimed || claimingPromo[subscriber.id]) return;
-
     setClaimingPromo((prev) => ({ ...prev, [subscriber.id]: true }));
     try {
       await api.patch(`/newsletter/subscribers/${subscriber.id}/claim-promo`);
@@ -180,56 +248,27 @@ const NewsletterManagement: React.FC = () => {
     }
   };
 
-  const handleCopyEmails = () => {
-    const activeEmails = subscribers
-      .filter((s) => s.isActive)
-      .map((s) => s.email)
-      .join(', ');
-    navigator.clipboard.writeText(activeEmails);
-    showToast(`Copied ${subscribers.filter((s) => s.isActive).length} active emails`, 'success');
+  const handleCopyEmails = async () => {
+    try {
+      // Fetch all active emails (no pagination) for clipboard copy
+      const res = await api.get<PaginatedSubscribersResponse>('/newsletter/subscribers', {
+        params: { page: 1, limit: 1000, status: 'active' },
+      });
+      const emails = res.data.data.map((s) => s.email).join(', ');
+      await navigator.clipboard.writeText(emails);
+      showToast(`Copied ${res.data.total} active emails`, 'success');
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
+    }
   };
 
-  // ─── Derived data ──────────────────────────────────────────────────────────
-
-  const filteredSubscribers = useMemo(() => {
-    return subscribers.filter((sub) => {
-      const matchesSearch = sub.email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter =
-        filterStatus === 'all' ||
-        (filterStatus === 'active' && sub.isActive) ||
-        (filterStatus === 'unsubscribed' && !sub.isActive) ||
-        (filterStatus === 'promo_pending' && sub.isActive && !sub.promoCodeSent) ||
-        (filterStatus === 'promo_sent' && sub.promoCodeSent && !sub.promoClaimed) ||
-        (filterStatus === 'promo_claimed' && sub.promoClaimed);
-      return matchesSearch && matchesFilter;
-    });
-  }, [subscribers, searchTerm, filterStatus]);
+  // ─── Derived data ─────────────────────────────────────────────────────────
 
   const summaryStats: StatItem[] = [
-    {
-      label: 'Total Subscribers',
-      value: stats.total,
-      icon: <GroupIcon />,
-      color: '#C87941',
-    },
-    {
-      label: 'Active Subscribers',
-      value: stats.active,
-      icon: <ActiveIcon />,
-      color: '#4CAF50',
-    },
-    {
-      label: 'Promo Code Sent',
-      value: stats.promoSent,
-      icon: <SentPromoIcon />,
-      color: '#2196F3',
-    },
-    {
-      label: 'Pending Promo',
-      value: stats.promoPending,
-      icon: <PendingPromoIcon />,
-      color: '#FF9800',
-    },
+    { label: 'Total Subscribers', value: stats.total, icon: <GroupIcon />, color: '#C87941' },
+    { label: 'Active Subscribers', value: stats.active, icon: <ActiveIcon />, color: '#4CAF50' },
+    { label: 'Promo Code Sent', value: stats.promoSent, icon: <SentPromoIcon />, color: '#2196F3' },
+    { label: 'Pending Promo', value: stats.promoPending, icon: <PendingPromoIcon />, color: '#FF9800' },
   ];
 
   const filterOptions: { value: FilterStatus; label: string }[] = [
@@ -241,7 +280,7 @@ const NewsletterManagement: React.FC = () => {
     { value: 'promo_claimed', label: 'Claimed' },
   ];
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -251,12 +290,12 @@ const NewsletterManagement: React.FC = () => {
         icon={<EmailIcon sx={{ fontSize: 32, color: '#C87941' }} />}
         action={
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip title="Copy active emails">
+            <Tooltip title="Copy all active emails to clipboard">
               <Button
                 variant="outlined"
                 startIcon={<CopyIcon />}
                 onClick={handleCopyEmails}
-                disabled={subscribers.filter((s) => s.isActive).length === 0}
+                disabled={stats.active === 0}
                 sx={{
                   borderColor: 'rgba(200, 121, 65, 0.3)',
                   color: '#C87941',
@@ -267,7 +306,7 @@ const NewsletterManagement: React.FC = () => {
               </Button>
             </Tooltip>
             <Tooltip title="Refresh">
-              <IconButton onClick={fetchData} sx={{ color: '#C87941' }}>
+              <IconButton onClick={fetchAll} sx={{ color: '#C87941' }}>
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
@@ -304,17 +343,10 @@ const NewsletterManagement: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              borderRadius: 1.5,
-              bgcolor: '#1877F2',
-              color: '#fff',
-              textDecoration: 'none',
-              '&:hover': { opacity: 0.85 },
-              transition: 'opacity 0.2s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 28, borderRadius: 1.5, bgcolor: '#1877F2',
+              color: '#fff', textDecoration: 'none',
+              '&:hover': { opacity: 0.85 }, transition: 'opacity 0.2s',
             }}
           >
             <FaFacebookF size={13} />
@@ -327,17 +359,10 @@ const NewsletterManagement: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              borderRadius: 1.5,
-              bgcolor: '#E1306C',
-              color: '#fff',
-              textDecoration: 'none',
-              '&:hover': { opacity: 0.85 },
-              transition: 'opacity 0.2s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 28, borderRadius: 1.5, bgcolor: '#E1306C',
+              color: '#fff', textDecoration: 'none',
+              '&:hover': { opacity: 0.85 }, transition: 'opacity 0.2s',
             }}
           >
             <FaInstagram size={14} />
@@ -350,17 +375,10 @@ const NewsletterManagement: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              borderRadius: 1.5,
-              bgcolor: '#010101',
-              color: '#fff',
-              textDecoration: 'none',
-              '&:hover': { opacity: 0.85 },
-              transition: 'opacity 0.2s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 28, borderRadius: 1.5, bgcolor: '#010101',
+              color: '#fff', textDecoration: 'none',
+              '&:hover': { opacity: 0.85 }, transition: 'opacity 0.2s',
             }}
           >
             <FaTiktok size={14} />
@@ -371,13 +389,13 @@ const NewsletterManagement: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* Filters */}
+      {/* Filters + search */}
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
         <TextField
           size="small"
           placeholder="Search by email..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           slotProps={{
             input: {
               startAdornment: (
@@ -402,7 +420,7 @@ const NewsletterManagement: React.FC = () => {
               key={value}
               label={label}
               variant={filterStatus === value ? 'filled' : 'outlined'}
-              onClick={() => setFilterStatus(value)}
+              onClick={() => handleFilterChange(value)}
               sx={{
                 fontWeight: 600,
                 ...(filterStatus === value
@@ -417,12 +435,12 @@ const NewsletterManagement: React.FC = () => {
           ))}
         </Box>
         <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
-          Showing {filteredSubscribers.length} of {subscribers.length}
+          {total > 0 ? `${total} subscriber${total !== 1 ? 's' : ''}` : 'No results'}
         </Typography>
       </Box>
 
       {/* Subscriber list */}
-      {filteredSubscribers.length === 0 ? (
+      {!loading && subscribers.length === 0 ? (
         <Card
           sx={{
             textAlign: 'center',
@@ -435,10 +453,10 @@ const NewsletterManagement: React.FC = () => {
           <CardContent>
             <EmailIcon sx={{ fontSize: 64, color: 'rgba(200, 121, 65, 0.3)', mb: 2 }} />
             <Typography variant="h6" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-              {searchTerm || filterStatus !== 'all' ? 'No matching subscribers' : 'No subscribers yet'}
+              {debouncedSearch || filterStatus !== 'all' ? 'No matching subscribers' : 'No subscribers yet'}
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
-              {searchTerm || filterStatus !== 'all'
+              {debouncedSearch || filterStatus !== 'all'
                 ? 'Try adjusting your search or filter criteria'
                 : 'Subscribers will appear here when users sign up via the website newsletter form'}
             </Typography>
@@ -446,7 +464,7 @@ const NewsletterManagement: React.FC = () => {
         </Card>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {filteredSubscribers.map((subscriber) => (
+          {subscribers.map((subscriber) => (
             <SubscriberRow
               key={subscriber.id}
               subscriber={subscriber}
@@ -460,6 +478,41 @@ const NewsletterManagement: React.FC = () => {
               }}
             />
           ))}
+        </Box>
+      )}
+
+      {/* Pagination */}
+      {total > 0 && (
+        <Box
+          sx={{
+            mt: 2,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            background: 'rgba(255,255,255,0.9)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(200, 121, 65, 0.08)',
+            borderRadius: 2,
+          }}
+        >
+          <TablePagination
+            component="div"
+            count={total}
+            page={page}
+            onPageChange={handlePageChange}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            rowsPerPageOptions={[10, 20, 50, 100]}
+            labelRowsPerPage="Per page:"
+            sx={{
+              '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                color: 'text.secondary',
+                fontSize: '0.8rem',
+              },
+              '& .MuiTablePagination-select': { color: '#C87941', fontWeight: 600 },
+              '& .MuiIconButton-root': { color: '#C87941' },
+              '& .MuiIconButton-root.Mui-disabled': { color: 'rgba(0,0,0,0.26)' },
+            }}
+          />
         </Box>
       )}
 
@@ -543,17 +596,12 @@ const SubscriberRow: React.FC<SubscriberRowProps> = ({
       {/* Status icon */}
       <Box
         sx={{
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          width: 40, height: 40, borderRadius: '50%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           bgcolor: subscriber.isActive
             ? (theme) => alpha(theme.palette.success.main, 0.1)
             : (theme) => alpha(theme.palette.warning.main, 0.1),
-          mr: 2,
-          flexShrink: 0,
+          mr: 2, flexShrink: 0,
         }}
       >
         {subscriber.isActive ? (
@@ -567,13 +615,7 @@ const SubscriberRow: React.FC<SubscriberRowProps> = ({
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography
           variant="body1"
-          sx={{
-            fontWeight: 600,
-            color: 'text.primary',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
+          sx={{ fontWeight: 600, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
         >
           {subscriber.email}
         </Typography>
@@ -610,9 +652,7 @@ const SubscriberRow: React.FC<SubscriberRowProps> = ({
         label={subscriber.isActive ? 'Active' : 'Unsubscribed'}
         size="small"
         sx={{
-          fontWeight: 600,
-          fontSize: '0.72rem',
-          mx: { xs: 0, sm: 1.5 },
+          fontWeight: 600, fontSize: '0.72rem', mx: { xs: 0, sm: 1.5 },
           ...(subscriber.isActive
             ? { bgcolor: (theme) => alpha(theme.palette.success.main, 0.1), color: 'success.dark' }
             : { bgcolor: (theme) => alpha(theme.palette.warning.main, 0.1), color: 'warning.dark' }),
@@ -621,18 +661,10 @@ const SubscriberRow: React.FC<SubscriberRowProps> = ({
 
       {/* Promo status chip */}
       <Chip
-        label={
-          subscriber.promoClaimed
-            ? 'Claimed'
-            : subscriber.promoCodeSent
-              ? 'Sent'
-              : 'Not Sent'
-        }
+        label={subscriber.promoClaimed ? 'Claimed' : subscriber.promoCodeSent ? 'Sent' : 'Not Sent'}
         size="small"
         sx={{
-          fontWeight: 600,
-          fontSize: '0.72rem',
-          mr: { xs: 0, sm: 1.5 },
+          fontWeight: 600, fontSize: '0.72rem', mr: { xs: 0, sm: 1.5 },
           ...(subscriber.promoClaimed
             ? { bgcolor: (theme) => alpha(theme.palette.success.main, 0.12), color: 'success.dark' }
             : subscriber.promoCodeSent
@@ -655,22 +687,12 @@ const SubscriberRow: React.FC<SubscriberRowProps> = ({
           <Button
             size="small"
             variant={canSendPromo ? 'contained' : 'outlined'}
-            startIcon={
-              isSendingPromo ? (
-                <CircularProgress size={13} color="inherit" />
-              ) : (
-                <PromoIcon sx={{ fontSize: 15 }} />
-              )
-            }
+            startIcon={isSendingPromo ? <CircularProgress size={13} color="inherit" /> : <PromoIcon sx={{ fontSize: 15 }} />}
             disabled={!canSendPromo || isSendingPromo}
             onClick={() => onSendPromo(subscriber)}
             sx={{
-              mr: 1,
-              fontWeight: 600,
-              fontSize: '0.72rem',
-              borderRadius: 2,
-              minWidth: 130,
-              whiteSpace: 'nowrap',
+              mr: 1, fontWeight: 600, fontSize: '0.72rem', borderRadius: 2,
+              minWidth: 130, whiteSpace: 'nowrap',
               ...(canSendPromo
                 ? { bgcolor: '#C87941', color: '#fff', '&:hover': { bgcolor: '#A0612F' }, boxShadow: 'none' }
                 : { borderColor: 'rgba(0,0,0,0.12)', color: 'text.disabled' }),
@@ -695,22 +717,12 @@ const SubscriberRow: React.FC<SubscriberRowProps> = ({
           <Button
             size="small"
             variant={canMarkClaimed ? 'outlined' : 'text'}
-            startIcon={
-              isClaimingPromo ? (
-                <CircularProgress size={13} color="inherit" />
-              ) : (
-                <ClaimedIcon sx={{ fontSize: 15 }} />
-              )
-            }
+            startIcon={isClaimingPromo ? <CircularProgress size={13} color="inherit" /> : <ClaimedIcon sx={{ fontSize: 15 }} />}
             disabled={!canMarkClaimed || isClaimingPromo}
             onClick={() => onMarkClaimed(subscriber)}
             sx={{
-              mr: 1,
-              fontWeight: 600,
-              fontSize: '0.72rem',
-              borderRadius: 2,
-              minWidth: 120,
-              whiteSpace: 'nowrap',
+              mr: 1, fontWeight: 600, fontSize: '0.72rem', borderRadius: 2,
+              minWidth: 120, whiteSpace: 'nowrap',
               ...(canMarkClaimed
                 ? {
                     borderColor: 'rgba(76, 175, 80, 0.5)',
@@ -730,10 +742,7 @@ const SubscriberRow: React.FC<SubscriberRowProps> = ({
         <IconButton
           size="small"
           onClick={onDelete}
-          sx={{
-            color: 'text.secondary',
-            '&:hover': { color: 'error.main', bgcolor: 'rgba(244, 67, 54, 0.08)' },
-          }}
+          sx={{ color: 'text.secondary', '&:hover': { color: 'error.main', bgcolor: 'rgba(244, 67, 54, 0.08)' } }}
         >
           <DeleteIcon fontSize="small" />
         </IconButton>
