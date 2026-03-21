@@ -18,6 +18,8 @@ import {
   alpha,
   CircularProgress,
   TablePagination,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -32,6 +34,7 @@ import {
   LocalOffer as PromoIcon,
   CheckCircleOutline as SentPromoIcon,
   TaskAlt as ClaimedIcon,
+  Print as PrintIcon,
 } from '@mui/icons-material';
 import { FaFacebookF } from 'react-icons/fa';
 import { FaInstagram, FaTiktok } from 'react-icons/fa6';
@@ -111,6 +114,10 @@ const NewsletterManagement: React.FC = () => {
   const [sendingPromo, setSendingPromo] = useState<Record<string, boolean>>({});
   const [claimingPromo, setClaimingPromo] = useState<Record<string, boolean>>({});
 
+  // ─── Selection state (for print) ─────────────────────────────────────────
+  // Map preserves full Subscriber objects so cross-page selections can be printed
+  const [selectedSubscribers, setSelectedSubscribers] = useState<Map<string, Subscriber>>(new Map());
+
   // ─── Debounce search input ────────────────────────────────────────────────
 
   const handleSearchChange = (value: string) => {
@@ -118,7 +125,8 @@ const NewsletterManagement: React.FC = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setDebouncedSearch(value);
-      setPage(0); // reset to first page on new search
+      setPage(0);
+      setSelectedSubscribers(new Map()); // Clear when search context changes
     }, 350);
   };
 
@@ -171,16 +179,19 @@ const NewsletterManagement: React.FC = () => {
 
   const handlePageChange = (_: unknown, newPage: number) => {
     setPage(newPage);
+    // Selection intentionally preserved — user may select across multiple pages
   };
 
   const handleRowsPerPageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(e.target.value, 10));
     setPage(0);
+    // Selection intentionally preserved across page-size changes
   };
 
   const handleFilterChange = (value: FilterStatus) => {
     setFilterStatus(value);
     setPage(0);
+    setSelectedSubscribers(new Map()); // Clear when context changes
   };
 
   // ─── Action handlers ─────────────────────────────────────────────────────
@@ -262,6 +273,326 @@ const NewsletterManagement: React.FC = () => {
     }
   };
 
+  // ─── Selection helpers ────────────────────────────────────────────────────
+
+  const handleToggleSelect = (subscriber: Subscriber) => {
+    setSelectedSubscribers((prev) => {
+      const next = new Map(prev);
+      if (next.has(subscriber.id)) next.delete(subscriber.id);
+      else next.set(subscriber.id, subscriber);
+      return next;
+    });
+  };
+
+  const allOnPageSelected =
+    subscribers.length > 0 && subscribers.every((s) => selectedSubscribers.has(s.id));
+
+  const someOnPageSelected =
+    subscribers.some((s) => selectedSubscribers.has(s.id)) && !allOnPageSelected;
+
+  const handleSelectAllPage = () => {
+    if (allOnPageSelected) {
+      setSelectedSubscribers((prev) => {
+        const next = new Map(prev);
+        subscribers.forEach((s) => next.delete(s.id));
+        return next;
+      });
+    } else {
+      setSelectedSubscribers((prev) => {
+        const next = new Map(prev);
+        subscribers.forEach((s) => next.set(s.id, s));
+        return next;
+      });
+    }
+  };
+
+  const handlePrintSelected = () => {
+    const toPrint = Array.from(selectedSubscribers.values());
+    if (toPrint.length === 0) return;
+
+    const formatDate = (iso: string | null, includeTime = false) => {
+      if (!iso) return '—';
+      const fmt = includeTime ? 'MMM D, YYYY h:mm A' : 'MMM D, YYYY';
+      return moment(iso).tz('America/Toronto').format(fmt);
+    };
+
+    const logoUrl = `${window.location.origin}/brooklinpub-logo.png`;
+
+    const rows = toPrint
+      .map(
+        (s, i) => `
+        <tr class="${i % 2 === 0 ? 'even' : 'odd'}">
+          <td class="num">${i + 1}</td>
+          <td class="email">${s.email}</td>
+          <td><span class="badge ${s.isActive ? 'active' : 'inactive'}">${s.isActive ? 'Active' : 'Unsub'}</span></td>
+          <td>${formatDate(s.subscribedAt)}</td>
+          <td class="mono">${s.promoCode ?? '—'}</td>
+          <td><span class="badge ${s.promoClaimed ? 'claimed' : s.promoCodeSent ? 'sent' : 'pending'}">${s.promoClaimed ? 'Claimed' : s.promoCodeSent ? 'Sent' : 'Pending'}</span></td>
+          <td>${s.promoSentAt ? formatDate(s.promoSentAt) : '—'}</td>
+          <td>${s.promoClaimedAt ? formatDate(s.promoClaimedAt) : '—'}</td>
+        </tr>`,
+      )
+      .join('');
+
+    const filterLabel = filterOptions.find((f) => f.value === filterStatus)?.label ?? 'All';
+    const printedAt = moment().tz('America/Toronto').format('MMMM D, YYYY [at] h:mm A');
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Newsletter Subscribers — Brooklin Pub</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 10px;
+      color: #1a1a1a;
+      padding: 96px 0 48px 0;
+    }
+
+    @page {
+      size: letter portrait;
+      margin: 0.45in;
+      /* Clear every margin-box slot so Chrome/Edge show nothing in the
+         header/footer strip (date, title, URL, page number).
+         Supported in Chrome 131+ (Nov 2024) and Edge. */
+      @top-left      { content: ''; }
+      @top-center    { content: ''; }
+      @top-right     { content: ''; }
+      @bottom-left   { content: ''; }
+      @bottom-center { content: ''; }
+      @bottom-right  { content: ''; }
+    }
+
+    /* ── Fixed header — repeats on every printed page ── */
+    .page-header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: #fff;
+      padding: 14px 0 10px 0;
+      border-bottom: 2.5px solid #C87941;
+      z-index: 100;
+    }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      max-width: 100%;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      border-radius: 5px;
+      flex-shrink: 0;
+    }
+    .brand-text h1 { font-size: 15px; font-weight: 800; color: #C87941; letter-spacing: -0.3px; }
+    .brand-text .tagline { font-size: 9.5px; color: #999; margin-top: 1px; }
+    .brand-text .report-badge {
+      display: inline-block;
+      margin-top: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      color: #fff;
+      background: #C87941;
+      padding: 2px 8px;
+      border-radius: 9px;
+      letter-spacing: 0.3px;
+    }
+    .meta { text-align: right; flex-shrink: 0; }
+    .meta p { font-size: 9px; color: #666; line-height: 1.7; }
+    .meta strong { color: #1a1a1a; }
+
+    /* ── Fixed footer — repeats on every printed page ── */
+    .page-footer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #fff;
+      border-top: 1.5px solid #e0c9b0;
+      padding: 7px 0 5px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+    .page-footer p { font-size: 8.5px; color: #bbb; }
+
+    /* ── Content area ── */
+    .content { width: 100%; }
+
+    /* ── Summary bar ── */
+    .summary {
+      display: flex;
+      gap: 0;
+      margin-bottom: 14px;
+      border: 1px solid #e8d5c0;
+      border-radius: 7px;
+      overflow: hidden;
+    }
+    .summary-item {
+      flex: 1;
+      text-align: center;
+      padding: 9px 4px;
+      border-right: 1px solid #e8d5c0;
+    }
+    .summary-item:last-child { border-right: none; }
+    .summary-item .val { font-size: 18px; font-weight: 800; color: #C87941; line-height: 1; }
+    .summary-item .lbl { font-size: 8px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+    thead tr { background: #C87941; }
+    thead th {
+      padding: 7px 8px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 8.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #fff;
+      white-space: nowrap;
+    }
+    thead th.num { width: 24px; text-align: center; }
+    tbody tr.even { background: #fff; }
+    tbody tr.odd  { background: #fdf8f4; }
+    td {
+      padding: 6px 8px;
+      vertical-align: middle;
+      border-bottom: 1px solid #f0e8df;
+    }
+    td.num { text-align: center; color: #bbb; font-size: 8.5px; }
+    td.email { font-weight: 600; color: #111; word-break: break-all; max-width: 180px; }
+    td.mono { font-family: 'Courier New', monospace; font-weight: 700; color: #1565c0; font-size: 9px; letter-spacing: 1px; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    .badge.active   { background: #e8f5e9; color: #2e7d32; }
+    .badge.inactive { background: #fff3e0; color: #bf360c; }
+    .badge.sent     { background: #e3f2fd; color: #1565c0; }
+    .badge.claimed  { background: #e8f5e9; color: #2e7d32; }
+    .badge.pending  { background: #f5f5f5; color: #757575; }
+
+    @media print {
+      body { padding: 96px 0 48px 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fixed header: appears at the top of every printed page -->
+  <div class="page-header">
+    <div class="header-inner">
+      <div class="brand">
+        <img class="brand-logo" src="${logoUrl}" alt="Brooklin Pub Logo" />
+        <div class="brand-text">
+          <h1>Brooklin Pub</h1>
+          <div class="tagline">Newsletter Management System</div>
+          <span class="report-badge">Subscriber Report</span>
+        </div>
+      </div>
+      <div class="meta">
+        <p><strong>Printed:</strong> ${printedAt}</p>
+        <p><strong>Filter:</strong> ${filterLabel}${debouncedSearch ? ` &middot; &ldquo;${debouncedSearch}&rdquo;` : ''}</p>
+        <p><strong>Selected:</strong> ${toPrint.length} subscriber${toPrint.length !== 1 ? 's' : ''}</p>
+        <p><strong>Total in DB:</strong> ${total}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="content">
+    <div class="summary">
+      <div class="summary-item">
+        <div class="val">${toPrint.length}</div>
+        <div class="lbl">Printed</div>
+      </div>
+      <div class="summary-item">
+        <div class="val">${toPrint.filter((s) => s.isActive).length}</div>
+        <div class="lbl">Active</div>
+      </div>
+      <div class="summary-item">
+        <div class="val">${toPrint.filter((s) => !s.isActive).length}</div>
+        <div class="lbl">Unsubscribed</div>
+      </div>
+      <div class="summary-item">
+        <div class="val">${toPrint.filter((s) => s.promoCodeSent).length}</div>
+        <div class="lbl">Promo Sent</div>
+      </div>
+      <div class="summary-item">
+        <div class="val">${toPrint.filter((s) => s.promoClaimed).length}</div>
+        <div class="lbl">Claimed</div>
+      </div>
+      <div class="summary-item">
+        <div class="val">${toPrint.filter((s) => s.isActive && !s.promoCodeSent).length}</div>
+        <div class="lbl">Need Promo</div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th class="num">#</th>
+          <th>Email Address</th>
+          <th>Sub Status</th>
+          <th>Subscribed On</th>
+          <th>Promo Code</th>
+          <th>Promo Status</th>
+          <th>Promo Sent</th>
+          <th>Promo Claimed</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Fixed footer: appears at the bottom of every printed page -->
+  <div class="page-footer">
+    <p>Brooklin Pub &mdash; Confidential, for internal use only</p>
+    <p>Generated ${printedAt}</p>
+  </div>
+
+  <script>
+    var img = document.querySelector('.brand-logo');
+    if (img) {
+      img.onload = function() { window.print(); };
+      img.onerror = function() { window.print(); }; // print even if logo fails
+    } else {
+      window.print();
+    }
+  </script>
+</body>
+</html>`;
+
+    // Use a Blob URL so @page { margin: 0 } in the HTML fully suppresses
+    // the browser's built-in print header/footer (date, title, URL).
+    // @page only takes effect in a top-level browsing context, not an iframe.
+    const blob = new Blob([html], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    const win = window.open(blobUrl, '_blank', 'width=900,height=750');
+    if (win) {
+      win.addEventListener('load', () => {
+        URL.revokeObjectURL(blobUrl);
+      }, { once: true });
+    }
+  };
+
   // ─── Derived data ─────────────────────────────────────────────────────────
 
   const summaryStats: StatItem[] = [
@@ -289,7 +620,26 @@ const NewsletterManagement: React.FC = () => {
         subtitle="Manage your newsletter subscribers and send promo codes"
         icon={<EmailIcon sx={{ fontSize: 32, color: '#C87941' }} />}
         action={
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            {selectedSubscribers.size > 0 && (
+              <Tooltip title={`Print ${selectedSubscribers.size} selected subscriber${selectedSubscribers.size !== 1 ? 's' : ''} as PDF`}>
+                <Button
+                  variant="contained"
+                  startIcon={<PrintIcon />}
+                  onClick={handlePrintSelected}
+                  sx={{
+                    bgcolor: '#C87941',
+                    color: '#fff',
+                    fontWeight: 700,
+                    borderRadius: 2,
+                    boxShadow: 'none',
+                    '&:hover': { bgcolor: '#A0612F', boxShadow: 'none' },
+                  }}
+                >
+                  Print PDF ({selectedSubscribers.size})
+                </Button>
+              </Tooltip>
+            )}
             <Tooltip title="Copy all active emails to clipboard">
               <Button
                 variant="outlined"
@@ -391,6 +741,30 @@ const NewsletterManagement: React.FC = () => {
 
       {/* Filters + search */}
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Select-all checkbox for current page */}
+        <Tooltip title={allOnPageSelected ? 'Deselect all on this page' : 'Select all on this page'}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={allOnPageSelected}
+                indeterminate={someOnPageSelected}
+                onChange={handleSelectAllPage}
+                disabled={subscribers.length === 0}
+                sx={{
+                  color: 'rgba(200, 121, 65, 0.5)',
+                  '&.Mui-checked, &.MuiCheckbox-indeterminate': { color: '#C87941' },
+                  p: 0.5,
+                }}
+              />
+            }
+            label={
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                {selectedSubscribers.size > 0 ? `${selectedSubscribers.size} selected` : 'Select page'}
+              </Typography>
+            }
+            sx={{ m: 0, userSelect: 'none' }}
+          />
+        </Tooltip>
         <TextField
           size="small"
           placeholder="Search by email..."
@@ -468,6 +842,8 @@ const NewsletterManagement: React.FC = () => {
             <SubscriberRow
               key={subscriber.id}
               subscriber={subscriber}
+              selected={selectedSubscribers.has(subscriber.id)}
+              onToggleSelect={handleToggleSelect}
               isSendingPromo={!!sendingPromo[subscriber.id]}
               isClaimingPromo={!!claimingPromo[subscriber.id]}
               onSendPromo={handleSendPromo}
@@ -552,6 +928,8 @@ const NewsletterManagement: React.FC = () => {
 
 interface SubscriberRowProps {
   subscriber: Subscriber;
+  selected: boolean;
+  onToggleSelect: (subscriber: Subscriber) => void;
   isSendingPromo: boolean;
   isClaimingPromo: boolean;
   onSendPromo: (subscriber: Subscriber) => void;
@@ -561,6 +939,8 @@ interface SubscriberRowProps {
 
 const SubscriberRow: React.FC<SubscriberRowProps> = ({
   subscriber,
+  selected,
+  onToggleSelect,
   isSendingPromo,
   isClaimingPromo,
   onSendPromo,
@@ -575,24 +955,42 @@ const SubscriberRow: React.FC<SubscriberRowProps> = ({
       sx={{
         display: 'flex',
         alignItems: 'center',
-        px: 2.5,
+        px: 2,
         py: 1.5,
-        background: 'rgba(255, 255, 255, 0.9)',
+        background: selected ? 'rgba(200, 121, 65, 0.06)' : 'rgba(255, 255, 255, 0.9)',
         backdropFilter: 'blur(10px)',
         border: '1px solid',
-        borderColor: subscriber.isActive ? 'rgba(200, 121, 65, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+        borderColor: selected
+          ? 'rgba(200, 121, 65, 0.35)'
+          : subscriber.isActive
+            ? 'rgba(200, 121, 65, 0.08)'
+            : 'rgba(0, 0, 0, 0.06)',
         borderRadius: 2,
         transition: 'all 0.2s ease',
         opacity: subscriber.isActive ? 1 : 0.7,
         '&:hover': {
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)',
           transform: 'translateY(-1px)',
-          borderColor: 'rgba(200, 121, 65, 0.15)',
+          borderColor: selected ? 'rgba(200, 121, 65, 0.5)' : 'rgba(200, 121, 65, 0.15)',
         },
         flexWrap: { xs: 'wrap', sm: 'nowrap' },
         gap: { xs: 1, sm: 0 },
       }}
     >
+      {/* Selection checkbox */}
+      <Checkbox
+        checked={selected}
+        onChange={() => onToggleSelect(subscriber)}
+        size="small"
+        sx={{
+          mr: 0.5,
+          flexShrink: 0,
+          color: 'rgba(200, 121, 65, 0.4)',
+          '&.Mui-checked': { color: '#C87941' },
+          p: 0.5,
+        }}
+      />
+
       {/* Status icon */}
       <Box
         sx={{
