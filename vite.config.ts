@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       sourcemap: mode === 'development',
       minify: mode === 'production' ? 'esbuild' : false,
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 600,
       rollupOptions: {
         output: {
           manualChunks: {
@@ -25,12 +25,14 @@ export default defineConfig(({ mode }) => {
               '@emotion/react',
               '@emotion/styled',
             ],
+            'mui-datagrid': ['@mui/x-data-grid'],
             'calendar-vendor': [
               '@fullcalendar/react',
               '@fullcalendar/daygrid',
               '@fullcalendar/timegrid',
               '@fullcalendar/interaction',
             ],
+            charts: ['recharts'],
           },
         },
       },

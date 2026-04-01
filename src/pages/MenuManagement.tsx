@@ -449,9 +449,11 @@ const MenuManagement: React.FC = () => {
   }, [showSnackbar]);
 
   useEffect(() => {
-    loadPrimaryCategories();
-    loadCategories();
-    loadMenuItems();
+    Promise.all([
+      loadPrimaryCategories(),
+      loadCategories(),
+      loadMenuItems(),
+    ]);
   }, [loadPrimaryCategories, loadCategories, loadMenuItems]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {

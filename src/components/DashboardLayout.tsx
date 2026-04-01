@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 import { Outlet } from "react-router-dom";
 import {
   Box,
@@ -43,6 +43,40 @@ import moment from "moment-timezone";
 
 const drawerWidth = 260;
 
+// Isolated clock component – updates every second without re-rendering the entire layout
+const ClockChip = memo(() => {
+  const [currentTime, setCurrentTime] = useState("");
+
+  useEffect(() => {
+    const updateClock = () => {
+      const now = moment().tz("America/Toronto");
+      setCurrentTime(now.format("MMM DD, YYYY • h:mm:ss A"));
+    };
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <Chip
+      icon={<AccessTimeIcon sx={{ fontSize: '1rem !important' }} />}
+      label={currentTime}
+      variant="outlined"
+      size="small"
+      sx={{
+        display: { xs: 'none', md: 'flex' },
+        borderColor: 'rgba(200, 121, 65, 0.2)',
+        color: '#6B4E3D',
+        fontWeight: 500,
+        fontSize: '0.813rem',
+        letterSpacing: '-0.01em',
+        px: 0.5,
+        '& .MuiChip-icon': { color: '#C87941' },
+      }}
+    />
+  );
+});
+
 const navigationGroups = [
   {
     label: 'Overview',
@@ -84,22 +118,9 @@ const allNavItems = navigationGroups.flatMap((g) => g.items);
 const DashboardLayout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [currentTime, setCurrentTime] = useState<string>("");
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-
-  // Update clock every second
-  useEffect(() => {
-    const updateClock = () => {
-      const now = moment().tz("America/Toronto");
-      setCurrentTime(now.format("MMM DD, YYYY • h:mm:ss A"));
-    };
-
-    updateClock();
-    const interval = setInterval(updateClock, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const currentPage = allNavItems.find((item) => item.path === location.pathname);
 
@@ -407,23 +428,7 @@ const DashboardLayout: React.FC = () => {
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {/* Real-time Clock */}
-            <Chip
-              icon={<AccessTimeIcon sx={{ fontSize: '1rem !important' }} />}
-              label={currentTime}
-              variant="outlined"
-              size="small"
-              sx={{
-                display: { xs: 'none', md: 'flex' },
-                borderColor: 'rgba(200, 121, 65, 0.2)',
-                color: '#6B4E3D',
-                fontWeight: 500,
-                fontSize: '0.813rem',
-                background: 'rgba(255, 255, 255, 0.7)',
-                height: 34,
-                borderRadius: 2,
-                '& .MuiChip-icon': { color: '#C87941' },
-              }}
-            />
+            <ClockChip />
 
             {/* Profile Avatar */}
             <IconButton
