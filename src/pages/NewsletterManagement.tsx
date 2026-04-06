@@ -51,6 +51,7 @@ import type { StatItem } from '../components/common/SummaryStats';
 
 interface Subscriber {
   id: string;
+  subscriberNumber: number;
   email: string;
   isActive: boolean;
   unsubscribeToken: string;
@@ -322,7 +323,7 @@ const NewsletterManagement: React.FC = () => {
       .map(
         (s, i) => `
         <tr class="${i % 2 === 0 ? 'even' : 'odd'}">
-          <td class="num">${i + 1}</td>
+          <td class="num">#${s.subscriberNumber}</td>
           <td class="email">${s.email}</td>
           <td><span class="badge ${s.isActive ? 'active' : 'inactive'}">${s.isActive ? 'Active' : 'Unsub'}</span></td>
           <td>${formatDate(s.subscribedAt)}</td>
@@ -546,7 +547,7 @@ const NewsletterManagement: React.FC = () => {
     <table>
       <thead>
         <tr>
-          <th class="num">#</th>
+          <th class="num">Sub #</th>
           <th>Email Address</th>
           <th>Sub Status</th>
           <th>Subscribed On</th>
@@ -1007,6 +1008,29 @@ const SubscriberRow: React.FC<SubscriberRowProps> = ({
         ) : (
           <UnsubscribedIcon sx={{ fontSize: 20, color: 'warning.main' }} />
         )}
+      </Box>
+
+      {/* Subscriber number badge */}
+      <Box
+        sx={{
+          minWidth: 36,
+          height: 24,
+          borderRadius: '12px',
+          bgcolor: 'rgba(200, 121, 65, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          mr: 1.5,
+          flexShrink: 0,
+          px: 1,
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{ fontWeight: 800, color: '#C87941', fontSize: '0.7rem', lineHeight: 1 }}
+        >
+          #{subscriber.subscriberNumber}
+        </Typography>
       </Box>
 
       {/* Email + date info */}
