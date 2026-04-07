@@ -308,7 +308,9 @@ const NewsletterManagement: React.FC = () => {
   };
 
   const handlePrintSelected = () => {
-    const toPrint = Array.from(selectedSubscribers.values());
+    // Sort descending by subscriberNumber so the list is in proper mathematical order
+    const toPrint = Array.from(selectedSubscribers.values())
+      .sort((a, b) => b.subscriberNumber - a.subscriberNumber);
     if (toPrint.length === 0) return;
 
     const formatDate = (iso: string | null, includeTime = false) => {
@@ -346,49 +348,37 @@ const NewsletterManagement: React.FC = () => {
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html, body { height: 100%; }
-
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       font-size: 10px;
       color: #1a1a1a;
-      padding: 96px 0 48px 0;
     }
 
     @page {
       size: letter portrait;
-      margin: 0.45in;
-      /* Clear every margin-box slot so Chrome/Edge show nothing in the
-         header/footer strip (date, title, URL, page number).
-         Supported in Chrome 131+ (Nov 2024) and Edge. */
+      margin: 0.5in;
       @top-left      { content: ''; }
       @top-center    { content: ''; }
       @top-right     { content: ''; }
-      @bottom-left   { content: ''; }
+      @bottom-left   { content: 'Brooklin Pub \2014 Confidential, for internal use only'; font-size: 7.5pt; color: #bbb; }
       @bottom-center { content: ''; }
-      @bottom-right  { content: ''; }
+      @bottom-right  { content: 'Page ' counter(page) ' of ' counter(pages); font-size: 7.5pt; color: #bbb; }
     }
 
-    /* ── Fixed header — repeats on every printed page ── */
-    .page-header {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      background: #fff;
-      padding: 14px 0 10px 0;
-      border-bottom: 2.5px solid #C87941;
-      z-index: 100;
-    }
-    .header-inner {
+    /* ── Report header (appears once at the very top) ── */
+    .report-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      max-width: 100%;
+      padding-bottom: 12px;
+      border-bottom: 2.5px solid #C87941;
+      margin-bottom: 14px;
     }
     .brand { display: flex; align-items: center; gap: 12px; }
     .brand-logo {
-      width: 60px;
-      height: 60px;
+      width: 56px;
+      height: 56px;
       object-fit: contain;
       border-radius: 5px;
       flex-shrink: 0;
@@ -407,25 +397,8 @@ const NewsletterManagement: React.FC = () => {
       letter-spacing: 0.3px;
     }
     .meta { text-align: right; flex-shrink: 0; }
-    .meta p { font-size: 9px; color: #666; line-height: 1.7; }
+    .meta p { font-size: 9px; color: #666; line-height: 1.8; }
     .meta strong { color: #1a1a1a; }
-
-    /* ── Fixed footer — repeats on every printed page ── */
-    .page-footer {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: #fff;
-      border-top: 1.5px solid #e0c9b0;
-      padding: 7px 0 5px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 100;
-    }
-    .page-footer p { font-size: 8.5px; color: #bbb; }
-
-    /* ── Content area ── */
-    .content { width: 100%; }
 
     /* ── Summary bar ── */
     .summary {
@@ -435,6 +408,7 @@ const NewsletterManagement: React.FC = () => {
       border: 1px solid #e8d5c0;
       border-radius: 7px;
       overflow: hidden;
+      page-break-inside: avoid;
     }
     .summary-item {
       flex: 1;
@@ -446,8 +420,12 @@ const NewsletterManagement: React.FC = () => {
     .summary-item .val { font-size: 18px; font-weight: 800; color: #C87941; line-height: 1; }
     .summary-item .lbl { font-size: 8px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
 
-    /* ── Table ── */
+    /* ── Table — thead repeats on every printed page automatically ── */
     table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+
+    thead { display: table-header-group; }
+    tfoot { display: table-footer-group; }
+
     thead tr { background: #C87941; }
     thead th {
       padding: 7px 8px;
@@ -459,9 +437,12 @@ const NewsletterManagement: React.FC = () => {
       color: #fff;
       white-space: nowrap;
     }
-    thead th.num { width: 24px; text-align: center; }
+    thead th.num { width: 30px; text-align: center; }
+
+    tbody tr { page-break-inside: avoid; }
     tbody tr.even { background: #fff; }
     tbody tr.odd  { background: #fdf8f4; }
+
     td {
       padding: 6px 8px;
       vertical-align: middle;
@@ -487,93 +468,80 @@ const NewsletterManagement: React.FC = () => {
     .badge.sent     { background: #e3f2fd; color: #1565c0; }
     .badge.claimed  { background: #e8f5e9; color: #2e7d32; }
     .badge.pending  { background: #f5f5f5; color: #757575; }
-
-    @media print {
-      body { padding: 96px 0 48px 0; }
-    }
   </style>
 </head>
 <body>
 
-  <!-- Fixed header: appears at the top of every printed page -->
-  <div class="page-header">
-    <div class="header-inner">
-      <div class="brand">
-        <img class="brand-logo" src="${logoUrl}" alt="Brooklin Pub Logo" />
-        <div class="brand-text">
-          <h1>Brooklin Pub</h1>
-          <div class="tagline">Newsletter Management System</div>
-          <span class="report-badge">Subscriber Report</span>
-        </div>
+  <!-- Report header: shown once at the top of the first page -->
+  <div class="report-header">
+    <div class="brand">
+      <img class="brand-logo" src="${logoUrl}" alt="Brooklin Pub Logo" />
+      <div class="brand-text">
+        <h1>Brooklin Pub</h1>
+        <div class="tagline">Newsletter Management System</div>
+        <span class="report-badge">Subscriber Report</span>
       </div>
-      <div class="meta">
-        <p><strong>Printed:</strong> ${printedAt}</p>
-        <p><strong>Filter:</strong> ${filterLabel}${debouncedSearch ? ` &middot; &ldquo;${debouncedSearch}&rdquo;` : ''}</p>
-        <p><strong>Selected:</strong> ${toPrint.length} subscriber${toPrint.length !== 1 ? 's' : ''}</p>
-        <p><strong>Total in DB:</strong> ${total}</p>
-      </div>
+    </div>
+    <div class="meta">
+      <p><strong>Printed:</strong> ${printedAt}</p>
+      <p><strong>Filter:</strong> ${filterLabel}${debouncedSearch ? ` &middot; &ldquo;${debouncedSearch}&rdquo;` : ''}</p>
+      <p><strong>Printed:</strong> ${toPrint.length} subscriber${toPrint.length !== 1 ? 's' : ''}</p>
+      <p><strong>Total in DB:</strong> ${total}</p>
     </div>
   </div>
 
-  <!-- Main content -->
-  <div class="content">
-    <div class="summary">
-      <div class="summary-item">
-        <div class="val">${toPrint.length}</div>
-        <div class="lbl">Printed</div>
-      </div>
-      <div class="summary-item">
-        <div class="val">${toPrint.filter((s) => s.isActive).length}</div>
-        <div class="lbl">Active</div>
-      </div>
-      <div class="summary-item">
-        <div class="val">${toPrint.filter((s) => !s.isActive).length}</div>
-        <div class="lbl">Unsubscribed</div>
-      </div>
-      <div class="summary-item">
-        <div class="val">${toPrint.filter((s) => s.promoCodeSent).length}</div>
-        <div class="lbl">Promo Sent</div>
-      </div>
-      <div class="summary-item">
-        <div class="val">${toPrint.filter((s) => s.promoClaimed).length}</div>
-        <div class="lbl">Claimed</div>
-      </div>
-      <div class="summary-item">
-        <div class="val">${toPrint.filter((s) => s.isActive && !s.promoCodeSent).length}</div>
-        <div class="lbl">Need Promo</div>
-      </div>
+  <!-- Summary stats -->
+  <div class="summary">
+    <div class="summary-item">
+      <div class="val">${toPrint.length}</div>
+      <div class="lbl">Printed</div>
     </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th class="num">Sub #</th>
-          <th>Email Address</th>
-          <th>Sub Status</th>
-          <th>Subscribed On</th>
-          <th>Promo Code</th>
-          <th>Promo Status</th>
-          <th>Promo Sent</th>
-          <th>Promo Claimed</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows}
-      </tbody>
-    </table>
+    <div class="summary-item">
+      <div class="val">${toPrint.filter((s) => s.isActive).length}</div>
+      <div class="lbl">Active</div>
+    </div>
+    <div class="summary-item">
+      <div class="val">${toPrint.filter((s) => !s.isActive).length}</div>
+      <div class="lbl">Unsubscribed</div>
+    </div>
+    <div class="summary-item">
+      <div class="val">${toPrint.filter((s) => s.promoCodeSent).length}</div>
+      <div class="lbl">Promo Sent</div>
+    </div>
+    <div class="summary-item">
+      <div class="val">${toPrint.filter((s) => s.promoClaimed).length}</div>
+      <div class="lbl">Claimed</div>
+    </div>
+    <div class="summary-item">
+      <div class="val">${toPrint.filter((s) => s.isActive && !s.promoCodeSent).length}</div>
+      <div class="lbl">Need Promo</div>
+    </div>
   </div>
 
-  <!-- Fixed footer: appears at the bottom of every printed page -->
-  <div class="page-footer">
-    <p>Brooklin Pub &mdash; Confidential, for internal use only</p>
-    <p>Generated ${printedAt}</p>
-  </div>
+  <!-- Subscriber table — thead repeats on every page, rows flow across pages -->
+  <table>
+    <thead>
+      <tr>
+        <th class="num">Sub #</th>
+        <th>Email Address</th>
+        <th>Sub Status</th>
+        <th>Subscribed On</th>
+        <th>Promo Code</th>
+        <th>Promo Status</th>
+        <th>Promo Sent</th>
+        <th>Promo Claimed</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+    </tbody>
+  </table>
 
   <script>
     var img = document.querySelector('.brand-logo');
     if (img) {
       img.onload = function() { window.print(); };
-      img.onerror = function() { window.print(); }; // print even if logo fails
+      img.onerror = function() { window.print(); };
     } else {
       window.print();
     }
