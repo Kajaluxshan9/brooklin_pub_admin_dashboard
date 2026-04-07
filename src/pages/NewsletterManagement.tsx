@@ -360,7 +360,7 @@ const NewsletterManagement: React.FC = () => {
       @top-left      { content: ''; }
       @top-center    { content: ''; }
       @top-right     { content: ''; }
-      @bottom-left   { content: 'Brooklin Pub \2014 Confidential, for internal use only'; font-size: 7.5pt; color: #bbb; }
+      @bottom-left   { content: 'Brooklin Pub \u2014 Confidential, for internal use only'; font-size: 7.5pt; color: #bbb; }
       @bottom-center { content: ''; }
       @bottom-right  { content: 'Page ' counter(page) ' of ' counter(pages); font-size: 7.5pt; color: #bbb; }
     }
