@@ -36,6 +36,7 @@ import {
   Group as GroupIcon,
   Close as CloseIcon,
   Warning as WarningIcon,
+  ReplayCircleFilled as ResetIcon,
 } from '@mui/icons-material';
 import moment from 'moment-timezone';
 import { api } from '../utils/api';
@@ -296,6 +297,17 @@ const AnnouncementsManagement: React.FC = () => {
     }
   };
 
+  const handleResetSending = async (id: string) => {
+    try {
+      await api.post(`/announcements/${id}/reset-sending`);
+      showToast('Announcement reset to Draft — you can now re-send it.', 'success');
+      fetchData();
+    } catch (error) {
+      logger.error('Failed to reset announcement:', error);
+      showToast(getErrorMessage(error), 'error');
+    }
+  };
+
   const handleDelete = async () => {
     if (!selectedAnnouncement) return;
     try {
@@ -409,7 +421,7 @@ const AnnouncementsManagement: React.FC = () => {
           }}
         />
         <Box sx={{ display: 'flex', gap: 1 }}>
-          {(['all', 'draft', 'sent', 'failed'] as const).map((status) => (
+          {(['all', 'draft', 'sending', 'sent', 'failed'] as const).map((status) => (
             <Chip
               key={status}
               label={
@@ -643,6 +655,20 @@ const AnnouncementsManagement: React.FC = () => {
                         </IconButton>
                       </Tooltip>
                     </>
+                  )}
+                  {announcement.status === 'sending' && (
+                    <Tooltip title="Reset stuck announcement back to Draft">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleResetSending(announcement.id)}
+                        sx={{
+                          color: '#FF9800',
+                          '&:hover': { bgcolor: 'rgba(255, 152, 0, 0.08)' },
+                        }}
+                      >
+                        <ResetIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   )}
                   <Tooltip title="Delete">
                     <IconButton
