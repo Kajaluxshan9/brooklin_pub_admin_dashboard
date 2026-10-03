@@ -30,6 +30,7 @@ const NewsletterManagement = lazy(
 const AnnouncementsManagement = lazy(
   () => import('../pages/AnnouncementsManagement'),
 );
+const GiftCardsManagement = lazy(() => import('../pages/GiftCardsManagement'));
 const ScheduledNotifications = lazy(
   () => import('../pages/ScheduledNotifications'),
 );
@@ -68,6 +69,7 @@ const AppRoutes: React.FC = () => {
           <Route path="newsletter" element={<NewsletterManagement />} />
           <Route path="announcements" element={<AnnouncementsManagement />} />
           <Route path="notifications" element={<ScheduledNotifications />} />
+          <Route path="gift-cards" element={<GiftCardsManagement />} />
           <Route path="settings" element={<Settings />} />
         </Route>
         <Route path="/login" element={<Navigate to="/" replace />} />

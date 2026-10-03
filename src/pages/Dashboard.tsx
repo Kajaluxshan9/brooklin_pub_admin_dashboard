@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { api } from "../utils/api";
+import { GiftCardDashboardWidget } from "../components/GiftCardDashboardWidget";
 import {
   Box,
   Grid,
@@ -561,6 +562,8 @@ const Dashboard: React.FC = () => {
         title={`Welcome, ${user?.firstName || 'Admin'}!`}
         subtitle="Here's what's happening at Brooklin Pub today."
       />
+
+      <GiftCardDashboardWidget />
 
       {/* Stats Cards */}
       <Grid container spacing={{ xs: 2, sm: 2.5 }} sx={{ mb: 4 }}>

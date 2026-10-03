@@ -34,11 +34,13 @@ import {
   PhotoLibrary as StoriesIcon,
   Category as MeasurementsIcon,
   Email as NewsletterIcon,
+  CardGiftcard as GiftCardIcon,
   Campaign as AnnouncementsIcon,
   NotificationsActive as NotificationsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { api } from "../utils/api";
 import moment from "moment-timezone";
 
 const drawerWidth = 260;
@@ -104,6 +106,12 @@ const navigationGroups = [
     ],
   },
   {
+    label: 'Sales',
+    items: [
+      { name: 'Gift Cards', path: '/gift-cards', icon: GiftCardIcon },
+    ],
+  },
+  {
     label: 'System',
     items: [
       { name: 'Users', path: '/users', icon: PeopleIcon },
@@ -123,6 +131,23 @@ const DashboardLayout: React.FC = () => {
   const { user, logout } = useAuth();
 
   const currentPage = allNavItems.find((item) => item.path === location.pathname);
+
+  // Pending gift card orders badge (refreshes every minute and on navigation)
+  const [pendingGiftCards, setPendingGiftCards] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      api
+        .get<{ pendingCount: number }>('/giftcards/admin/stats')
+        .then((res) => !cancelled && setPendingGiftCards(res.data.pendingCount))
+        .catch(() => undefined);
+    load();
+    const t = setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [location.pathname]);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
@@ -278,7 +303,20 @@ const DashboardLayout: React.FC = () => {
                           <Icon sx={{ fontSize: 20 }} />
                         </ListItemIcon>
                         <ListItemText
-                          primary={item.name}
+                          primary={
+                            item.path === '/gift-cards' && pendingGiftCards > 0 ? (
+                              <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                                {item.name}
+                                <Chip
+                                  size="small"
+                                  label={pendingGiftCards}
+                                  sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700, bgcolor: isActive ? 'white' : '#ED6C02', color: isActive ? '#C87941' : 'white' }}
+                                />
+                              </Box>
+                            ) : (
+                              item.name
+                            )
+                          }
                           primaryTypographyProps={{
                             fontWeight: isActive ? 700 : 500,
                             fontSize: '0.9rem',
