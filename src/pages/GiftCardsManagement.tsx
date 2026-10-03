@@ -174,6 +174,20 @@ const TX_LABEL: Record<string, string> = {
   email_resent: 'Email resent',
 };
 
+/**
+ * index.css paints every <button> with the brand gradient. Neutralise that for
+ * text/outlined buttons, tabs and icon buttons inside this page and its dialogs.
+ */
+const buttonResetSx = {
+  '& .MuiButton-text, & .MuiButton-outlined, & .MuiTab-root, & .MuiIconButton-root': {
+    background: 'transparent',
+    boxShadow: 'none',
+    '&::before': { display: 'none' },
+    '&:hover': { background: 'rgba(200, 121, 65, 0.08)', transform: 'none', boxShadow: 'none' },
+  },
+  '& .MuiButton-text.Mui-disabled, & .MuiButton-outlined.Mui-disabled': { background: 'transparent' },
+} as const;
+
 const StatusChips: React.FC<{ card: GiftCard }> = ({ card }) => (
   <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
     <Chip size="small" label={STATUS_META[card.status].label} color={STATUS_META[card.status].color} />
@@ -312,7 +326,7 @@ const GiftCardsManagement: React.FC = () => {
   );
 
   return (
-    <Box>
+    <Box sx={buttonResetSx}>
       <PageHeader
         title="Gift Cards"
         subtitle="Verify bank-transfer orders, redeem cards at the till and manage balances"
@@ -503,7 +517,7 @@ const GiftCardsManagement: React.FC = () => {
         />
       )}
 
-      <Dialog open={!!shownPin} onClose={() => setShownPin(null)} maxWidth="xs" fullWidth>
+      <Dialog open={!!shownPin} onClose={() => setShownPin(null)} maxWidth="xs" fullWidth sx={buttonResetSx}>
         <DialogTitle>Hand these details to the customer</DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
@@ -563,7 +577,7 @@ const ReviewDialog: React.FC<{ card: GiftCard; onClose: () => void; onDone: () =
   };
 
   return (
-    <Dialog open onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open onClose={onClose} maxWidth="md" fullWidth sx={buttonResetSx}>
       <DialogTitle>
         Review order <Box component="span" sx={{ fontFamily: 'monospace' }}>{card.code}</Box>
       </DialogTitle>
@@ -613,8 +627,8 @@ const ReviewDialog: React.FC<{ card: GiftCard; onClose: () => void; onDone: () =
                   multiline
                   minRows={2}
                   required={differs}
+                  slotProps={{ htmlInput: { maxLength: 500 }, inputLabel: { shrink: true } }}
                   error={differs && !note.trim()}
-                  slotProps={{ htmlInput: { maxLength: 500 } }}
                 />
               </>
             ) : (
@@ -704,7 +718,7 @@ const DetailDialog: React.FC<{
   const issued = card.status !== 'pending_verification' && card.status !== 'rejected';
 
   return (
-    <Dialog open onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open onClose={onClose} maxWidth="md" fullWidth sx={buttonResetSx}>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
         <Box component="span" sx={{ fontFamily: 'monospace' }}>{card.code}</Box>
         <Tooltip title="Copy ID">
@@ -842,7 +856,7 @@ const DetailDialog: React.FC<{
         <Button onClick={onClose}>Close</Button>
       </DialogActions>
 
-      <Dialog open={!!confirm} onClose={() => setConfirm(null)}>
+      <Dialog open={!!confirm} onClose={() => setConfirm(null)} sx={buttonResetSx}>
         <DialogTitle>{confirm?.title}</DialogTitle>
         <DialogContent><Typography>{confirm?.text}</Typography></DialogContent>
         <DialogActions>
@@ -916,7 +930,7 @@ const RedeemPanel: React.FC<{ onDone: () => void; onOpenDetail: (id: string) => 
           onKeyDown={(e) => e.key === 'Enter' && code.trim() && lookup()}
           slotProps={{ htmlInput: { style: { fontFamily: 'monospace', letterSpacing: 2 } } }}
         />
-        <Button variant="contained" onClick={lookup} disabled={busy || !code.trim()}>Look up</Button>
+        <Button variant="contained" onClick={lookup} disabled={busy || !code.trim()} sx={{ whiteSpace: 'nowrap', minWidth: 110 }}>Look up</Button>
       </Box>
 
       {lastResult && <Alert severity="success" sx={{ mt: 2 }}>{lastResult}</Alert>}
@@ -959,7 +973,7 @@ const RedeemPanel: React.FC<{ onDone: () => void; onOpenDetail: (id: string) => 
                     slotProps={{ input: { startAdornment: <InputAdornment position="start">$</InputAdornment> }, htmlInput: { min: 0.01, step: '0.01' } }}
                     sx={{ flex: 1, minWidth: 140 }}
                   />
-                  <Button size="small" onClick={() => setAmount(String(card.balance))} sx={{ alignSelf: 'flex-start', mt: 1 }}>Use full</Button>
+                  <Button size="small" onClick={() => setAmount(String(card.balance))} sx={{ alignSelf: 'flex-start', mt: 1, whiteSpace: 'nowrap' }}>Use full</Button>
                 </Box>
                 <TextField fullWidth size="small" label="Note (optional, e.g. table / bill #)" value={note} onChange={(e) => setNote(e.target.value)} sx={{ mt: 1 }} />
                 <Button fullWidth variant="contained" size="large" sx={{ mt: 2 }} disabled={busy || !canRedeem} onClick={redeem} startIcon={<RedeemIcon />}>
@@ -1147,7 +1161,7 @@ const IssueDialog: React.FC<{ onClose: () => void; onIssued: (card: GiftCard, pi
   };
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open onClose={onClose} maxWidth="sm" fullWidth sx={buttonResetSx}>
       <DialogTitle>Issue a gift card</DialogTitle>
       <DialogContent dividers>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
